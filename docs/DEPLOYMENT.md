@@ -86,6 +86,44 @@ Any platform that runs a long-lived Node process with a persistent disk works:
 
 Do not run multiple instances against one SQLite file. If you need horizontal scaling, do §5 first and move media to object storage and rate limits to Redis.
 
+### Deploy with Docker (works today)
+
+The repository ships a `Dockerfile` that runs migrations on boot and keeps `data/` and
+`storage/` on mounted volumes:
+
+```bash
+docker build -t buildtogether .
+docker run -d -p 3000:3000 \
+  -e SESSION_SECRET="$(openssl rand -hex 32)" \
+  -e NEXT_PUBLIC_APP_URL="https://your.domain" \
+  -v buildtogether-data:/app/data \
+  -v buildtogether-media:/app/storage \
+  buildtogether
+```
+
+**Platform notes.** Mount the volume at `/app/data` (SQLite plus the outbox log) and
+`/app/storage` (uploads). Free tiers usually do **not** include a persistent disk; a small
+instance with a 1 GB volume is the realistic minimum, and one instance only — SQLite must not
+be shared by two processes.
+
+- **Fly.io**: `fly launch --dockerfile Dockerfile`, then `fly volumes create data --size 1` and
+  `fly volumes create media --size 1`; mount them at `/app/data` and `/app/storage` in
+  `fly.toml`, and run a single machine.
+- **Render**: create a Web Service from the repo with runtime *Docker*, add a Disk mounted at
+  `/app/data` (and another at `/app/storage`), health check path `/api/health`.
+- **Railway / VPS**: same container, bind-mount the two directories, terminate TLS in front.
+
+Set `SESSION_SECRET` to 32+ random bytes and `NEXT_PUBLIC_APP_URL` to the public HTTPS origin;
+`/api/health` reports `config: "incomplete"` until both are present. Then seed a demo
+environment (`npm run db:seed` inside the container) only if it holds nothing real — the script
+now refuses otherwise.
+
+> The image was **not** built in this repository's development environment (Docker is not
+> installed there). The command sequence inside it — `npm ci`, `npm run build`,
+> `npm run db:migrate`, `npm start` — is the same one verified locally in §3, and migrations
+> were confirmed to apply to an empty database from a production build. Treat the first
+> `docker build` as the remaining check.
+
 ### Serverless hosting (Netlify, Vercel Functions) is not supported
 
 Deploying this build to Netlify fails at runtime with:

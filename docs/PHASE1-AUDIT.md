@@ -189,6 +189,38 @@ Recommendation: **A**, with Supabase/Neon only as the *hosted Postgres provider*
 authorisation rules already exist in code and are tested; re-implementing them as RLS policies
 adds a second source of truth for the same rules without removing the first.
 
+### Decision and measured scope (2026-10-25)
+
+Option **A** was chosen, because a Netlify deployment cannot persist SQLite (§G1, and
+`docs/DEPLOYMENT.md`). The conversion is a single atomic change, not an incremental one: the
+schema dialect, the driver and every call site must move together, because the SQLite driver is
+the only synchronous one. Measured in this repository:
+
+| Element | Count |
+| --- | --- |
+| Tables to translate to `pg-core` | 63 |
+| Synchronous Drizzle call sites (`.run()`/`.get()`/`.all()`) | 604 |
+| Exported functions in `src/services` + `src/lib` that become `async` | 264 |
+| App files that must `await` them | 42 (≈98 import sites) |
+| Columns to convert to `jsonb` / `boolean` | 14 / 13 |
+
+It is therefore scheduled as its own multi-pass change on a branch, not mixed into a hardening
+release, and `main` stays deployable throughout. Required preparation, in order:
+
+1. A test harness that runs the real suite against Postgres without an external server
+   (PGlite), so every pass is verified rather than asserted.
+2. `@typescript-eslint/no-floating-promises` from the first commit. Converting a void function
+   such as `notify()` or `audit()` to `Promise<void>` fails silently if a caller forgets
+   `await`; TypeScript does not flag an ignored promise, and losing audit rows silently is
+   exactly the failure this project cannot afford.
+3. Schema translation + regenerated migrations + ported database guards (audit triggers,
+   partial unique index), then core libs, then services, then app call sites.
+4. Data migration for any existing deployment, and a rollback plan that keeps the SQLite copy
+   readable until the Postgres cut-over is proven.
+
+Until that lands, the supported production path is the Docker image in
+`docs/DEPLOYMENT.md` §3.
+
 ## 6. Proposed sequence (one phase per pass, tests green at every step)
 
 1. **Safety + hardening (no architecture change):** production guard on the seed, CSP/HSTS,
