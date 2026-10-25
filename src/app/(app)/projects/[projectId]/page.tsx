@@ -17,6 +17,7 @@ import {
   setMilestoneStatusAction,
   toggleProjectFollowAction,
   updateProjectAction,
+  updateProjectCoverAction,
 } from "@/app/actions/projects";
 import { openProjectChatAction } from "@/app/actions/chat";
 import { consentAction } from "@/app/actions/learning";
@@ -251,6 +252,36 @@ export default async function ProjectPage({
             <ReportForm targetType="project" targetId={projectId} returnTo={returnTo} />
           </div>
         </div>
+
+        {access.canEdit ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-navy-100 bg-navy-50/40 px-4 py-2.5 sm:px-6">
+            <form action={updateProjectCoverAction} className="flex flex-wrap items-center gap-2">
+              <input type="hidden" name="projectId" value={projectId} />
+              <label htmlFor="coverUpload" className="text-[12px] font-medium text-navy-700">
+                {project.coverImageId ? "Replace cover" : "Add a cover"}
+              </label>
+              <input
+                id="coverUpload"
+                name="cover"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="text-[11px] text-navy-600 file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-navy-100 file:px-2 file:py-1 file:text-[11px] file:font-medium file:text-navy-800"
+              />
+              <SubmitButton size="sm" variant="secondary" pendingLabel="Uploading…">
+                Save cover
+              </SubmitButton>
+            </form>
+            {project.coverImageId ? (
+              <form action={updateProjectCoverAction}>
+                <input type="hidden" name="projectId" value={projectId} />
+                <input type="hidden" name="removeCover" value="1" />
+                <SubmitButton size="sm" variant="ghost" pendingLabel="Removing…">
+                  Remove cover
+                </SubmitButton>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-5">

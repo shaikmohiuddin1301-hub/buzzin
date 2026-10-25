@@ -8,7 +8,7 @@ import { authTokens, users } from "@/db/schema";
 import { runServerAction } from "@/lib/actions";
 import { clearSessionCookie, requestMeta, requireUserOrThrow, setSessionCookie, getCurrentUser } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
-import { bool, list, str } from "@/lib/form";
+import { bool, file, list, str } from "@/lib/form";
 import { createSession } from "@/lib/session";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -105,9 +105,9 @@ export async function onboardingAction(formData: FormData) {
     const user = await requireUserOrThrow();
     const goals = list(formData, "goals") as UserGoal[];
 
-    const avatar = formData.get("avatar");
+    const avatar = file(formData, "avatar");
     let avatarFileId: string | null = null;
-    if (avatar instanceof File && avatar.size > 0) {
+    if (avatar) {
       const { saveUploadedFile } = await import("@/lib/storage");
       const file = await saveUploadedFile(avatar, { ownerId: user.id, visibility: "public" });
       avatarFileId = file.id;

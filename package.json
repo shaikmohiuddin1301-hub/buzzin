@@ -14,6 +14,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/migrate.ts",
     "db:seed": "tsx db/seed.ts",
+    "db:seed:first-boot": "tsx db/seed-if-empty.ts",
     "db:reset": "tsx db/reset.ts",
     "test": "vitest run",
     "test:watch": "vitest"

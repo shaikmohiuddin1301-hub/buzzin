@@ -2,7 +2,7 @@
 
 import { runServerAction } from "@/lib/actions";
 import { requireUserOrThrow } from "@/lib/auth";
-import { bool, list, optional, str } from "@/lib/form";
+import { bool, file, list, optional, str } from "@/lib/form";
 import { saveUploadedFile } from "@/lib/storage";
 import { changePassword, updatePreferences, updateProfile, updateSkills } from "@/services/users";
 import type { NotificationKind } from "@/lib/types";
@@ -12,8 +12,8 @@ export async function updateProfileAction(formData: FormData) {
     const user = await requireUserOrThrow();
 
     let avatarFileId: string | null | undefined;
-    const avatar = formData.get("avatar");
-    if (avatar instanceof File && avatar.size > 0) {
+    const avatar = file(formData, "avatar");
+    if (avatar) {
       const stored = await saveUploadedFile(avatar, { ownerId: user.id, visibility: "public" });
       avatarFileId = stored.id;
     }

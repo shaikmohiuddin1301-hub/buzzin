@@ -29,7 +29,7 @@ Every variable has a safe default, so the app boots without any of them. Product
 | `DATABASE_PATH` | `./data/buildtogether.db` | SQLite file. Must be on a persistent volume. |
 | `SESSION_SECRET` | placeholder | **Required in production.** 32+ random bytes, base64. The app refuses to run in production with the placeholder value. |
 | `SESSION_TTL_DAYS` | `30` | Session lifetime. |
-| `EMAIL_PROVIDER` | `console` | `console` writes to `data/outbox.log`. `smtp` currently throws until a transport is implemented. |
+| `EMAIL_PROVIDER` | `console` | `console` writes to `data/outbox.log` and, in production, prints the action link to the server log (nothing is delivered — see §4). `smtp` currently throws until a transport is implemented. |
 | `EMAIL_FROM` | `BuildTogether <no-reply@buildtogether.example>` | Sender identity. |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | empty | Reserved for the SMTP adapter. |
 | `STORAGE_DRIVER` | `local` | `local` (private folder) or `s3` (seam that returns 501 until implemented). |
@@ -40,6 +40,7 @@ Every variable has a safe default, so the app boots without any of them. Product
 | `VIDEO_PROVIDER` | `local` | `local` = animated SVG renderer. |
 | `VIDEO_API_KEY` | empty | Reserved for a motion-graphics provider. |
 | `PAYMENTS_ENABLED` | `false` | Leave false. No card data is collected in this build. |
+| `DEMO_MODE` | unset | Demonstration deployment only. Seeds the fictional dataset once, on an empty database, and shows the demo sign-in details. Never set it on a deployment that people rely on. |
 | `MAX_UPLOAD_MB` | `10` | Enforced before writing. |
 | `ALLOWED_UPLOAD_TYPES` | png, jpeg, webp, gif, pdf, text, mp3, webm, mp4 | Comma-separated MIME allowlist; magic bytes are also checked. |
 | `RATE_LIMIT_AUTH_PER_MINUTE` | `10` | Per IP+email sign-in bucket. |
@@ -56,6 +57,7 @@ npm run typecheck
 npm test
 npm run build
 npm run db:migrate          # once per deploy, against the persistent volume
+npm run db:seed:first-boot  # no-op unless DEMO_MODE=1 and the database has no accounts
 npm start                  # next start, default port 3000
 ```
 
@@ -119,9 +121,14 @@ be shared by two processes.
 - **Railway / VPS**: same container, bind-mount the two directories, terminate TLS in front.
 
 Set `SESSION_SECRET` to 32+ random bytes and `NEXT_PUBLIC_APP_URL` to the public HTTPS origin;
-`/api/health` reports `config: "incomplete"` until both are present. Then seed a demo
-environment (`npm run db:seed` inside the container) only if it holds nothing real — the script
-now refuses otherwise.
+`/api/health` reports `config: "incomplete"` until both are present.
+
+A brand-new volume contains an empty database, so the site has no projects and nobody can sign
+in. For a demonstration deployment, set `DEMO_MODE=1`: `npm run db:seed:first-boot` (wired into
+the image's start command) then inserts the fictional dataset exactly once, the next boot sees
+accounts and skips, and the sign-in page shows the demo credentials. A deployment without
+`DEMO_MODE` keeps an honest empty state. Either way the seed refuses to wipe a database that
+already holds an account, and `npm run db:seed` remains a development-only command.
 
 > The image was **not** built in this repository's development environment (Docker is not
 > installed there). The command sequence inside it — `npm ci`, `npm run build`,

@@ -3,7 +3,7 @@
 import { runServerAction } from "@/lib/actions";
 import { requireUserOrThrow } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
-import { bool, optional, str } from "@/lib/form";
+import { bool, file, optional, str } from "@/lib/form";
 import { rateLimit } from "@/lib/rate-limit";
 import { saveUploadedFile } from "@/lib/storage";
 import {
@@ -41,8 +41,8 @@ export async function sendMessageAction(formData: FormData) {
     rateLimit(`chat:send:${user.id}`, 60, 60_000);
 
     let attachmentId: string | null = null;
-    const upload = formData.get("attachment");
-    if (upload instanceof File && upload.size > 0) {
+    const upload = file(formData, "attachment");
+    if (upload) {
       const stored = await saveUploadedFile(upload, { ownerId: user.id, visibility: "private" });
       attachmentId = stored.id;
     }

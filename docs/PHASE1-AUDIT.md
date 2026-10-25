@@ -243,3 +243,21 @@ Until that lands, the supported production path is the Docker image in
 3. Provide accounts/keys for the services you want wired in this pass: Postgres connection
    string, email provider, S3-compatible bucket, and (if multi-instance) Redis/Upstash.
    Nothing is invented here; unconfigured adapters keep failing closed with a clear error.
+
+## 8. Implemented after this audit — deployment and project covers (2026-10-25, second pass)
+
+Triggered by comparing the live Render deployment with the seeded local build. The audit above
+was written from the code; running the deployment showed two *operational* gaps that no amount
+of schema work would have caught, plus one UI gap that was visible in the code.
+
+| Gap | Evidence | Change | Verified how |
+| --- | --- | --- | --- |
+| A fresh volume renders an empty site: no projects on the homepage and no account to sign in with | Live `/api/health` returned `ok` while `/` showed the empty state and `/u/maya_okafor` did not exist | `db/seed-if-empty.ts` + `DEMO_MODE`, wired into the image start command; the seed's production guard now allows exactly one run against a database with zero accounts | Migrated an empty DB, ran first boot twice: first inserted 7 people / 5 projects, second skipped; skipped entirely without `DEMO_MODE` |
+| Verification links were unreachable in production | `EMAIL_PROVIDER=console` writes only to `data/outbox.log`; `/auth/dev-outbox` returns 404 in production, yet `/auth/verify-email` linked to it | Console adapter prints the action link to the server log in production; the verify page shows the true state and hides the dev-only link | Rendered `/auth/verify-email` from a production build: production notice shown, no outbox button; `/auth/dev-outbox` → 404 |
+| Project covers had schema and rendering but no way to set one | `projects.coverImageId` existed, cards and detail page rendered it, and the create form's cover field was `disabled` | Upload on create, replace/remove on the project page, ownership + image-type checks in the service | Server action POST: create with cover, replace, remove, public fetch `200 image/png`, non-editor rejected with `Only project owners and admins can do that.` |
+| `instanceof File` throws on Node 18 (`engines: >=18.18`) | `ReferenceError: File is not defined` in the server log during the upload probe | `file()` helper in `src/lib/form.ts` using the `Blob` global; all seven upload call sites moved to it | New unit test plus the upload probes above, run on Node 18.20 |
+
+Still open from §4, unchanged: PostgreSQL (G1), real email transport (G3), object storage (G4),
+shared rate limiter (G5), Zod at the boundary (G7), HTTP-level tests (G9), CI/monitoring (G10).
+The brief's gallery (captions, alt text, ordering, thumbnails) is **not** implemented: the schema
+has a single cover reference and no project-media table, so that needs a migration before UI.

@@ -282,8 +282,8 @@ function ContentFields() {
       <Field label="Target date" htmlFor="deadline">
         <Input id="deadline" name="deadline" type="date" />
       </Field>
-      <Field label="Cover image" htmlFor="cover" hint="Add the cover after publishing from the project page.">
-        <Input id="cover" name="cover" disabled placeholder="Upload in project settings" />
+      <Field label="Cover image" htmlFor="cover" hint="PNG, JPEG or WebP, 16:9 works best. Optional for a draft.">
+        <Input id="cover" name="cover" type="file" accept="image/png,image/jpeg,image/webp" />
       </Field>
     </div>
   );

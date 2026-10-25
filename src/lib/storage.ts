@@ -168,13 +168,13 @@ export async function saveMedia(input: SaveMediaInput): Promise<MediaFile> {
 }
 
 export async function saveUploadedFile(
-  file: File,
+  file: Blob & { name?: string },
   meta: { ownerId: string; projectId?: string | null; taskId?: string | null; visibility?: Visibility },
 ): Promise<MediaFile> {
   const buffer = Buffer.from(await file.arrayBuffer());
   return saveMedia({
     buffer,
-    filename: file.name,
+    filename: file.name ?? "upload",
     mimeType: file.type || "application/octet-stream",
     ownerId: meta.ownerId,
     projectId: meta.projectId,

@@ -1,8 +1,9 @@
 "use server";
 
 import { runServerAction } from "@/lib/actions";
+import { AppError } from "@/lib/errors";
 import { assertEmailVerified, requireUserOrThrow } from "@/lib/auth";
-import { bool, list, optional, str } from "@/lib/form";
+import { bool, file, list, optional, str } from "@/lib/form";
 import { rateLimit } from "@/lib/rate-limit";
 import { saveUploadedFile } from "@/lib/storage";
 import {
@@ -58,7 +59,15 @@ export async function createProjectAction(formData: FormData) {
     const name = str(formData, "name");
     const publish = bool(formData, "publish");
 
+    let coverImageId: string | null = null;
+    const cover = file(formData, "cover");
+    if (cover) {
+      const stored = await saveUploadedFile(cover, { ownerId: user.id, visibility: "public" });
+      coverImageId = stored.id;
+    }
+
     const { id } = createProject(user.id, {
+      coverImageId,
       name,
       shortDescription: str(formData, "shortDescription"),
       overview: optional(formData, "overview"),
@@ -119,6 +128,31 @@ export async function updateProjectAction(formData: FormData) {
       ipNotes: optional(formData, "ipNotes"),
     });
     return { path: `/projects/${projectId}?tab=overview&notice=Project+updated.`, revalidate: [`/projects/${projectId}`] };
+  });
+}
+
+export async function updateProjectCoverAction(formData: FormData) {
+  const projectId = str(formData, "projectId");
+  await runServerAction(`/projects/${projectId}`, async () => {
+    const user = await requireUserOrThrow();
+    rateLimit(`cover:${user.id}`, 20, 3_600_000);
+
+    const remove = bool(formData, "removeCover");
+    let coverImageId: string | null | undefined;
+
+    const cover = file(formData, "cover");
+    if (cover) {
+      const stored = await saveUploadedFile(cover, { ownerId: user.id, visibility: "public" });
+      coverImageId = stored.id;
+    }
+    if (remove) coverImageId = null;
+    if (coverImageId === undefined) throw new AppError("Choose an image before saving a cover.");
+
+    updateProject(projectId, user, { coverImageId });
+    return {
+      path: `/projects/${projectId}?notice=${remove ? "Cover+removed." : "Cover+updated."}`,
+      revalidate: [`/projects/${projectId}`, "/explore", "/home"],
+    };
   });
 }
 
@@ -355,10 +389,10 @@ export async function submitWorkAction(formData: FormData) {
     rateLimit(`submit:${user.id}`, 10, 600_000);
 
     const files: { title: string; url?: string; fileId?: string; description?: string }[] = [];
-    const upload = formData.get("file");
-    if (upload instanceof File && upload.size > 0) {
+    const upload = file(formData, "file");
+    if (upload) {
       const stored = await saveUploadedFile(upload, { ownerId: user.id, taskId, visibility: "private" });
-      files.push({ title: str(formData, "fileTitle", upload.name), fileId: stored.id });
+      files.push({ title: str(formData, "fileTitle", upload.name ?? "Upload"), fileId: stored.id });
     }
     const url = optional(formData, "deliverableUrl");
     if (url) files.push({ title: str(formData, "deliverableTitle", "Deliverable link"), url, description: optional(formData, "deliverableDescription") });
@@ -416,8 +450,8 @@ export async function addWorkLogAction(formData: FormData) {
     rateLimit(`worklog:${user.id}`, 40, 600_000);
 
     let fileId: string | null = null;
-    const upload = formData.get("file");
-    if (upload instanceof File && upload.size > 0) {
+    const upload = file(formData, "file");
+    if (upload) {
       const stored = await saveUploadedFile(upload, { ownerId: user.id, taskId, visibility: "private" });
       fileId = stored.id;
     }

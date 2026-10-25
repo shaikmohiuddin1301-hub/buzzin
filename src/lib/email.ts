@@ -47,7 +47,18 @@ class ConsoleEmailAdapter implements EmailAdapter {
     } catch {
       // Logging outbox failures must never break a signup.
     }
-    if (!env.isProduction) console.info(`[email] ${message.subject} -> ${message.to}`);
+    if (env.isProduction) {
+      // Nothing was delivered. A production container has no browsable outbox, so the link is
+      // printed to stdout where the host's log viewer can retrieve it. Without this a real
+      // sign-up can never be verified, because publishing requires a verified address.
+      console.warn(
+        `[email:console] NOT DELIVERED — "${message.subject}" for ${message.to}` +
+          (message.actionUrl ? `\n[email:console] link: ${message.actionUrl}` : "") +
+          "\n[email:console] configure a real transport before inviting real users (docs/DEPLOYMENT.md §4).",
+      );
+    } else {
+      console.info(`[email] ${message.subject} -> ${message.to}`);
+    }
     return { delivered: true, provider: "console", previewUrl: message.actionUrl };
   }
 }

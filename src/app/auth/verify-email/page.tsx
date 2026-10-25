@@ -3,6 +3,7 @@ import { verifyEmailAction } from "@/app/actions/auth";
 import { SubmitButton } from "@/components/client/submit-button";
 import { Alert, ButtonLink } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 export const metadata = { title: "Verify your email" };
 
@@ -39,14 +40,23 @@ export default async function VerifyEmailPage({
         </div>
       ) : (
         <div className="mt-5 space-y-4">
-          <Alert tone="info">
-            Open the verification link from your inbox. In this development build, emails are written to{" "}
-            <code>data/outbox.log</code> and can be opened from the development outbox.
-          </Alert>
+          {env.isProduction && env.emailProvider === "console" ? (
+            <Alert tone="warning" title="Email delivery is not configured on this deployment">
+              Your account exists, but verification messages are not sent. This deployment records them in the server log
+              instead. Ask the site operator for your verification link, or sign in with a demonstration account.
+            </Alert>
+          ) : (
+            <Alert tone="info">
+              Open the verification link from your inbox. In this development build, emails are written to{" "}
+              <code>data/outbox.log</code> and can be opened from the development outbox.
+            </Alert>
+          )}
           <div className="flex flex-wrap gap-2">
-            <ButtonLink href="/auth/dev-outbox" variant="secondary" size="sm">
-              Open development outbox
-            </ButtonLink>
+            {env.isProduction ? null : (
+              <ButtonLink href="/auth/dev-outbox" variant="secondary" size="sm">
+                Open development outbox
+              </ButtonLink>
+            )}
             <ButtonLink href="/settings?tab=security" variant="ghost" size="sm">
               Resend verification
             </ButtonLink>

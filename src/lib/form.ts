@@ -42,6 +42,20 @@ export function links(form: FormData, prefix: string, count = 5): { label: strin
   return result;
 }
 
+/**
+ * Read a file part from FormData.
+ *
+ * `entry instanceof File` throws `ReferenceError: File is not defined` on Node 18, which the
+ * engines field still allows, so detection goes through `Blob` (global since Node 18) and
+ * returns null for anything that is not a non-empty upload.
+ */
+export function file(form: FormData, key: string): (Blob & { name?: string }) | null {
+  const entry = form.get(key);
+  if (!entry || typeof entry === "string") return null;
+  if (!(entry instanceof Blob) || entry.size === 0) return null;
+  return entry;
+}
+
 /** Only allow http(s) URLs from user input. */
 export function safeUrl(value: string | undefined): string | undefined {
   if (!value) return undefined;

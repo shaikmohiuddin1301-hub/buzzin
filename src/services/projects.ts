@@ -23,6 +23,7 @@ import { getProjectAccess, requireProjectAccess, type Viewer } from "@/lib/authz
 import { AppError, NotFoundError } from "@/lib/errors";
 import { slugify } from "@/lib/format";
 import { notify } from "@/lib/notify";
+import { getMedia } from "@/lib/storage";
 import { awardReputation, REPUTATION_WEIGHTS } from "@/lib/reputation";
 import { upsertSkill } from "@/services/users";
 import type { CompensationType, ProjectCategory, ProjectRole, ProjectStage, Visibility, WorkMode } from "@/lib/types";
@@ -168,13 +169,29 @@ export type CreateProjectInput = {
   milestones: { title: string; description?: string; dueDate?: string }[];
   publish: boolean;
   businessId?: string | null;
+  coverImageId?: string | null;
 };
+
+/**
+ * A cover must be an image the same person uploaded.
+ *
+ * Checking ownership here (not only in the action) means no caller can attach another
+ * account's file to a project, which would expose private media through a public page.
+ */
+function assertUsableCover(coverImageId: string, uploaderId: string): void {
+  const file = getMedia(coverImageId);
+  if (!file) throw new AppError("That cover image no longer exists. Upload it again.");
+  if (file.ownerId !== uploaderId) throw new AppError("You can only use an image you uploaded as a project cover.");
+  if (!file.mimeType.startsWith("image/")) throw new AppError("A project cover must be an image.");
+}
 
 export function createProject(ownerId: string, input: CreateProjectInput): { id: string; slug: string } {
   if (input.name.trim().length < 3) throw new AppError("Project name must be at least 3 characters.");
   if (input.shortDescription.trim().length < 20) {
     throw new AppError("Add a short description of at least 20 characters so people know what they are joining.");
   }
+  if (input.coverImageId) assertUsableCover(input.coverImageId, ownerId);
+
   if (input.publish && input.compensationType === "unpaid") {
     // We allow unpaid collaboration, but the listing must state that it is unpaid
     // and that no employment relationship is implied (see terms).
@@ -214,6 +231,7 @@ export function createProject(ownerId: string, input: CreateProjectInput): { id:
         confidentialityNotes: input.confidentialityNotes?.slice(0, 2000) ?? null,
         ipNotes: input.ipNotes?.slice(0, 2000) ?? null,
         links: input.links.filter((link) => link.url),
+        coverImageId: input.coverImageId ?? null,
         status: input.publish ? "published" : "draft",
         publishedAt: input.publish ? now : null,
       })
@@ -248,9 +266,14 @@ export function createProject(ownerId: string, input: CreateProjectInput): { id:
 export function updateProject(
   projectId: string,
   viewer: Viewer,
-  input: Partial<Pick<Project, "name" | "shortDescription" | "overview" | "problem" | "audience" | "stage" | "visibility" | "workMode" | "effort" | "deadline" | "compensationType" | "compensationDetails" | "allowPublicDocs" | "confidentialityNotes" | "ipNotes" | "category">>,
+  input: Partial<Pick<Project, "name" | "shortDescription" | "overview" | "problem" | "audience" | "stage" | "visibility" | "workMode" | "effort" | "deadline" | "compensationType" | "compensationDetails" | "allowPublicDocs" | "confidentialityNotes" | "ipNotes" | "category" | "coverImageId">>,
 ): void {
   const access = requireProjectAccess(projectId, viewer, "edit");
+  const { coverImageId, ...fields } = input;
+  if (coverImageId) {
+    if (!viewer) throw new NotFoundError("Project not found.");
+    assertUsableCover(coverImageId, viewer.id);
+  }
   if (input.visibility === "private" && access.project.visibility !== "private") {
     // Existing public documentation must not be silently hidden; the owner is
     // told to review it first (documented in the confirmation dialog).
@@ -263,7 +286,12 @@ export function updateProject(
   }
   getDb()
     .update(projects)
-    .set({ ...input, updatedAt: new Date().toISOString() })
+    .set({
+      ...fields,
+      // `undefined` means "leave the cover alone"; an explicit null removes it.
+      ...(coverImageId !== undefined ? { coverImageId } : {}),
+      updatedAt: new Date().toISOString(),
+    })
     .where(eq(projects.id, projectId))
     .run();
 }

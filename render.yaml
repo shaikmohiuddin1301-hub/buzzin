@@ -34,6 +34,10 @@ services:
         value: local
       - key: EMAIL_PROVIDER
         value: console
+      # Demonstration deployment: seed the fictional dataset once, on a brand-new volume.
+      # Seeding stops for good as soon as the database holds any account.
+      - key: DEMO_MODE
+        value: "1"
       - key: PAYMENTS_ENABLED
         value: "false"
     disk:

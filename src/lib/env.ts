@@ -82,6 +82,13 @@ export const env = {
   get isProduction() {
     return process.env.NODE_ENV === "production";
   },
+  /**
+   * A demonstration deployment: fictional seed data, and the demo sign-in details shown on the
+   * sign-in page. Never a substitute for a real transport or a real user population.
+   */
+  get demoMode() {
+    return bool("DEMO_MODE", false);
+  },
   /** In non-production we surface verification/reset links instead of emailing. */
   get showDevEmailLinks() {
     return !this.isProduction && this.emailProvider === "console";

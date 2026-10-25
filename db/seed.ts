@@ -111,11 +111,32 @@ function wipe() {
  * So the second gate looks at the data itself — every account created by this seed uses an
  * `@example.test` address, so any other address means real people signed up here.
  */
+/** How many accounts exist in this database. Zero means nothing can be lost by seeding. */
+export function accountCount(): number {
+  const sqlite = getSqlite();
+  const hasUsers = sqlite
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'")
+    .get();
+  if (!hasUsers) return 0;
+  return (sqlite.prepare("SELECT COUNT(*) AS count FROM users").get() as { count: number }).count;
+}
+
 function assertSafeToWipe() {
   if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "db:seed refuses to run in production: it would delete real data. Run it against a development database only.",
-    );
+    // A demo deployment (DEMO_MODE=1) may seed exactly once, and only while the database
+    // has no accounts at all. Once anyone signs up, this refuses for the life of the volume.
+    if (process.env.DEMO_MODE !== "1") {
+      throw new Error(
+        "db:seed refuses to run in production: it would delete real data. Set DEMO_MODE=1 only on a demonstration deployment.",
+      );
+    }
+    if (accountCount() > 0) {
+      throw new Error(
+        "db:seed refuses to wipe this database: it already holds accounts, so it is no longer an empty demo deployment.",
+      );
+    }
+    console.warn("DEMO_MODE=1: seeding demonstration data into an empty production database.");
+    return;
   }
   if (process.env.SEED_ALLOW_NON_DEMO === "1") {
     console.warn("SEED_ALLOW_NON_DEMO=1: wiping a database that holds non-demo accounts.");
@@ -163,9 +184,9 @@ function coverSvg(title: string, accent: string): Buffer {
   );
 }
 
-async function main() {
+export async function seedDemoData() {
   // This script deletes every application row before inserting demo fixtures. It must never
-  // be able to reach a production database — see assertSafeToWipe for the two gates.
+  // be able to reach a database holding real accounts — see assertSafeToWipe for the gates.
   assertSafeToWipe();
 
   console.log("Applying migrations…");
@@ -1797,7 +1818,9 @@ function eqId(id: string) {
   return eq(learningResources.id, id);
 }
 
-main().catch((error) => {
-  console.error("Seed failed:", error);
-  process.exitCode = 1;
-});
+if (process.argv[1] && process.argv[1].replace(/\\/g, "/").endsWith("db/seed.ts")) {
+  seedDemoData().catch((error) => {
+    console.error("Seed failed:", error);
+    process.exitCode = 1;
+  });
+}

@@ -20,7 +20,7 @@ export default async function SignInPage({
   if (user) redirect(user.onboardingCompletedAt ? "/home" : "/onboarding");
 
   const next = typeof params.next === "string" ? params.next : "";
-  const demo = env.showDevEmailLinks;
+  const demo = env.showDevEmailLinks || env.demoMode;
 
   return (
     <div>
@@ -60,10 +60,11 @@ export default async function SignInPage({
       {demo ? (
         <div className="mt-6 rounded-lg border border-navy-200 bg-navy-50 p-4 text-[12px] leading-6 text-navy-600">
           <p className="font-semibold text-navy-800">Demo accounts (seeded)</p>
-          <p className="mt-1 font-mono text-[11px]">maya_okafor · jonas_b · amara_d · sam_admin</p>
+          <p className="mt-1 font-mono text-[11px]">maya@example.test · jonas@example.test · sam@example.test</p>
           <p className="font-mono text-[11px]">Password: BuildTogether2026!</p>
           <p className="mt-1">
-            These are fictional accounts created by <code className="font-mono">npm run db:seed</code>.
+            These are fictional accounts from the demonstration dataset. Nothing here is a real person, testimonial or
+            commercial result.
           </p>
         </div>
       ) : null}

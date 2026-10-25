@@ -15,6 +15,7 @@ import {
   updateProject,
 } from "@/services/projects";
 import { expressInterest, projectInterests, respondToInterest } from "@/services/tasks";
+import { saveMedia } from "@/lib/storage";
 import { addMember, makeProject, makeUser, projectInput, projectRow } from "./helpers";
 
 function memberRow(projectId: string, userId: string) {
@@ -193,6 +194,77 @@ describe("following", () => {
 
     expect(toggleProjectFollow(id, fan.id)).toBe(false);
     expect(projectDetail(id, fan)!.counts.followers).toBe(0);
+  });
+});
+
+describe("project cover images", () => {
+  const png = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000000", "hex");
+
+  async function uploadPng(ownerId: string, name = "cover.png") {
+    return saveMedia({ buffer: png, filename: name, mimeType: "image/png", ownerId });
+  }
+
+  it("stores an uploaded cover on the project", async () => {
+    const owner = await makeUser();
+    const cover = await uploadPng(owner.id);
+
+    const { id } = createProject(owner.id, projectInput({ coverImageId: cover.id }));
+    expect(projectRow(id).coverImageId).toBe(cover.id);
+  });
+
+  it("replaces and removes a cover without touching other fields", async () => {
+    const owner = await makeUser();
+    const first = await uploadPng(owner.id, "first.png");
+    const second = await uploadPng(owner.id, "second.png");
+    const { id } = createProject(owner.id, projectInput({ name: "Cover swap", coverImageId: first.id }));
+
+    updateProject(id, owner, { coverImageId: second.id });
+    expect(projectRow(id).coverImageId).toBe(second.id);
+    expect(projectRow(id).name).toBe("Cover swap");
+
+    updateProject(id, owner, { coverImageId: null });
+    expect(projectRow(id).coverImageId).toBeNull();
+    expect(projectRow(id).name).toBe("Cover swap");
+  });
+
+  it("leaves the cover alone when an edit omits it", async () => {
+    const owner = await makeUser();
+    const cover = await uploadPng(owner.id);
+    const { id } = createProject(owner.id, projectInput({ coverImageId: cover.id }));
+
+    updateProject(id, owner, { shortDescription: "An updated description that is definitely long enough." });
+    expect(projectRow(id).coverImageId).toBe(cover.id);
+  });
+
+  it("refuses a cover uploaded by somebody else", async () => {
+    const owner = await makeUser();
+    const stranger = await makeUser();
+    const foreign = await uploadPng(stranger.id);
+
+    expect(() => createProject(owner.id, projectInput({ coverImageId: foreign.id }))).toThrow(/image you uploaded/i);
+  });
+
+  it("refuses a non-image file as a cover", async () => {
+    const owner = await makeUser();
+    const pdf = await saveMedia({
+      buffer: Buffer.from("%PDF-1.4 test fixture"),
+      filename: "notes.pdf",
+      mimeType: "application/pdf",
+      ownerId: owner.id,
+    });
+
+    expect(() => createProject(owner.id, projectInput({ coverImageId: pdf.id }))).toThrow(/must be an image/i);
+  });
+
+  it("refuses a cover change by someone who cannot edit the project", async () => {
+    const owner = await makeUser();
+    const member = await makeUser();
+    const cover = await uploadPng(owner.id);
+    const { id } = makeProject(owner.id, { coverImageId: cover.id });
+    addMember(id, member.id);
+
+    const memberOwnedCover = await uploadPng(member.id, "member.png");
+    expect(() => updateProject(id, { id: member.id }, { coverImageId: memberOwnedCover.id })).toThrow();
   });
 });
 

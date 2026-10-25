@@ -179,9 +179,13 @@ export default async function LandingPage() {
             {projectCards.length > 0 ? (
               projectCards.map((project) => <ProjectCard key={project.id} project={project} />)
             ) : (
-              <p className="rounded-lg border border-dashed border-navy-200 p-6 text-sm text-navy-500 md:col-span-3">
-                No projects yet. Seed the demonstration data to explore the product.
-              </p>
+              <div className="rounded-lg border border-dashed border-navy-200 p-6 text-sm text-navy-500 md:col-span-3">
+                <p className="font-medium text-navy-700">No public projects have been published yet.</p>
+                <p className="mt-1">
+                  Create an account to publish the first one — a project, its team and its accepted contributions will
+                  appear here as soon as it is live.
+                </p>
+              </div>
             )}
           </div>
         </section>
@@ -237,7 +241,9 @@ export default async function LandingPage() {
                   </Card>
                 </>
               ) : (
-                <Card className="p-5 text-sm text-navy-600">Seed the demo data to see an example reputation breakdown.</Card>
+                <Card className="p-5 text-sm text-navy-600">
+                  Reputation appears here once accepted deliveries exist — every point is a record, not a score out of ten.
+                </Card>
               )}
             </div>
           </div>
