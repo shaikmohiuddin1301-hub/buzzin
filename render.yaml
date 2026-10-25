@@ -42,6 +42,11 @@ services:
       # Seeding stops for good as soon as the database holds any account.
       - key: DEMO_MODE
         value: "1"
+      # One-shot reset for this demonstration site: deletes the demo database and uploads,
+      # then reseeds. A marker file records that it ran, so leaving this set cannot erase
+      # data again. Remove it once the site shows the demo data.
+      - key: DEMO_RESET
+        value: "1"
       - key: PAYMENTS_ENABLED
         value: "false"
     disk:

@@ -130,6 +130,12 @@ accounts and skips, and the sign-in page shows the demo credentials. A deploymen
 `DEMO_MODE` keeps an honest empty state. Either way the seed refuses to wipe a database that
 already holds an account, and `npm run db:seed` remains a development-only command.
 
+If a demonstration site already holds a stray account and therefore skipped seeding, set
+`DEMO_RESET=1` as well: the boot step then deletes the demo database and its uploads, reseeds,
+and writes `.demo-reset-done` beside the database. It is one-shot — leaving the variable set
+cannot erase data on a later restart — and it is the only path that destroys rows in
+production, so remove it after the site shows the demo data.
+
 > The image was **not** built in this repository's development environment (Docker is not
 > installed there). The command sequence inside it — `npm ci`, `npm run build`,
 > `npm run db:migrate`, `npm start` — is the same one verified locally in §3, and migrations
