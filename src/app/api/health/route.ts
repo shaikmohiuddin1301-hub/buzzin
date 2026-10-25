@@ -1,6 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
-import { DatabaseUnavailableError, getDb, getSqlite } from "@/db/client";
+import { DatabaseUnavailableError, databasePath, getDb, getSqlite } from "@/db/client";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +58,19 @@ export async function GET() {
       videoProvider: env.videoProvider,
       email: env.emailProvider,
       paymentsEnabled: env.paymentsEnabled,
-      ...(env.demoMode ? { demoMode: true, demoAccounts } : {}),
+      ...(env.demoMode
+        ? {
+            demoMode: true,
+            demoAccounts,
+            // `requested` is what this process was given; `applied` is whether the boot step
+            // actually ran. Together they separate "the variable never reached the container"
+            // from "the container's start command skips the seed step".
+            demoReset: {
+              requested: process.env.DEMO_RESET === "1",
+              applied: fs.existsSync(path.join(path.dirname(databasePath()), ".demo-reset-done")),
+            },
+          }
+        : {}),
       uptimeSeconds: Math.round(process.uptime()),
       checkMs: Date.now() - started,
     },
