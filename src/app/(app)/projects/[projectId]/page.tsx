@@ -20,6 +20,7 @@ import {
   updateProjectCoverAction,
 } from "@/app/actions/projects";
 import { openProjectChatAction } from "@/app/actions/chat";
+import { deleteShareAction, shareProjectUpdateAction } from "@/app/actions/socialSharing";
 import { consentAction } from "@/app/actions/learning";
 import { SubmitButton } from "@/components/client/submit-button";
 import { CommentThread } from "@/components/comments";
@@ -57,6 +58,7 @@ import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { formatDate, money, relativeTime, truncate } from "@/lib/format";
 import { label } from "@/lib/types";
+import { env } from "@/lib/env";
 import {
   projectDetail,
   projectAnalytics,
@@ -66,6 +68,8 @@ import { listTasks, projectInterests } from "@/services/tasks";
 import { listComments } from "@/services/social";
 import { projectJourneys, resourcesForProject } from "@/services/learning";
 import { storyboardsForProject } from "@/services/stories";
+import { listProjectShares } from "@/services/socialShares";
+import { SOCIAL_PLATFORMS, platformLabel } from "@/lib/ayrshare";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +111,9 @@ export default async function ProjectPage({
   const comments = listComments("project", projectId, user);
   const journeys = projectJourneys(projectId, user);
   const resources = resourcesForProject(projectId, user);
+  const socialReady = Boolean(env.ayrshareApiKey);
+  const shares = access.canEdit ? listProjectShares(projectId, user) : [];
+  const publicUpdates = updates.filter((update) => update.visibility === "public");
   const storyRows = storyboardsForProject(projectId, user);
   const featuredStory = storyRows.find((row) => row.status === "published") ?? null;
   const featuredScenes = featuredStory
@@ -661,6 +668,91 @@ export default async function ProjectPage({
                 </form>
               ) : null}
             </Card>
+
+            {access.canEdit ? (
+              <Card>
+                <div className="border-b border-navy-100 px-5 py-4">
+                  <h2 className="text-[14px] font-semibold text-navy-950">Share to social</h2>
+                  <p className="text-[12px] text-navy-500">
+                    Publishes through Ayrshare to the networks linked in your Ayrshare dashboard. Only public updates can
+                    be shared, and a link back to this project is always included.
+                  </p>
+                </div>
+
+                {!socialReady ? (
+                  <p className="p-5 text-[13px] text-navy-500">
+                    Social publishing is not configured on this deployment. Set <code>AYRSHARE_API_KEY</code> and link the
+                    networks in the Ayrshare dashboard to enable it.
+                  </p>
+                ) : publicUpdates.length === 0 ? (
+                  <p className="p-5 text-[13px] text-navy-500">
+                    Publish a public update first — team-only updates never leave the platform.
+                  </p>
+                ) : (
+                  <form action={shareProjectUpdateAction} className="space-y-3 p-5">
+                    <input type="hidden" name="projectId" value={projectId} />
+                    <Field label="Public update" htmlFor="share-update" required>
+                      <Select id="share-update" name="updateId" required>
+                        {publicUpdates.map((update) => (
+                          <option key={update.id} value={update.id}>
+                            {update.title}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <fieldset>
+                      <legend className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-navy-500">
+                        Networks
+                      </legend>
+                      <div className="grid gap-1 sm:grid-cols-2">
+                        {SOCIAL_PLATFORMS.map((platform) => (
+                          <Checkbox key={platform} name="platforms" value={platform} label={platformLabel(platform)} />
+                        ))}
+                      </div>
+                    </fieldset>
+                    <Field label="Message (optional)" htmlFor="share-message" hint="Leave blank to use the update text.">
+                      <Textarea id="share-message" name="message" rows={3} maxLength={1000} />
+                    </Field>
+                    <SubmitButton size="sm" pendingLabel="Publishing…">
+                      Share
+                    </SubmitButton>
+                  </form>
+                )}
+
+                <ul className="divide-y divide-navy-100 border-t border-navy-100">
+                  {shares.length === 0 ? (
+                    <li className="px-5 py-4 text-[12px] text-navy-500">Nothing shared from this project yet.</li>
+                  ) : (
+                    shares.map((share) => (
+                      <li key={share.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-3">
+                        <div className="min-w-0">
+                          <p className="flex flex-wrap items-center gap-2 text-[12px] font-medium text-navy-800">
+                            <Badge tone={share.status === "posted" ? "success" : share.status === "failed" ? "danger" : "neutral"}>
+                              {share.status}
+                            </Badge>
+                            <span>{share.platforms.map(platformLabel).join(", ")}</span>
+                            <time className="text-[11px] font-normal text-navy-400" dateTime={share.createdAt}>
+                              {relativeTime(share.createdAt)}
+                            </time>
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-[12px] text-navy-600">{share.body}</p>
+                          {share.error ? <p className="mt-0.5 text-[11px] text-red-700">{share.error}</p> : null}
+                        </div>
+                        {share.status === "deleted" ? null : (
+                          <form action={deleteShareAction}>
+                            <input type="hidden" name="projectId" value={projectId} />
+                            <input type="hidden" name="shareId" value={share.id} />
+                            <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                              Delete post
+                            </SubmitButton>
+                          </form>
+                        )}
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </Card>
+            ) : null}
           </div>
 
           <aside className="space-y-4">

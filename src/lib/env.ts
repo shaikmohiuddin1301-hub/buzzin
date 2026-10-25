@@ -60,6 +60,13 @@ export const env = {
     // integration cannot be switched on accidentally.
     return false && bool("PAYMENTS_ENABLED", false);
   },
+  /** Ayrshare is the social publishing provider; unset means the feature fails closed. */
+  get ayrshareApiKey() {
+    return str("AYRSHARE_API_KEY");
+  },
+  get ayrshareBaseUrl() {
+    return str("AYRSHARE_BASE_URL", "https://api.ayrshare.com/api").replace(/\/$/, "");
+  },
   get maxUploadMb() {
     return num("MAX_UPLOAD_MB", 10);
   },

@@ -35,6 +35,8 @@ Every variable has a safe default, so the app boots without any of them. Product
 | `STORAGE_DRIVER` | `local` | `local` (private folder) or `s3` (seam that returns 501 until implemented). |
 | `STORAGE_LOCAL_DIR` | `./storage` | Private media directory. Must be on a persistent volume. |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | empty | Reserved for the S3 adapter. |
+| `AYRSHARE_API_KEY` | empty | Social publishing. Unset means the share panel fails closed with a clear message. |
+| `AYRSHARE_BASE_URL` | `https://api.ayrshare.com/api` | Provider base URL; override only for a compatible proxy or a test double. |
 | `AI_PROVIDER` | `local` | `local` = deterministic, source-cited storyboard generator. |
 | `AI_API_KEY` / `AI_MODEL` | empty | Reserved for a hosted provider. |
 | `VIDEO_PROVIDER` | `local` | `local` = animated SVG renderer. |
@@ -254,3 +256,27 @@ Also back up the `storage/` directory; a database without its media is a broken 
 | Story generation says "not enough approved documentation" | No public, consented material | Approve work-log entries/milestones or publish a project update |
 | Admin pages redirect to `/home` | Account lacks `is_admin`/`is_moderator` | Grant the role in the database and sign in again |
 | `no such table` | Migrations not applied to that database file | `npm run db:migrate` with the same `DATABASE_PATH` |
+
+## 8. Social publishing (Ayrshare)
+
+Project owners can publish a **public** project update to X/Twitter, LinkedIn, Facebook,
+Instagram, Reddit, Telegram, YouTube or Google Business Profile from the project's Progress tab.
+The integration is deliberately narrow and server-side:
+
+- `src/lib/ayrshare.ts` calls Ayrshare's REST API directly (the endpoints of the
+  `social-media-api` SDK in <https://github.com/ayrshare/social-media-api>: post, delete,
+  history, user). No SDK package is vendored and the key never reaches the browser.
+- `src/services/socialShares.ts` enforces the rules: editors only, published projects only,
+  public updates only, the project link always appended, every attempt recorded in
+  `social_shares` (including failures and the exact text published).
+- Deleting a share removes the post at the provider first, then marks the record `deleted`.
+
+Setup:
+
+1. Create an Ayrshare account and link the networks you want to post to in its dashboard.
+2. Set `AYRSHARE_API_KEY` in the deployment environment and restart.
+3. Check `/api/health`: `"social": "ayrshare"` means the key is present (it does not prove a
+   network is linked — verify with one share from a project you own).
+
+Unset means the panel says so and no request is attempted. X/Twitter requires your own X
+developer credentials in Ayrshare's BYO configuration; that is configured on their side.

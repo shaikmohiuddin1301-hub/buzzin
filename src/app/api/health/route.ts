@@ -57,6 +57,7 @@ export async function GET() {
       narrationProvider: env.aiProvider,
       videoProvider: env.videoProvider,
       email: env.emailProvider,
+      social: env.ayrshareApiKey ? "ayrshare" : "unconfigured",
       paymentsEnabled: env.paymentsEnabled,
       ...(env.demoMode
         ? {

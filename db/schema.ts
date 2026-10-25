@@ -358,6 +358,32 @@ export const projectUpdates = sqliteTable(
 
 /* ---------------------------------- tasks --------------------------------- */
 
+/**
+ * One row per attempt to publish a BuildTogether update to social networks through Ayrshare.
+ *
+ * The post body is stored because the platform copy can differ from the in-app update (an
+ * owner may shorten it), and `remoteId` is kept so a share can be deleted upstream rather
+ * than only forgotten locally.
+ */
+export const socialShares = sqliteTable(
+  "social_shares",
+  {
+    id: uuid(),
+    projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    updateId: text("update_id").references(() => projectUpdates.id, { onDelete: "set null" }),
+    authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull().default("ayrshare"),
+    platforms: text("platforms", { mode: "json" }).$type<string[]>().notNull(),
+    body: text("body").notNull(),
+    remoteId: text("remote_id"),
+    status: text("status").$type<"pending" | "posted" | "failed" | "deleted">().notNull().default("pending"),
+    error: text("error"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("social_shares_project_idx").on(t.projectId, t.createdAt)],
+);
+
 export const tasks = sqliteTable(
   "tasks",
   {
