@@ -109,8 +109,13 @@ be shared by two processes.
 - **Fly.io**: `fly launch --dockerfile Dockerfile`, then `fly volumes create data --size 1` and
   `fly volumes create media --size 1`; mount them at `/app/data` and `/app/storage` in
   `fly.toml`, and run a single machine.
-- **Render**: create a Web Service from the repo with runtime *Docker*, add a Disk mounted at
-  `/app/data` (and another at `/app/storage`), health check path `/api/health`.
+- **Render**: the repository ships a blueprint (`render.yaml`) — Dashboard → **New → Blueprint**,
+  pick the repo, then set `NEXT_PUBLIC_APP_URL` when prompted and redeploy so it is present at
+  build time. The blueprint uses the Docker runtime, a 1 GB disk at `/app/data` holding both the
+  database and uploads, and `/api/health` as the check. **A disk requires a paid instance
+  (Starter and above); Render's free web services have an ephemeral filesystem**, so the free
+  plan will start and then lose all data on the next deploy. Render snapshots the disk daily
+  and keeps seven days of snapshots.
 - **Railway / VPS**: same container, bind-mount the two directories, terminate TLS in front.
 
 Set `SESSION_SECRET` to 32+ random bytes and `NEXT_PUBLIC_APP_URL` to the public HTTPS origin;

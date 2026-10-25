@@ -1,0 +1,42 @@
+# Render blueprint for BuildTogether.
+#
+# This app keeps its data in SQLite plus a local media folder, so it needs a persistent
+# disk. Render only offers disks on paid service types: the free web service plan has an
+# ephemeral filesystem and would lose every account and upload on each deploy or restart.
+#
+# Create via Dashboard → New → Blueprint, pointing at this repository. Then set
+# NEXT_PUBLIC_APP_URL to the service's public URL (Render prompts for it, because it is
+# not known until the service exists) and redeploy, so the value is present at build time.
+#
+# One service, one disk: Render attaches a single disk per service, so the database and the
+# uploads share it (/app/data/buildtogether.db and /app/data/storage).
+
+services:
+  - type: web
+    name: buildtogether
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: DATABASE_PATH
+        value: /app/data/buildtogether.db
+      - key: STORAGE_LOCAL_DIR
+        value: /app/data/storage
+      - key: STORAGE_DRIVER
+        value: local
+      - key: EMAIL_PROVIDER
+        value: console
+      - key: PAYMENTS_ENABLED
+        value: "false"
+    disk:
+      name: buildtogether-data
+      mountPath: /app/data
+      sizeGB: 1
