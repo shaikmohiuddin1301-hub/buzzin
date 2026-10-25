@@ -117,7 +117,10 @@ be shared by two processes.
   database and uploads, and `/api/health` as the check. **A disk requires a paid instance
   (Starter and above); Render's free web services have an ephemeral filesystem**, so the free
   plan will start and then lose all data on the next deploy. Render snapshots the disk daily
-  and keeps seven days of snapshots.
+  and keeps seven days of snapshots. Leave the service's **Docker Command** empty: Render
+  passes it as a single argument to `sh -c`, so a pipeline containing `&&` exits 127 at boot
+  and the deploy silently rolls back to the previous container. The image's exec-form `CMD`
+  already runs migrations, first-boot seeding and `next start`.
 - **Railway / VPS**: same container, bind-mount the two directories, terminate TLS in front.
 
 Set `SESSION_SECRET` to 32+ random bytes and `NEXT_PUBLIC_APP_URL` to the public HTTPS origin;
