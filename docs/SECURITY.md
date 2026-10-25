@@ -50,8 +50,10 @@ Private projects return `404`, not `403`, so outsiders cannot probe for existenc
 - **Validation in services**: lengths, enums, numeric ranges and cross-record rules (e.g. a task must belong to the project named in an interest request). React/Next escape output by default; no `dangerouslySetInnerHTML` is used for user content.
 - **SQL injection**: all queries go through Drizzle's parameter binding; the only raw fragments are static SQL with bound parameters.
 - **CSRF**: mutations are Next.js server actions, which Next validates against the request origin, combined with `SameSite=lax` session cookies and `httpOnly`. There is no separate CSRF token because there is no cross-origin write surface.
-- **Security headers** (`next.config.ts`): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` denying camera/microphone/geolocation, `Cross-Origin-Opener-Policy: same-origin`, and `poweredByHeader: false`.
-- **Gap:** a page-level Content-Security-Policy is not set (only on the file route). Add one at the reverse proxy or via `headers()` once the final asset origins are known.
+- **Security headers** (`next.config.ts`): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` denying camera/microphone/geolocation, `Cross-Origin-Opener-Policy: same-origin`, `X-DNS-Prefetch-Control: off`, and `poweredByHeader: false`.
+- **Content-Security-Policy**: `default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, images/media limited to self plus `data:`/`blob:`, `connect-src 'self'`. Sent on every route.
+- **Known CSP limitation:** `script-src` and `style-src` still allow `'unsafe-inline'` because Next.js inlines its hydration bootstrap and the marketing pages are statically rendered. Removing it needs a nonce issued in middleware, which forces every route to be dynamic — a deliberate cost/benefit call, not an oversight. Tracked in `docs/ROADMAP.md`.
+- **HSTS**: `max-age=63072000; includeSubDomains`, sent only when `NODE_ENV=production`, so a local http:// server is never pinned. Add `preload` only after the domain is confirmed HTTPS-only.
 
 ## 4. Uploads and media
 
@@ -100,6 +102,8 @@ Media rows carry `visibility` and owner/project links; `canAccessMedia` allows p
 - [x] No secret is referenced in client components (only `NEXT_PUBLIC_APP_URL` is public).
 - [x] Errors are converted to plain messages for users; stack traces are not returned.
 - [x] Audit trail for moderation, role changes, entitlement grants/revocations, story approvals and publication.
+- [x] Audit trail is append-only in the database: `BEFORE UPDATE`/`BEFORE DELETE` triggers on `audit_logs` abort (`db/migrations/1000_audit_append_only.sql`), so history survives application bugs and ad-hoc SQL.
+- [x] `db:seed` refuses to run in production and refuses to wipe a database containing any non-`@example.test` account unless `SEED_ALLOW_NON_DEMO=1` is set explicitly.
 - [x] Database foreign keys and transactions protect multi-step writes.
 - [ ] Structured logging with request ids (currently `console` only, two call sites).
 - [ ] Secret scanning and dependency scanning in CI.
@@ -113,7 +117,7 @@ Media rows carry `visibility` and owner/project links; `canAccessMedia` allows p
 1. Replace SQLite with PostgreSQL and enable managed backups with point-in-time recovery.
 2. Move rate limits to a shared store; add a WAF or edge rate limiting.
 3. Add malware scanning and image re-encoding to the upload path.
-4. Add a page-level CSP and HTTPS-only HSTS at the proxy.
+4. Remove `'unsafe-inline'` from the CSP by introducing a nonce (requires all routes dynamic), and add `preload` to HSTS once the domain is HTTPS-only.
 5. Implement SMTP/API email delivery with SPF, DKIM and DMARC.
 6. Define and implement retention: expired sessions, orphaned media, closed reports, deleted-account tombstones, audit log retention.
 7. Appoint a data protection contact, publish a lawful privacy notice, record processing activities and sign DPAs with every processor.

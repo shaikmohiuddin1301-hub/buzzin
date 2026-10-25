@@ -448,6 +448,27 @@ export function submitWork(
   const id = randomUUID();
 
   transaction((tx) => {
+    // A resubmission is allowed after revisions were requested, but two reviews cannot be
+    // pending for the same task at once: the owner would not know which one they are judging.
+    // The partial unique index in migration 1001 enforces the same rule for racing requests.
+    const pending = tx
+      .select({ id: taskSubmissions.id })
+      .from(taskSubmissions)
+      .where(
+        and(
+          eq(taskSubmissions.taskId, taskId),
+          eq(taskSubmissions.userId, userId),
+          eq(taskSubmissions.status, "submitted"),
+        ),
+      )
+      .get();
+    if (pending) {
+      throw new AppError("You already have work awaiting review on this task. Wait for a decision first.", {
+        status: 409,
+        code: "submission_pending",
+      });
+    }
+
     tx.insert(taskSubmissions)
       .values({ id, taskId, userId, note: input.note.slice(0, 4000), status: "submitted" })
       .run();

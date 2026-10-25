@@ -69,6 +69,13 @@ GET /api/health   →  200 {"status":"ok","database":"ok", ...}
 
 Point the platform's health check at this endpoint. It probes the database, reports the storage/email/AI provider modes and the payment flag, and returns a non-200 status when degraded.
 
+It also names missing production configuration without revealing values, which is the fastest way to diagnose a broken deploy:
+
+```json
+{ "status": "degraded", "database": "ok", "schemaReady": true,
+  "config": "incomplete", "configIssues": ["SESSION_SECRET is not set"] }
+```
+
 ### Recommended hosting shape
 
 Any platform that runs a long-lived Node process with a persistent disk works:
@@ -78,6 +85,46 @@ Any platform that runs a long-lived Node process with a persistent disk works:
 3. **Vercel + PostgreSQL** after completing the migration path in §5 — serverless filesystems cannot hold SQLite or the local media folder.
 
 Do not run multiple instances against one SQLite file. If you need horizontal scaling, do §5 first and move media to object storage and rate limits to Redis.
+
+### Serverless hosting (Netlify, Vercel Functions) is not supported
+
+Deploying this build to Netlify fails at runtime with:
+
+```
+Application error: a server-side exception has occurred ... Digest: 1577178729
+```
+
+That is the expected result, not a bug in the page. A serverless function has a read-only
+bundle filesystem, and this build stores its data in SQLite plus a local media folder:
+
+- `db/client.ts` creates `data/buildtogether.db` on first use. `mkdir`/`open` fails with
+  `EROFS`/`EACCES`, so every request that touches the database throws.
+- Even with a writable directory, functions are ephemeral: the file would be discarded on the
+  next cold start, silently deleting accounts, projects and sessions.
+- Uploads in `storage/` have the same problem, and in-memory rate limits do not survive a
+  cold start.
+
+**Diagnosing any deployment:** open `/api/health`. It now returns a reason code instead of a
+digest:
+
+```json
+{ "status": "degraded", "database": "error", "databaseReason": "read_only_filesystem", "schemaReady": null }
+```
+
+| `databaseReason` | Meaning | Fix |
+| --- | --- | --- |
+| `read_only_filesystem` | The process cannot create or write the database file | Run on a host with a persistent volume, or complete §5 |
+| `native_module_missing` | `better-sqlite3` was not packaged into the build | Deploy from a container or full Node host, not a bundle-only platform |
+| `cannot_open` | The path exists but is not a usable database | Check `DATABASE_PATH` and file permissions |
+| `schema_missing` | Connected, but migrations were never applied | Run `npm run db:migrate` against that database |
+| `query_failed` | The database answers but the query failed | Read the server logs |
+
+Application errors now render a diagnostic page that names the reason and links to
+`/api/health` (`src/app/error.tsx`, `src/app/global-error.tsx`) rather than the framework's
+generic digest screen.
+
+To host this build today, use option 1 or 2 above. To host it on Netlify or Vercel, §5 must be
+completed first — there is no configuration flag that makes SQLite persistent on serverless.
 
 ## 4. First-run checklist
 
@@ -90,7 +137,9 @@ Do not run multiple instances against one SQLite file. If you need horizontal sc
    ```
    There is no self-service admin escalation by design.
 5. Verify `/api/health`, sign-up, email verification (inspect `data/outbox.log` until SMTP is configured), creating a project, and an admin sign-in to `/admin`.
-6. Configure the reverse proxy for HTTPS, HSTS and (optionally) a page-level CSP.
+6. Terminate TLS at the proxy or platform. The app already sends `Strict-Transport-Security`
+   and a `Content-Security-Policy` in production builds (see `next.config.ts`); HSTS is sent
+   only when `NODE_ENV=production`, so a local http:// server is never pinned.
 
 ## 5. Moving to PostgreSQL
 

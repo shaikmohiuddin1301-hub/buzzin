@@ -84,9 +84,59 @@ function wipe() {
     .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name <> '_migrations'")
     .all()
     .map((row) => (row as { name: string }).name);
-  sqlite.pragma("foreign_keys = OFF");
-  for (const table of tables) sqlite.exec(`DELETE FROM "${table}"`);
-  sqlite.pragma("foreign_keys = ON");
+
+  // Database guards (audit_logs is append-only, see db/migrations/1000) would abort this
+  // destructive reset. Capture their definitions, drop them for the wipe, and put them back
+  // exactly as they were — including in a finally block, so a failed seed never leaves the
+  // database without its guards.
+  const guards = sqlite
+    .prepare("SELECT name, sql FROM sqlite_master WHERE type = 'trigger' AND sql IS NOT NULL")
+    .all() as { name: string; sql: string }[];
+  for (const guard of guards) sqlite.exec(`DROP TRIGGER "${guard.name}"`);
+
+  try {
+    sqlite.pragma("foreign_keys = OFF");
+    for (const table of tables) sqlite.exec(`DELETE FROM "${table}"`);
+  } finally {
+    sqlite.pragma("foreign_keys = ON");
+    for (const guard of guards) sqlite.exec(guard.sql);
+  }
+}
+
+/**
+ * Refuse to destroy a database that is not obviously a development database.
+ *
+ * `NODE_ENV` alone is not a reliable signal: a staging or production database can be reached
+ * with `NODE_ENV=development`, and this script deletes every row before inserting fixtures.
+ * So the second gate looks at the data itself — every account created by this seed uses an
+ * `@example.test` address, so any other address means real people signed up here.
+ */
+function assertSafeToWipe() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "db:seed refuses to run in production: it would delete real data. Run it against a development database only.",
+    );
+  }
+  if (process.env.SEED_ALLOW_NON_DEMO === "1") {
+    console.warn("SEED_ALLOW_NON_DEMO=1: wiping a database that holds non-demo accounts.");
+    return;
+  }
+
+  const sqlite = getSqlite();
+  const hasUsers = sqlite
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'")
+    .get();
+  if (!hasUsers) return;
+
+  const real = sqlite
+    .prepare("SELECT email FROM users WHERE email NOT LIKE '%@example.test' LIMIT 1")
+    .get() as { email: string } | undefined;
+  if (real) {
+    throw new Error(
+      `db:seed refuses to wipe this database: it contains a non-demo account (${real.email}). ` +
+        "Point DATABASE_PATH at a development database, or set SEED_ALLOW_NON_DEMO=1 if you are certain.",
+    );
+  }
 }
 
 function coverSvg(title: string, accent: string): Buffer {
@@ -114,16 +164,13 @@ function coverSvg(title: string, accent: string): Buffer {
 }
 
 async function main() {
-  // This script deletes every application row before inserting demo fixtures.
-  // It must never be able to reach a production database.
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "db:seed refuses to run in production: it would delete real data. Run it against a development database only.",
-    );
-  }
+  // This script deletes every application row before inserting demo fixtures. It must never
+  // be able to reach a production database — see assertSafeToWipe for the two gates.
+  assertSafeToWipe();
 
   console.log("Applying migrations…");
   runMigrations();
+  assertSafeToWipe();
   console.log("Clearing existing data…");
   wipe();
 

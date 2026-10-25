@@ -86,4 +86,24 @@ export const env = {
   get showDevEmailLinks() {
     return !this.isProduction && this.emailProvider === "console";
   },
+  /**
+   * Configuration problems that will break the running app.
+   *
+   * Names only — never values. `/api/health` exposes this so a broken deployment can be
+   * diagnosed from the browser instead of from a bundler stack trace.
+   */
+  get configIssues(): string[] {
+    const issues: string[] = [];
+    if (this.isProduction) {
+      if (!str("SESSION_SECRET")) issues.push("SESSION_SECRET is not set");
+      if (!str("NEXT_PUBLIC_APP_URL")) issues.push("NEXT_PUBLIC_APP_URL is not set");
+    }
+    if (this.storageDriver === "s3") {
+      issues.push("STORAGE_DRIVER=s3 is documented but not implemented; use local storage on a persistent volume");
+    }
+    if (this.emailProvider === "smtp") {
+      issues.push("EMAIL_PROVIDER=smtp is documented but not implemented; verification links go to the console outbox");
+    }
+    return issues;
+  },
 };

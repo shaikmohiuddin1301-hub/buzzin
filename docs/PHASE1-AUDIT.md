@@ -158,18 +158,19 @@ as done.
 
 ## 4. Gaps that matter, ranked
 
-| # | Gap | Risk | Effort |
-| --- | --- | --- | --- |
-| G1 | SQLite, not PostgreSQL | Blocks multi-instance/serverless hosting and the brief's Postgres requirement | **Large** — 577 sync Drizzle call sites must become async; all services and their callers change |
-| G2 | Seed can wipe production | Data loss (irreversible) | Small |
+| # | Gap | Risk | Effort | Status |
+| --- | --- | --- | --- | --- |
+| G1 | SQLite, not PostgreSQL | Blocks multi-instance/serverless hosting and the brief's Postgres requirement | **Large** — 577 sync Drizzle call sites must become async; all services and their callers change | Open — **now the blocker for the Netlify deploy** |
+| G2 | Seed can wipe production | Data loss (irreversible) | Small | **Fixed** — `NODE_ENV=production` plus a non-demo-account check |
 | G3 | No real email transport | No verification or recovery in production | Small once a provider is chosen |
 | G4 | No real object storage | Uploads lost on redeploy without a persistent volume | Medium |
 | G5 | In-memory rate limits | Brute-force protection broken across instances | Medium (needs Redis/Upstash if >1 instance) |
-| G6 | Missing CSP/HSTS | Weaker XSS/transport posture | Small (CSP needs nonce or hash for inline styles) |
-| G7 | Zod unused, hand-rolled validation | Drift as endpoints grow | Medium (mechanical) |
-| G8 | Audit trail not enforced append-only at the DB | Tampering by DB-level access | Small (trigger/revoke grants) |
-| G9 | No HTTP-level or migration tests | Route-level regressions escape | Medium |
-| G10 | No deploy artifacts/CI/monitoring | Operational guesswork | Medium |
+| G6 | Missing CSP/HSTS | Weaker XSS/transport posture | Small (CSP needs nonce or hash for inline styles) | **Fixed** — CSP on every route, HSTS in production; `'unsafe-inline'` remains (documented) |
+| G7 | Zod unused, hand-rolled validation | Drift as endpoints grow | Medium (mechanical) | **Open** |
+| G8 | Audit trail not enforced append-only at the DB | Tampering by DB-level access | Small (trigger/revoke grants) | **Fixed** — `BEFORE UPDATE`/`BEFORE DELETE` triggers, migration `1000` |
+| G9 | No HTTP-level or migration tests | Route-level regressions escape | Medium | Partial — migration and DB-constraint tests added; routes still untested |
+| G10 | No deploy artifacts/CI/monitoring | Operational guesswork | Medium | **Open** |
+| G11 | Failures surface as an opaque digest | Undiagnosable production outages | Small | **Fixed** — `/api/health` returns a reason code; error boundaries explain it |
 
 ## 5. The decision that determines everything else
 
