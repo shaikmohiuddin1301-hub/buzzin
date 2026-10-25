@@ -16,10 +16,16 @@
     "db:seed": "tsx db/seed.ts",
     "db:seed:first-boot": "tsx db/seed-if-empty.ts",
     "db:reset": "tsx db/reset.ts",
+    "cap:sync": "cap sync",
+    "cap:android": "cap sync android",
+    "cap:ios": "cap sync ios",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "better-sqlite3": "11.10.0",
     "drizzle-orm": "0.44.6",
     "lucide-react": "0.470.0",
@@ -29,6 +35,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "22.10.5",
     "@types/react": "19.1.9",

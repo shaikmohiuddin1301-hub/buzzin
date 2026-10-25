@@ -1,0 +1,125 @@
+name: Mobile builds
+
+# Builds the native shell on every push to main and for manual runs.
+#
+# Android produces an installable debug APK (debug keystore, no secrets required).
+# iOS produces an unsigned simulator build: an installable .ipa requires an Apple Developer
+# account, a distribution certificate, a provisioning profile and an App Store Connect key.
+# Those are not invented here — see docs/MOBILE.md for the signing steps.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  # The shell loads the deployed application. Override with a repository variable to point a
+  # build at a staging origin; only https:// is accepted by the config.
+  APP_URL: ${{ vars.BUILDTOGETHER_APP_URL || 'https://buildtogether-e6cb.onrender.com' }}
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync web assets and native config
+        env:
+          BUILDTOGETHER_APP_URL: ${{ env.APP_URL }}
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Verify the APK exists
+        run: |
+          test -f android/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buildtogether-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    name: iOS (simulator build)
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync web assets and native config
+        env:
+          BUILDTOGETHER_APP_URL: ${{ env.APP_URL }}
+        run: npx cap sync ios
+
+      - name: Report Xcode version
+        run: xcodebuild -version
+
+      - name: Build for simulator (unsigned)
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package the simulator app
+        run: |
+          APP_PATH="$(find ios/build/Build/Products -name 'App.app' -maxdepth 3 | head -1)"
+          if [ -z "$APP_PATH" ]; then echo "No App.app produced"; exit 1; fi
+          echo "Built: $APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" buildtogether-ios-simulator.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: buildtogether-ios-simulator
+          path: buildtogether-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 30
