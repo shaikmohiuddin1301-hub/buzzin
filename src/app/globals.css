@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --ring: 109 74 255;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-muted text-navy-900 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-navy-950;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Visible focus for keyboard users everywhere. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: #d5cdff;
+    color: #131e33;
+  }
+
+  /* Respect the OS reduced-motion setting for all decorative animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  [data-reduce-motion="true"] * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@layer components {
+  .prose-bt {
+    @apply text-[15px] leading-7 text-navy-700;
+  }
+  .prose-bt h2 {
+    @apply mt-8 mb-2 text-xl font-semibold text-navy-950;
+  }
+  .prose-bt h3 {
+    @apply mt-6 mb-2 text-base font-semibold text-navy-950;
+  }
+  .prose-bt p {
+    @apply mb-4;
+  }
+  .prose-bt ul {
+    @apply mb-4 list-disc space-y-1 pl-5;
+  }
+  .prose-bt ol {
+    @apply mb-4 list-decimal space-y-1 pl-5;
+  }
+  .prose-bt a {
+    @apply text-brand-700 underline underline-offset-2 hover:text-brand-800;
+  }
+  .prose-bt blockquote {
+    @apply my-4 border-l-2 border-brand-300 pl-4 italic text-navy-600;
+  }
+  .prose-bt code {
+    @apply rounded bg-navy-100 px-1.5 py-0.5 font-mono text-[13px];
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-navy-100;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent;
+  }
+
+  .field-input {
+    @apply w-full rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 placeholder:text-navy-400 shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-navy-50;
+  }
+
+  .card-surface {
+    @apply rounded-xl border border-navy-200/80 bg-white shadow-card;
+  }
+}

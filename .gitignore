@@ -1,0 +1,30 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+
+# Local database and private object storage (never commit user data)
+data/
+storage/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local safety checkpoint archive (pre-hardening snapshot)
+checkpoints/
