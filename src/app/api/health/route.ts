@@ -17,6 +17,7 @@ export async function GET() {
   let database: "ok" | "error" = "ok";
   let databaseReason: string | null = null;
   let schemaReady: boolean | null = null;
+  let demoAccounts: number | null = null;
 
   try {
     getDb().run(sql`select 1`);
@@ -24,6 +25,11 @@ export async function GET() {
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'")
       .get();
     schemaReady = Boolean(row);
+    if (schemaReady && env.demoMode) {
+      // Demo deployments only: distinguishes "first-boot seeding never ran" from "it ran and
+      // this database already had accounts". A count, never an address or a name.
+      demoAccounts = (getSqlite().prepare("SELECT COUNT(*) AS count FROM users").get() as { count: number }).count;
+    }
   } catch (error) {
     database = "error";
     databaseReason =
@@ -50,6 +56,7 @@ export async function GET() {
       videoProvider: env.videoProvider,
       email: env.emailProvider,
       paymentsEnabled: env.paymentsEnabled,
+      ...(env.demoMode ? { demoMode: true, demoAccounts } : {}),
       uptimeSeconds: Math.round(process.uptime()),
       checkMs: Date.now() - started,
     },

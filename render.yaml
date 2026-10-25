@@ -17,6 +17,10 @@ services:
     runtime: docker
     plan: starter
     dockerfilePath: ./Dockerfile
+    # Pinned here as well as in the Dockerfile: a service-level start command overrides the
+    # image's CMD, and a start command without the seed step leaves a demo deployment empty.
+    # Seeding failures are logged and do not stop the app from serving.
+    dockerCommand: sh -c "npm run db:migrate && (npm run db:seed:first-boot || echo '[boot] first-boot seeding failed; starting without demo data') && exec npm start"
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
