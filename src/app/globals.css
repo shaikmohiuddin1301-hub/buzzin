@@ -105,3 +105,123 @@
     @apply rounded-xl border border-navy-200/80 bg-white shadow-card;
   }
 }
+
+/*
+ * Motion system.
+ *
+ * One vocabulary, three durations:
+ *   - feedback (120–180 ms): hover, press, active indicators
+ *   - transition (150–300 ms): pages, sheets, cards
+ *   - accepted work (400–700 ms): the one meaningful, celebratory movement
+ *
+ * Everything is transform/opacity only, and the reduced-motion rule at the top of this file
+ * collapses all of it to near-zero, so no information depends on movement.
+ */
+@layer utilities {
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-page {
+      animation: bt-page-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+    .motion-fade {
+      animation: bt-fade-in 160ms ease-out both;
+    }
+    .motion-sheet {
+      animation: bt-sheet-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+    .motion-card {
+      transition:
+        transform 160ms ease,
+        box-shadow 160ms ease;
+    }
+    .motion-card:hover {
+      transform: translateY(-2px);
+    }
+    .motion-card:active {
+      transform: translateY(0) scale(0.995);
+    }
+    .motion-lift {
+      animation: bt-lift 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+    .motion-check {
+      animation: bt-check 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 180ms both;
+    }
+    .motion-file {
+      animation: bt-file 700ms cubic-bezier(0.2, 0.7, 0.2, 1) 160ms both;
+    }
+  }
+}
+
+@keyframes bt-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bt-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bt-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bt-lift {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bt-check {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bt-file {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}

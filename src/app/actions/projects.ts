@@ -409,13 +409,17 @@ export async function reviewSubmissionAction(formData: FormData) {
   const taskId = str(formData, "taskId");
   await runServerAction(`/tasks/${taskId}`, async () => {
     const user = await requireUserOrThrow();
-    reviewSubmission(
-      str(formData, "submissionId"),
-      user,
-      str(formData, "decision", "accepted") as "accepted" | "revision_requested",
-      optional(formData, "reason"),
-    );
-    return { path: `/tasks/${taskId}?notice=Review+recorded.`, revalidate: [`/tasks/${taskId}`] };
+    const decision = str(formData, "decision", "accepted") as "accepted" | "revision_requested";
+    reviewSubmission(str(formData, "submissionId"), user, decision, optional(formData, "reason"));
+    // `approved=1` is only ever set after the approval is persisted, and the page uses it to
+    // play the accepted-work animation once. A failure throws above and never reaches here.
+    return {
+      path:
+        decision === "accepted"
+          ? `/tasks/${taskId}?notice=Work+approved+and+filed.&approved=1`
+          : `/tasks/${taskId}?notice=Changes+requested.`,
+      revalidate: [`/tasks/${taskId}`],
+    };
   });
 }
 

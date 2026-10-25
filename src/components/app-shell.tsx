@@ -6,6 +6,7 @@ import {
   BookOpen,
   Briefcase,
   Compass,
+  FolderKanban,
   Home,
   LayoutDashboard,
   MessageSquare,
@@ -19,9 +20,11 @@ import { getDb } from "@/db/client";
 import { projectInvitations } from "@/db/schema";
 import { signOutAction } from "@/app/actions/auth";
 import { Avatar, Badge, cn } from "@/components/ui";
+import { BottomTabs } from "@/components/client/bottom-tabs";
 import { MobileNav } from "@/components/client/app-nav";
 import { Logo } from "@/components/logo";
 import { unreadMessageCount } from "@/services/chat";
+import { projectsForUser } from "@/services/projects";
 import { unreadNotificationCount } from "@/services/notifications";
 import type { SessionUser } from "@/lib/session";
 
@@ -86,17 +89,23 @@ export async function AppShell({
   const isActive = (href: string) =>
     href === "/home" ? activePath === "/home" : activePath === href || activePath.startsWith(`${href}/`);
 
+  // The same six destinations as the mobile bar (Create is the button above them).
   const primary = [
     { href: "/home", label: "Home", icon: <Home size={17} aria-hidden="true" /> },
     { href: "/explore", label: "Explore", icon: <Compass size={17} aria-hidden="true" /> },
-    { href: "/projects/new", label: "Create", icon: <Plus size={17} aria-hidden="true" /> },
     { href: "/chats", label: "Chats", icon: <MessageSquare size={17} aria-hidden="true" />, badge: messages },
-    { href: "/learn", label: "Learn", icon: <BookOpen size={17} aria-hidden="true" /> },
-    { href: "/notifications", label: "Notifications", icon: <Bell size={17} aria-hidden="true" />, badge: notifications },
+    { href: "/learn", label: "Learning", icon: <BookOpen size={17} aria-hidden="true" /> },
+    { href: "/projects", label: "Projects", icon: <FolderKanban size={17} aria-hidden="true" /> },
     { href: `/u/${user.username}`, label: "Profile", icon: <UserRound size={17} aria-hidden="true" /> },
   ];
 
+  const editableProjects = projectsForUser(user.id).owned.slice(0, 12).map((project) => ({
+    id: project.id,
+    name: project.name,
+  }));
+
   const secondary = [
+    { href: "/notifications", label: "Notifications", icon: <Bell size={16} aria-hidden="true" /> },
     { href: "/studio", label: "Creator studio", icon: <LayoutDashboard size={16} aria-hidden="true" /> },
     { href: "/business", label: "Business", icon: <Briefcase size={16} aria-hidden="true" /> },
     { href: "/challenges", label: "Challenges", icon: <Blocks size={16} aria-hidden="true" /> },
@@ -187,8 +196,7 @@ export async function AppShell({
               </div>
               <MobileNav
                 items={[
-                  ...primary.map((item) => ({ ...item })),
-                  ...secondary.map((item) => ({ ...item })),
+                  ...secondary.map((item) => ({ ...item, badge: item.href === "/notifications" ? notifications : undefined })),
                   ...(user.isAdmin || user.isModerator
                     ? [{ href: "/admin", label: "Admin", icon: <Shield size={16} aria-hidden="true" /> }]
                     : []),
@@ -246,9 +254,14 @@ export async function AppShell({
             </div>
           </header>
 
-          <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
+          <main
+            id="main"
+            className="mx-auto w-full max-w-6xl px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 lg:pb-8 lg:pt-8"
+          >
             {children}
           </main>
+
+          <BottomTabs username={user.username} unread={messages} projects={editableProjects} />
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import {
   submitWorkAction,
 } from "@/app/actions/projects";
 import { commentAction } from "@/app/actions/social";
+import { AcceptedWorkCelebration } from "@/components/client/accepted-work";
 import { SubmitButton } from "@/components/client/submit-button";
 import { CommentThread } from "@/components/comments";
 import { ReportForm } from "@/components/report-form";
@@ -62,6 +63,8 @@ export default async function TaskPage({
   const project = projectAccess.project;
   const returnTo = `/tasks/${taskId}`;
   const comments = listComments("task", taskId, user);
+  // Set by reviewSubmissionAction only after the approval was written.
+  const justApproved = query.approved === "1";
 
   const candidateMembers = canReview
     ? getDb()
@@ -118,6 +121,7 @@ export default async function TaskPage({
       />
 
       <Flash error={error} notice={notice} />
+      <AcceptedWorkCelebration show={justApproved} title={task.title} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
