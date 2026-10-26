@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BellOff, LogOut, Send, ShieldAlert } from "lucide-react";
 import {
+  createDropFromMessageAction,
   leaveConversationAction,
   markReadAction,
   muteConversationAction,
@@ -27,6 +28,7 @@ import {
 import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { formatDate, relativeTime } from "@/lib/format";
+import { getProjectAccess } from "@/lib/authz";
 import { conversationDetail } from "@/services/chat";
 import { getMedia, signedMediaUrl } from "@/lib/storage";
 import { REPORT_REASONS, label } from "@/lib/types";
@@ -52,7 +54,10 @@ export default async function ConversationPage({
     notFound();
   }
 
-  const { conversation, member, members, messages, project } = detail;
+  const { conversation, member, members, messages, project, area } = detail;
+  // Filing a Drop is a project-management action, not a chat action, so it follows
+  // the project's edit permission rather than conversation membership.
+  const canFileDrop = project ? (getProjectAccess(project.id, user)?.canEdit ?? false) : false;
   const title =
     conversation.kind === "direct"
       ? (members.find((entry) => entry.id !== user.id)?.displayName ?? "Direct message")
@@ -68,7 +73,11 @@ export default async function ConversationPage({
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-navy-950">{title}</h1>
           <p className="mt-0.5 text-[12px] text-navy-500">
-            {conversation.kind === "group" ? "Private project group chat" : "Direct message"} · {members.length} participant
+            {area
+              ? `Private work area chat · ${area.name}`
+              : conversation.kind === "group"
+                ? "Private project group chat"
+                : "Direct message"} · {members.length} participant
             {members.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -101,12 +110,15 @@ export default async function ConversationPage({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <Card className="flex min-h-[420px] flex-col">
           {project ? (
-            <div className="border-b border-navy-100 bg-navy-50/60 px-4 py-2 text-[11.5px] text-navy-600">
-              Team chat for{" "}
-              <Link href={`/projects/${project.id}`} className="font-medium text-brand-700 underline">
-                {project.name}
-              </Link>
-              . Access is revoked automatically when someone leaves the team.
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-100 bg-navy-50/60 px-4 py-2 text-[11.5px] text-navy-600">
+              {area ? <Badge tone="brand">{area.name}</Badge> : null}
+              <span>
+                {area ? "Work area chat for" : "Team chat for"}{" "}
+                <Link href={`/projects/${project.id}`} className="font-medium text-brand-700 underline">
+                  {project.name}
+                </Link>
+                . Access is revoked automatically when someone leaves the team.
+              </span>
             </div>
           ) : null}
 
@@ -114,13 +126,29 @@ export default async function ConversationPage({
             {messages.map((row) => {
               const mine = row.message.senderId === user.id;
               const attachment = row.message.attachmentId ? getMedia(row.message.attachmentId) : null;
+              const parent = row.message.parentId
+                ? messages.find((candidate) => candidate.message.id === row.message.parentId)
+                : null;
               return (
-                <div key={row.message.id} className={cn("flex gap-2.5", mine ? "flex-row-reverse" : "")}>
+                <div
+                  key={row.message.id}
+                  id={`m-${row.message.id}`}
+                  className={cn(
+                    "flex gap-2.5 scroll-mt-20",
+                    mine ? "flex-row-reverse" : "",
+                    row.message.parentId ? "ml-5 border-l-2 border-navy-100 pl-3" : "",
+                  )}
+                >
                   <Avatar name={row.senderName} size={28} src={row.senderAvatar ? `/api/files/${row.senderAvatar}` : null} />
                   <div className={cn("max-w-[80%]", mine ? "text-right" : "")}>
                     <p className="text-[10.5px] text-navy-500">
                       {mine ? "You" : row.senderName} · {relativeTime(row.message.createdAt)}
                     </p>
+                    {parent ? (
+                      <p className={cn("mb-1 max-w-full truncate text-[10.5px] text-navy-500", mine ? "text-right" : "")}>
+                        Replying to {parent.senderName}: “{parent.message.body.slice(0, 80)}”
+                      </p>
+                    ) : null}
                     <div
                       className={cn(
                         "mt-0.5 inline-block rounded-lg px-3 py-2 text-left text-[12.5px] leading-5",
@@ -142,6 +170,38 @@ export default async function ConversationPage({
                           sizeBytes={attachment.sizeBytes}
                           signed={signedMediaUrl(attachment.id)}
                         />
+                      </div>
+                    ) : null}
+                    {!row.message.deletedAt ? (
+                      <div className={cn("mt-1 flex flex-wrap items-center gap-2 text-[10px]", mine ? "justify-end" : "")}>
+                        {!row.message.parentId ? (
+                          <details className="text-left">
+                            <summary className="cursor-pointer text-navy-400 hover:text-navy-600">Reply</summary>
+                            <form action={sendMessageAction} className="mt-1 w-64 space-y-1 rounded-md border border-navy-200 bg-white p-2">
+                              <input type="hidden" name="conversationId" value={conversationId} />
+                              <input type="hidden" name="parentId" value={row.message.id} />
+                              <Textarea name="body" rows={2} required maxLength={4000} aria-label="Reply" placeholder="Write a reply…" />
+                              <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="…">
+                                Send reply
+                              </SubmitButton>
+                            </form>
+                          </details>
+                        ) : null}
+                        {canFileDrop ? (
+                          row.message.taskId ? (
+                            <Link href={`/tasks/${row.message.taskId}`} className="text-brand-700 underline">
+                              Filed as a Drop
+                            </Link>
+                          ) : (
+                            <form action={createDropFromMessageAction}>
+                              <input type="hidden" name="conversationId" value={conversationId} />
+                              <input type="hidden" name="messageId" value={row.message.id} />
+                              <SubmitButton size="sm" variant="ghost" pendingLabel="Filing…" className="h-6 px-1.5 text-[10px]">
+                                Create Drop
+                              </SubmitButton>
+                            </form>
+                          )
+                        ) : null}
                       </div>
                     ) : null}
                     {!mine && !row.message.deletedAt ? (

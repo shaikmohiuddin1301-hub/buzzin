@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createProjectAction } from "@/app/actions/projects";
+import { createProjectAction, quickCreateProjectAction } from "@/app/actions/projects";
 import { SubmitButton } from "@/components/client/submit-button";
 import {
   Alert,
@@ -42,7 +42,7 @@ export default async function NewProjectPage({
       <PageHeader
         eyebrow="Create"
         title="Start a project"
-        description="Six short sections. Save it as a draft at any point — nothing is public until you publish."
+        description="Four answers and you have a workspace: a team chat, a place for Drops, and an Accepted Work collection that fills itself. Add the rest whenever you want."
         actions={
           <ButtonLink href="/explore" variant="ghost" size="sm">
             Cancel
@@ -63,7 +63,54 @@ export default async function NewProjectPage({
         </div>
       ) : null}
 
-      <form action={createProjectAction} className="space-y-5">
+      <Card className="mb-5 p-5">
+        <h2 className="text-[15px] font-semibold text-navy-950">Quick start</h2>
+        <p className="mt-1 text-[12.5px] leading-6 text-navy-500">
+          No boards, sprints or templates to set up first. Your project starts with a team chat and a project inbox for work.
+        </p>
+        <form action={quickCreateProjectAction} className="mt-4 space-y-4">
+          <Field label="Project name" htmlFor="quickName" required hint="Concrete beats clever. “River Watch” not “Project Phoenix”.">
+            <Input id="quickName" name="name" required maxLength={120} placeholder="River Watch" />
+          </Field>
+          <Field label="Goal" htmlFor="quickGoal" hint="The outcome you want this project to produce. Plain language is fine.">
+            <Textarea id="quickGoal" name="goal" rows={2} maxLength={8000} placeholder="A repairable sensor kit that a volunteer can assemble in an afternoon." />
+          </Field>
+          <Field label="Short description" htmlFor="quickShortDescription" required hint="One or two sentences shown in discovery. At least 20 characters.">
+            <Textarea
+              id="quickShortDescription"
+              name="shortDescription"
+              required
+              minLength={20}
+              maxLength={240}
+              rows={2}
+              placeholder="Volunteers build and deploy low-cost river sensors, and everything we learn is published openly."
+            />
+          </Field>
+          <div className="grid items-end gap-4 sm:grid-cols-[220px_auto]">
+            <Field label="Who can see this project" htmlFor="quickVisibility">
+              <Select id="quickVisibility" name="visibility" defaultValue="public">
+                {VISIBILITIES.map((visibility) => (
+                  <option key={visibility} value={visibility}>
+                    {label(visibility)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <SubmitButton size="lg" pendingLabel="Creating…">
+              Create project
+            </SubmitButton>
+          </div>
+        </form>
+      </Card>
+
+      <details className="rounded-xl border border-navy-200 bg-white shadow-card">
+        <summary className="cursor-pointer px-5 py-4 text-[13px] font-semibold text-navy-800">
+          Plan it in more detail (optional)
+        </summary>
+        <p className="px-5 pb-3 text-[12px] text-navy-500">
+          Milestones, skills, compensation, confidentiality and links. Nothing here is required to start.
+        </p>
+      <form action={createProjectAction} className="space-y-5 border-t border-navy-100 p-5">
         <Card className="p-5">
           <h2 className="text-[15px] font-semibold text-navy-950">
             <span className="mr-2 text-brand-600">01</span>The basics
@@ -235,6 +282,7 @@ export default async function NewProjectPage({
           </div>
         </Card>
       </form>
+      </details>
     </div>
   );
 }

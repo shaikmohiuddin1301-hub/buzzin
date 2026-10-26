@@ -32,6 +32,7 @@ export const PROJECT_CATEGORIES = [
   "community",
   "sustainability",
   "health",
+  "other",
 ] as const;
 export type ProjectCategory = (typeof PROJECT_CATEGORIES)[number];
 

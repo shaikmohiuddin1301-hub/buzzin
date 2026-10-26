@@ -25,6 +25,7 @@ import { slugify } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { getMedia } from "@/lib/storage";
 import { awardReputation, REPUTATION_WEIGHTS } from "@/lib/reputation";
+import { ensureProjectGroup } from "@/services/chat";
 import { upsertSkill } from "@/services/users";
 import type { CompensationType, ProjectCategory, ProjectRole, ProjectStage, Visibility, WorkMode } from "@/lib/types";
 
@@ -261,6 +262,42 @@ export function createProject(ownerId: string, input: CreateProjectInput): { id:
   });
 
   return { id, slug };
+}
+
+export type QuickProjectInput = {
+  name: string;
+  goal?: string;
+  shortDescription: string;
+  visibility: Visibility;
+};
+
+/**
+ * The four-field project path: create the project, then open its team chat.
+ *
+ * Defaults are deliberately modest — category "other" instead of guessing,
+ * stage "idea", unpaid with a stated non-monetary benefit. The quick path must
+ * never claim a budget, a skill set or a milestone that nobody entered.
+ */
+export function createQuickProject(ownerId: string, input: QuickProjectInput) {
+  const { id, slug } = createProject(ownerId, {
+    name: input.name,
+    shortDescription: input.shortDescription,
+    overview: input.goal,
+    category: "other",
+    stage: "idea",
+    visibility: input.visibility,
+    workMode: "remote",
+    compensationType: "unpaid",
+    compensationDetails: "Portfolio credit and a reference. No payment is implied.",
+    allowPublicDocs: input.visibility === "public",
+    links: [],
+    skills: [],
+    milestones: [],
+    publish: true,
+  });
+
+  const conversationId = ensureProjectGroup(id, ownerId);
+  return { id, slug, conversationId };
 }
 
 export function updateProject(

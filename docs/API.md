@@ -75,6 +75,7 @@ searchPeople(query, limit?)
 ### `projects.ts` — projects and teams
 ```ts
 createProject(ownerId, input): { id, slug }               // validates name/description/compensation
+createQuickProject(ownerId, { name, goal?, shortDescription, visibility })  // four fields + team chat
 updateProject(projectId, viewer, patch)
 publishProject(id, viewer) · archiveProject(id, viewer) · deleteProject(id, viewer, typedName)
 projectDetail(id, viewer)                                 // null when not viewable
@@ -178,12 +179,26 @@ publishedStories(limit?) · grantConsent(...) · revokeConsent(...) · storyReso
 ```ts
 listConversations(userId) · unreadMessageCount(userId)
 getOrCreateDirectConversation(a, b): string                // enforces blocks + recipient DM policy
-ensureProjectGroup(projectId, actorId): string             // active members only
+ensureProjectGroup(projectId, actorId): string             // active members only; syncs team membership
+ensureGroupConversation(projectId, title, actorId, existingId?): string
 conversationDetail(id, userId) · markConversationRead(id, userId)
-sendMessage(id, senderId, { body, attachmentId? }): string
+sendMessage(id, senderId, { body, attachmentId?, parentId? }): string   // one reply level
+createDropFromMessage(messageId, viewer): string            // project edit permission; private Drop in the chat's area
 muteConversation(id, userId, muted) · leaveConversation(id, userId)
 reportMessage(messageId, reporterId, reasonCode, details?)
 ```
+
+### `workAreas.ts` — role-style workspaces inside a project
+```ts
+listWorkAreas(projectId, viewer)                          // counts derived from real Drops
+createWorkArea(projectId, viewer, { name, description? }): string   // owner/admin only, creates its chat
+ensureWorkAreaChat(areaId, viewer): string                  // members only, creates lazily
+assignTaskToArea(taskId, viewer, areaId | null)
+workAreaForConversation(conversationId)
+workAreaDropdown(projectId) · deleteWorkArea(areaId, viewer)
+```
+
+A work area is a project-scoped row, not a global role: it owns a group conversation, is the preferred grouping for Accepted Work, and never grants access on its own — project membership still decides who can see anything.
 
 ### `social.ts` — feed and discussion
 ```ts

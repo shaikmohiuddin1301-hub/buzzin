@@ -10,6 +10,7 @@ import {
   addMilestone,
   archiveProject,
   createProject,
+  createQuickProject,
   deleteProject,
   inviteToProject,
   postProjectUpdate,
@@ -35,6 +36,7 @@ import {
   updateTask,
 } from "@/services/tasks";
 import { addDependency, removeDependency } from "@/services/dependencies";
+import { ensureProjectGroup } from "@/services/chat";
 import { addWorkLogEntry, approveWorkLogEntry, updateWorkLogEntry, withdrawConsent } from "@/services/worklog";
 import type {
   CompensationType,
@@ -100,9 +102,41 @@ export async function createProjectAction(formData: FormData) {
       businessId: optional(formData, "businessId") ?? null,
     });
 
+    // Every project starts with a team chat, so "where do we talk about this?"
+    // never depends on someone finding a button afterwards.
+    ensureProjectGroup(id, user.id);
+
     return {
       path: `/projects/${id}?${publish ? "notice=Project+published." : "notice=Draft+saved."}`,
       revalidate: ["/explore", "/home", "/projects/new"],
+    };
+  });
+}
+
+/**
+ * Four fields, then a usable workspace.
+ *
+ * Everything the long form asks for has a sensible default here: the category is
+ * "other" rather than a guess, the stage is "idea" because that is where a new
+ * project actually starts, and the arrangement is explicitly unpaid with credit
+ * stated. Nothing is invented about money, skills or milestones.
+ */
+export async function quickCreateProjectAction(formData: FormData) {
+  await runServerAction("/projects/new", async () => {
+    const user = await requireUserOrThrow();
+    assertEmailVerified(user);
+    rateLimit(`project:create:${user.id}`, 5, 3_600_000);
+
+    const { id, conversationId } = createQuickProject(user.id, {
+      name: str(formData, "name"),
+      goal: optional(formData, "goal"),
+      shortDescription: str(formData, "shortDescription"),
+      visibility: str(formData, "visibility", "public") as Visibility,
+    });
+
+    return {
+      path: `/projects/${id}?notice=Workspace+ready.+Your+team+chat+is+open.`,
+      revalidate: ["/explore", "/home", "/projects", "/projects/new", "/chats", `/chats/${conversationId}`],
     };
   });
 }
@@ -290,6 +324,7 @@ export async function createTaskAction(formData: FormData) {
       confidentiality: optional(formData, "confidentiality"),
       skills: list(formData, "skills", 10),
       publish: bool(formData, "publish"),
+      workAreaId: optional(formData, "workAreaId") ?? null,
     });
     return {
       path: `/tasks/${id}?notice=Task+${bool(formData, "publish") ? "published" : "saved+as+draft"}.`,

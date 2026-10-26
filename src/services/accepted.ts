@@ -10,6 +10,7 @@ import {
   taskSubmissions,
   tasks,
   users,
+  workAreas,
 } from "@/db/schema";
 import { requireProjectAccess, type Viewer } from "@/lib/authz";
 
@@ -29,6 +30,7 @@ export type AcceptedWorkItem = {
   verificationMethod: string | null;
   areaKey: string;
   areaLabel: string;
+  workAreaId: string | null;
   createdAt: string;
 };
 
@@ -74,6 +76,8 @@ export function projectAcceptedWork(projectId: string, viewer: Viewer) {
       deliverable: deliverables,
       task: tasks,
       submission: taskSubmissions,
+      workAreaName: workAreas.name,
+      workAreaId: workAreas.id,
       contributorId: users.id,
       contributorName: users.displayName,
       contributorUsername: users.username,
@@ -84,6 +88,7 @@ export function projectAcceptedWork(projectId: string, viewer: Viewer) {
     .leftJoin(taskSubmissions, eq(taskSubmissions.id, deliverables.submissionId))
     .leftJoin(users, eq(users.id, taskSubmissions.userId))
     .leftJoin(reviewer, eq(reviewer.id, taskSubmissions.reviewerId))
+    .leftJoin(workAreas, eq(workAreas.id, tasks.workAreaId))
     .where(
       and(
         eq(tasks.projectId, projectId),
@@ -120,7 +125,11 @@ export function projectAcceptedWork(projectId: string, viewer: Viewer) {
     .all();
 
   const items: AcceptedWorkItem[] = rows.map((row) => {
-    const area = areaByTask.get(row.task.id) ?? GENERAL;
+    // A work area is the canonical home; the skill category is only a fallback for
+    // projects that have not organised themselves yet.
+    const area = row.workAreaName
+      ? { key: `area-${row.workAreaId}`, label: row.workAreaName }
+      : (areaByTask.get(row.task.id) ?? GENERAL);
     const attribution =
       attributions.find(
         (candidate) =>
@@ -148,6 +157,7 @@ export function projectAcceptedWork(projectId: string, viewer: Viewer) {
       verificationMethod: attribution?.verificationMethod ?? null,
       areaKey: area.key,
       areaLabel: area.label,
+      workAreaId: row.workAreaId ?? null,
       createdAt: row.deliverable.createdAt,
     };
   });

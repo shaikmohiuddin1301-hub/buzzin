@@ -21,6 +21,7 @@ import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { projectDetail } from "@/services/projects";
 import { listTasks } from "@/services/tasks";
+import { workAreaDropdown } from "@/services/workAreas";
 import { COMPENSATION_TYPES, TASK_STATUSES, VISIBILITIES, label } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -191,6 +192,16 @@ export default async function ProjectTasksPage({
                 </Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Work area" htmlFor="workAreaId" hint="Its home in the project. You can move it after creating it.">
+                  <Select id="workAreaId" name="workAreaId" defaultValue="">
+                    <option value="">Project inbox</option>
+                    {workAreaDropdown(projectId).map((area) => (
+                      <option key={area.id} value={area.id}>
+                        {area.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
                 <Field label="Arrangement" htmlFor="compensationType">
                   <Select id="compensationType" name="compensationType" defaultValue="unpaid">
                     {COMPENSATION_TYPES.map((type) => (

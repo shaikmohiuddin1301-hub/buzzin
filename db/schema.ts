@@ -384,6 +384,28 @@ export const socialShares = sqliteTable(
   (t) => [index("social_shares_project_idx").on(t.projectId, t.createdAt)],
 );
 
+/**
+ * A named work area inside a project (Design, Development, Research…).
+ *
+ * It gives Drops a canonical home, owns an optional dedicated chat, and is the
+ * grouping used by the Accepted Work collection. Keeping it a project-scoped row
+ * (rather than a global role) means two projects can name their areas differently
+ * without inventing a second permission system.
+ */
+export const workAreas = sqliteTable(
+  "work_areas",
+  {
+    id: uuid(),
+    projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    conversationId: text("conversation_id").references(() => conversations.id, { onDelete: "set null" }),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("work_areas_name_uq").on(t.projectId, t.name), index("work_areas_project_idx").on(t.projectId)],
+);
+
 export const tasks = sqliteTable(
   "tasks",
   {
@@ -402,6 +424,7 @@ export const tasks = sqliteTable(
     compensationDetails: text("compensation_details"),
     visibility: text("visibility").$type<Visibility>().notNull().default("public"),
     confidentiality: text("confidentiality"),
+    workAreaId: text("work_area_id").references(() => workAreas.id, { onDelete: "set null" }),
     publishedAt: text("published_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -685,11 +708,13 @@ export const messages = sqliteTable(
     senderId: text("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
     attachmentId: text("attachment_id").references(() => mediaFiles.id, { onDelete: "set null" }),
+    parentId: text("parent_id"),
+    taskId: text("task_id"),
     editedAt: text("edited_at"),
     deletedAt: text("deleted_at"),
     createdAt: createdAt(),
   },
-  (t) => [index("messages_conversation_idx").on(t.conversationId, t.createdAt)],
+  (t) => [index("messages_conversation_idx").on(t.conversationId, t.createdAt), index("messages_parent_idx").on(t.parentId)],
 );
 
 export const notifications = sqliteTable(

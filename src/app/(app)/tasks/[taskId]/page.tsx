@@ -42,7 +42,9 @@ import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { formatDate, relativeTime } from "@/lib/format";
 import { label, TASK_STATUSES } from "@/lib/types";
+import { assignTaskAreaAction } from "@/app/actions/workAreas";
 import { listTaskDependencies } from "@/services/dependencies";
+import { workAreaDropdown } from "@/services/workAreas";
 import { listTasks, taskDetail } from "@/services/tasks";
 import { listComments } from "@/services/social";
 
@@ -69,6 +71,8 @@ export default async function TaskPage({
   // Set by reviewSubmissionAction only after the approval was written.
   const justApproved = query.approved === "1";
   const dependencies = listTaskDependencies(taskId, user);
+  const areaOptions = workAreaDropdown(project.id);
+  const currentArea = areaOptions.find((area) => area.id === task.workAreaId) ?? null;
   const prerequisiteCandidates = canEdit
     ? listTasks(project.id, user).filter((candidate) => candidate.id !== taskId)
     : [];
@@ -97,6 +101,13 @@ export default async function TaskPage({
         eyebrow={
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge status={task.status} />
+            {currentArea ? (
+              <Link href={`/projects/${project.id}/areas/${currentArea.id}`}>
+                <Badge tone="brand">{currentArea.name}</Badge>
+              </Link>
+            ) : (
+              <Badge tone="neutral">Project inbox</Badge>
+            )}
             <Badge tone={task.visibility === "public" ? "success" : "neutral"}>{label(task.visibility)}</Badge>
             <Badge tone={task.compensationType === "paid" ? "success" : "neutral"}>{label(task.compensationType)}</Badge>
             {task.status === "draft" ? <Badge tone="warning">Not visible to contributors</Badge> : null}
@@ -492,6 +503,23 @@ export default async function TaskPage({
                 </Field>
                 <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="…">
                   Update status
+                </SubmitButton>
+              </form>
+
+              <form action={assignTaskAreaAction} className="mt-3 space-y-2 border-t border-navy-100 pt-3">
+                <input type="hidden" name="taskId" value={taskId} />
+                <Field label="Work area" htmlFor="workAreaId" hint="Its canonical home, used by the Accepted Work collection.">
+                  <Select id="workAreaId" name="workAreaId" defaultValue={task.workAreaId ?? ""}>
+                    <option value="">Project inbox</option>
+                    {areaOptions.map((area) => (
+                      <option key={area.id} value={area.id}>
+                        {area.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="…">
+                  Move Drop
                 </SubmitButton>
               </form>
 

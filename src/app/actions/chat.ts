@@ -7,6 +7,7 @@ import { bool, file, optional, str } from "@/lib/form";
 import { rateLimit } from "@/lib/rate-limit";
 import { saveUploadedFile } from "@/lib/storage";
 import {
+  createDropFromMessage,
   ensureProjectGroup,
   getOrCreateDirectConversation,
   leaveConversation,
@@ -49,8 +50,22 @@ export async function sendMessageAction(formData: FormData) {
 
     const body = str(formData, "body");
     if (!body && !attachmentId) throw new AppError("Write a message first.");
-    sendMessage(conversationId, user.id, { body, attachmentId });
+    sendMessage(conversationId, user.id, { body, attachmentId, parentId: optional(formData, "parentId") });
     return { path: `/chats/${conversationId}`, revalidate: [`/chats/${conversationId}`] };
+  });
+}
+
+/** File a chat message as a Drop. Permission is checked against the project, not the chat. */
+export async function createDropFromMessageAction(formData: FormData) {
+  const conversationId = str(formData, "conversationId");
+  await runServerAction(`/chats/${conversationId}`, async () => {
+    const user = await requireUserOrThrow();
+    rateLimit(`chat:drop:${user.id}`, 30, 600_000);
+    const taskId = createDropFromMessage(str(formData, "messageId"), user);
+    return {
+      path: `/tasks/${taskId}?notice=Filed+as+a+Drop+from+the+conversation.`,
+      revalidate: [`/chats/${conversationId}`, "/projects"],
+    };
   });
 }
 

@@ -68,6 +68,8 @@ import { listTasks, projectInterests } from "@/services/tasks";
 import { listComments } from "@/services/social";
 import { projectJourneys, resourcesForProject } from "@/services/learning";
 import { storyboardsForProject } from "@/services/stories";
+import { createWorkAreaAction, openWorkAreaChatAction } from "@/app/actions/workAreas";
+import { listWorkAreas } from "@/services/workAreas";
 import { listProjectShares } from "@/services/socialShares";
 import { SOCIAL_PLATFORMS, platformLabel } from "@/lib/ayrshare";
 
@@ -107,6 +109,7 @@ export default async function ProjectPage({
   const db = getDb();
   const projectTasks = listTasks(projectId, user);
   const interests = access.canReview ? projectInterests(projectId, user) : [];
+  const workAreaList = listWorkAreas(projectId, user);
 
   const comments = listComments("project", projectId, user);
   const journeys = projectJourneys(projectId, user);
@@ -854,6 +857,61 @@ export default async function ProjectPage({
                   </li>
                 ))}
               </ul>
+            </Card>
+
+            <Card>
+              <div className="border-b border-navy-100 px-5 py-4">
+                <h2 className="text-[14px] font-semibold text-navy-950">Work areas</h2>
+                <p className="text-[12px] text-navy-500">
+                  Where work belongs: each area keeps its own Drops, chat and Accepted Work. Create one only when it earns its place.
+                </p>
+              </div>
+              {workAreaList.length === 0 ? (
+                <p className="px-5 py-4 text-[12.5px] text-navy-500">
+                  No work areas yet. Drops stay in the project inbox until you add one.
+                </p>
+              ) : (
+                <ul className="divide-y divide-navy-100">
+                  {workAreaList.map((area) => (
+                    <li key={area.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/projects/${projectId}/areas/${area.id}`} className="text-[13px] font-medium text-navy-900 hover:underline">
+                          {area.name}
+                        </Link>
+                        <p className="text-[11px] text-navy-500">
+                          {area.openDrops} open {area.openDrops === 1 ? "Drop" : "Drops"} · {area.accepted} accepted
+                          {area.description ? ` · ${truncate(area.description, 80)}` : ""}
+                        </p>
+                      </div>
+                      {access.canViewWorkspace ? (
+                        <form action={openWorkAreaChatAction}>
+                          <input type="hidden" name="areaId" value={area.id} />
+                          <input type="hidden" name="projectId" value={projectId} />
+                          <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                            <MessageSquare size={12} aria-hidden="true" /> Chat
+                          </SubmitButton>
+                        </form>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {access.canEdit ? (
+                <form action={createWorkAreaAction} className="grid gap-2 border-t border-navy-100 bg-navy-50/40 px-5 py-4 sm:grid-cols-[1fr_1.4fr_auto]">
+                  <input type="hidden" name="projectId" value={projectId} />
+                  <Field label="New work area" htmlFor="areaName">
+                    <Input id="areaName" name="name" required maxLength={40} placeholder="Design" />
+                  </Field>
+                  <Field label="What belongs here" htmlFor="areaDescription">
+                    <Input id="areaDescription" name="description" maxLength={500} placeholder="Interface, brand and user research" />
+                  </Field>
+                  <div className="flex items-end">
+                    <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="Creating…">
+                      Create
+                    </SubmitButton>
+                  </div>
+                </form>
+              ) : null}
             </Card>
 
             {access.canReview ? (

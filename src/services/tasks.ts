@@ -15,6 +15,7 @@ import {
   taskSubmissions,
   tasks,
   users,
+  workAreas,
 } from "@/db/schema";
 import { getTaskAccess, requireProjectAccess, requireTaskAccess, type Viewer } from "@/lib/authz";
 import { notifyDependentsReady } from "@/services/dependencies";
@@ -38,6 +39,8 @@ export type CreateTaskInput = {
   confidentiality?: string;
   skills: string[];
   publish: boolean;
+  /** Canonical home inside the project; validated against the same project. */
+  workAreaId?: string | null;
 };
 
 export function createTask(projectId: string, viewer: Viewer, input: CreateTaskInput): string {
@@ -48,6 +51,10 @@ export function createTask(projectId: string, viewer: Viewer, input: CreateTaskI
   }
   if (input.publish && input.compensationType === "unpaid" && !input.compensationDetails?.trim()) {
     throw new AppError("Describe what unpaid contributors receive before publishing.");
+  }
+  if (input.workAreaId) {
+    const area = getDb().select({ id: workAreas.id, projectId: workAreas.projectId }).from(workAreas).where(eq(workAreas.id, input.workAreaId)).get();
+    if (!area || area.projectId !== projectId) throw new AppError("Choose a work area from this project.");
   }
 
   const db = getDb();
@@ -69,6 +76,7 @@ export function createTask(projectId: string, viewer: Viewer, input: CreateTaskI
         compensationDetails: input.compensationDetails?.slice(0, 2000) ?? null,
         visibility: input.visibility,
         confidentiality: input.confidentiality?.slice(0, 2000) ?? null,
+        workAreaId: input.workAreaId ?? null,
         status: input.publish ? "open" : "draft",
         publishedAt: input.publish ? new Date().toISOString() : null,
       })

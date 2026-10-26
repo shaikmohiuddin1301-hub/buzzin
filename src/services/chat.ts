@@ -10,11 +10,13 @@ import {
   reports,
   userPreferences,
   users,
+  workAreas,
 } from "@/db/schema";
-import { assertConversationMember, isBlockedEitherWay } from "@/lib/authz";
+import { assertConversationMember, isBlockedEitherWay, requireProjectAccess } from "@/lib/authz";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { notify } from "@/lib/notify";
 import { rateLimit } from "@/lib/rate-limit";
+import { createTask } from "@/services/tasks";
 
 export type ConversationSummary = {
   id: string;
@@ -162,6 +164,86 @@ export function getOrCreateDirectConversation(initiatorId: string, otherUserId: 
   return id;
 }
 
+/**
+ * Keep a project group conversation in step with the project team.
+ *
+ * Adding someone to the team does not otherwise give them access to a chat that
+ * was created earlier; syncing here means opened chats never drift from the
+ * membership list. Removed members are not re-added.
+ */
+function syncGroupMembers(conversationId: string, projectId: string): void {
+  const db = getDb();
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
+  if (!project) return;
+  const memberIds = db
+    .select({ userId: projectMembers.userId })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.status, "active")))
+    .all()
+    .map((row) => row.userId);
+  const existing = db
+    .select({ userId: conversationMembers.userId, removedAt: conversationMembers.removedAt })
+    .from(conversationMembers)
+    .where(eq(conversationMembers.conversationId, conversationId))
+    .all();
+  const known = new Set(existing.map((row) => row.userId));
+  for (const userId of memberIds) {
+    if (!known.has(userId)) {
+      db.insert(conversationMembers)
+        .values({ conversationId, userId, role: userId === project.ownerId ? "admin" : "member" })
+        .onConflictDoNothing()
+        .run();
+    }
+  }
+}
+
+/**
+ * Create or reuse a project group conversation.
+ *
+ * `existingId` is used by work areas, which own a chat of their own; the project
+ * team chat deliberately excludes any conversation a work area claims.
+ */
+export function ensureGroupConversation(
+  projectId: string,
+  title: string,
+  actorId: string,
+  existingId?: string | null,
+): string {
+  const db = getDb();
+  const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
+  if (!project) throw new NotFoundError("Project not found.");
+  const membership = db
+    .select()
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, actorId), eq(projectMembers.status, "active")))
+    .get();
+  if (!membership) throw new ForbiddenError("Only active project members can open this chat.");
+
+  if (existingId) {
+    syncGroupMembers(existingId, projectId);
+    return existingId;
+  }
+
+  const memberIds = db
+    .select({ userId: projectMembers.userId })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.status, "active")))
+    .all()
+    .map((row) => row.userId);
+
+  const id = randomUUID();
+  transaction((tx) => {
+    tx.insert(conversations).values({ id, kind: "group", projectId, title: title.slice(0, 120), createdBy: actorId }).run();
+    for (const userId of memberIds) {
+      tx.insert(conversationMembers)
+        .values({ conversationId: id, userId, role: userId === project.ownerId ? "admin" : "member" })
+        .onConflictDoNothing()
+        .run();
+    }
+  });
+  return id;
+}
+
 export function ensureProjectGroup(projectId: string, actorId: string): string {
   const db = getDb();
   const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
@@ -173,30 +255,24 @@ export function ensureProjectGroup(projectId: string, actorId: string): string {
     .get();
   if (!membership) throw new ForbiddenError("Only active project members can open the team chat.");
 
+  // A work-area chat is also a project group; only the unclaimed one is the team chat.
   const existing = db
     .select()
     .from(conversations)
-    .where(and(eq(conversations.projectId, projectId), eq(conversations.kind, "group")))
+    .where(
+      and(
+        eq(conversations.projectId, projectId),
+        eq(conversations.kind, "group"),
+        sql`${conversations.id} not in (select conversation_id from work_areas where conversation_id is not null)`,
+      ),
+    )
     .get();
-  if (existing) return existing.id;
+  if (existing) {
+    syncGroupMembers(existing.id, projectId);
+    return existing.id;
+  }
 
-  const memberIds = db
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.status, "active")))
-    .all()
-    .map((row) => row.userId);
-
-  const id = randomUUID();
-  transaction((tx) => {
-    tx.insert(conversations)
-      .values({ id, kind: "group", projectId, title: `${project.name} team`, createdBy: actorId })
-      .run();
-    for (const userId of memberIds) {
-      tx.insert(conversationMembers).values({ conversationId: id, userId, role: userId === project.ownerId ? "admin" : "member" }).run();
-    }
-  });
-  return id;
+  return ensureGroupConversation(projectId, `${project.name} team`, actorId);
 }
 
 export function conversationDetail(conversationId: string, userId: string) {
@@ -233,7 +309,13 @@ export function conversationDetail(conversationId: string, userId: string) {
     ? db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.id, conversation.projectId)).get()
     : null;
 
-  return { conversation, member, members, messages: rows, project: project ?? null };
+  const area = db
+    .select({ id: workAreas.id, name: workAreas.name, projectId: workAreas.projectId })
+    .from(workAreas)
+    .where(eq(workAreas.conversationId, conversationId))
+    .get();
+
+  return { conversation, member, members, messages: rows, project: project ?? null, area: area ?? null };
 }
 
 export function markConversationRead(conversationId: string, userId: string): void {
@@ -248,7 +330,7 @@ export function markConversationRead(conversationId: string, userId: string): vo
 export function sendMessage(
   conversationId: string,
   senderId: string,
-  input: { body: string; attachmentId?: string | null },
+  input: { body: string; attachmentId?: string | null; parentId?: string | null },
 ): string {
   assertConversationMember(conversationId, senderId);
   if (!input.body.trim() && !input.attachmentId) throw new AppError("Write a message first.");
@@ -256,6 +338,14 @@ export function sendMessage(
   rateLimit(`chat:${senderId}`, 60, 60_000);
 
   const db = getDb();
+  let parentId: string | null = null;
+  if (input.parentId) {
+    const parent = db.select().from(messages).where(eq(messages.id, input.parentId)).get();
+    if (!parent || parent.conversationId !== conversationId) throw new AppError("That message is not part of this conversation.");
+    // One level keeps threads readable instead of turning a chat into a tree.
+    if (parent.parentId) throw new AppError("Reply to the original message rather than a reply.");
+    parentId = parent.id;
+  }
   const members = db
     .select({ userId: conversationMembers.userId })
     .from(conversationMembers)
@@ -270,7 +360,7 @@ export function sendMessage(
 
   const id = randomUUID();
   db.insert(messages)
-    .values({ id, conversationId, senderId, body: input.body.trim(), attachmentId: input.attachmentId ?? null })
+    .values({ id, conversationId, senderId, body: input.body.trim(), attachmentId: input.attachmentId ?? null, parentId })
     .run();
 
   const conversation = db.select().from(conversations).where(eq(conversations.id, conversationId)).get();
@@ -280,12 +370,74 @@ export function sendMessage(
       userId: member.userId,
       actorId: senderId,
       kind: "message",
-      title: conversation?.kind === "group" ? `New message in ${conversation.title}` : "New direct message",
+      title: conversation?.kind === "group" ? `New ${parentId ? "reply" : "message"} in ${conversation.title}` : "New direct message",
       body: input.body.slice(0, 120),
       href,
     });
   }
   return id;
+}
+
+/**
+ * Turn one chat message into a Drop.
+ *
+ * The Drop keeps a reference to the message, takes the work area of the chat it
+ * came from, and starts private to the team: a conversation is not an announcement,
+ * so nothing becomes public just because someone filed it.
+ */
+export function createDropFromMessage(messageId: string, viewer: { id: string }): string {
+  const db = getDb();
+  const message = db.select().from(messages).where(eq(messages.id, messageId)).get();
+  if (!message) throw new NotFoundError("Message not found.");
+  assertConversationMember(message.conversationId, viewer.id);
+  if (message.taskId) throw new AppError("That message is already filed as a Drop.", { status: 409, code: "already_filed" });
+
+  const conversation = db.select().from(conversations).where(eq(conversations.id, message.conversationId)).get();
+  if (!conversation?.projectId) throw new AppError("Only project conversations can produce Drops.");
+  requireProjectAccess(conversation.projectId, viewer, "edit");
+
+  const firstLine = message.body.split("\n").find((line) => line.trim().length > 0)?.trim() ?? "";
+  const title = firstLine.replace(/^[#>*\-\s]+/, "").slice(0, 90).trim();
+  if (title.length < 4) throw new AppError("That message is too short to become a Drop. Add a clearer title first.");
+
+  const sender = db.select({ displayName: users.displayName }).from(users).where(eq(users.id, message.senderId)).get();
+  const area = db
+    .select({ id: workAreas.id, name: workAreas.name })
+    .from(workAreas)
+    .where(eq(workAreas.conversationId, message.conversationId))
+    .get();
+
+  const taskId = createTask(conversation.projectId, viewer, {
+    title,
+    description: `${message.body}\n\n— from ${sender?.displayName ?? "a team member"} in ${conversation.title ?? "the project chat"}`,
+    objective: "Agreed in the project chat. The Drop is the place to track it.",
+    acceptanceCriteria: "The work answers the request in the original message and a reviewer accepts it here.",
+    compensationType: "unpaid",
+    compensationDetails: "Portfolio credit and a reference. No payment is implied.",
+    visibility: "private",
+    skills: [],
+    publish: true,
+    workAreaId: area?.id ?? null,
+  });
+
+  db.update(messages).set({ taskId }).where(eq(messages.id, messageId)).run();
+
+  for (const member of db
+    .select({ userId: conversationMembers.userId })
+    .from(conversationMembers)
+    .where(and(eq(conversationMembers.conversationId, message.conversationId), isNull(conversationMembers.removedAt)))
+    .all()) {
+    notify({
+      userId: member.userId,
+      actorId: viewer.id,
+      kind: "system",
+      title: `New Drop from chat: ${title}`,
+      body: area ? `Filed under ${area.name}.` : "Filed in the project inbox.",
+      href: `/tasks/${taskId}`,
+    });
+  }
+
+  return taskId;
 }
 
 export function muteConversation(conversationId: string, userId: string, muted: boolean): void {
