@@ -7,7 +7,9 @@ import {
   BookOpen,
   Compass,
   FolderKanban,
+  GraduationCap,
   Home,
+  ImagePlus,
   Megaphone,
   MessageSquare,
   Plus,
@@ -30,6 +32,9 @@ type Tab = { href: string; label: string; icon: React.ReactNode };
  * Create opens a small sheet rather than navigating: creating a Drop or an update needs a
  * project, so the sheet lists only projects the person can actually edit.
  */
+const sheetRow =
+  "flex min-h-[52px] items-start gap-3 rounded-xl px-3 py-2 text-[14px] font-medium text-navy-800 hover:bg-navy-50";
+
 export function BottomTabs({
   username,
   unread,
@@ -41,7 +46,7 @@ export function BottomTabs({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState<null | "drop" | "update">(null);
+  const [pending, setPending] = useState<null | "drop">(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -96,9 +101,7 @@ export function BottomTabs({
             className="motion-sheet absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-navy-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-raised"
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold text-navy-950">
-                {pending ? (pending === "drop" ? "New Drop in…" : "Share an update in…") : "Create"}
-              </h2>
+              <h2 className="text-[15px] font-semibold text-navy-950">{pending ? "New Drop in…" : "Create"}</h2>
               <button
                 type="button"
                 onClick={() => (pending ? setPending(null) : setOpen(false))}
@@ -110,36 +113,55 @@ export function BottomTabs({
             </div>
 
             {!pending ? (
-              <div className="space-y-1">
-                <Link
-                  href="/projects/new"
-                  className="flex min-h-[52px] items-center gap-3 rounded-xl px-3 text-[14px] font-medium text-navy-800 hover:bg-navy-50"
-                >
-                  <FolderKanban size={18} aria-hidden="true" className="text-brand-600" />
-                  New project
+              <div className="space-y-0.5">
+                <Link href="/projects/new" className={sheetRow}>
+                  <FolderKanban size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-600" />
+                  <span>
+                    New project
+                    <span className="block text-[11px] font-normal text-navy-500">Start something and invite people in.</span>
+                  </span>
+                </Link>
+                <Link href="/create/post" className={sheetRow}>
+                  <ImagePlus size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-600" />
+                  <span>
+                    New post
+                    <span className="block text-[11px] font-normal text-navy-500">A photo, a caption, something you made.</span>
+                  </span>
+                </Link>
+                <Link href="/create/update" className={sheetRow}>
+                  <Megaphone size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-600" />
+                  <span>
+                    Share an update
+                    <span className="block text-[11px] font-normal text-navy-500">Progress, a milestone or an announcement.</span>
+                  </span>
+                </Link>
+                <Link href="/create/teaching" className={sheetRow}>
+                  <GraduationCap size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-600" />
+                  <span>
+                    New teaching
+                    <span className="block text-[11px] font-normal text-navy-500">A guide or explainer others can learn from.</span>
+                  </span>
+                </Link>
+                <Link href="/create/learning" className={sheetRow}>
+                  <BookOpen size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-600" />
+                  <span>
+                    Share a learning
+                    <span className="block text-[11px] font-normal text-navy-500">What you learned, or finished.</span>
+                  </span>
                 </Link>
                 <button
                   type="button"
                   onClick={() => setPending("drop")}
                   disabled={projects.length === 0}
-                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] font-medium text-navy-800 hover:bg-navy-50 disabled:cursor-not-allowed disabled:text-navy-400"
+                  className={cn(sheetRow, "w-full text-left disabled:cursor-not-allowed disabled:text-navy-400")}
                 >
-                  <Plus size={18} aria-hidden="true" className="text-brand-600" />
+                  <Plus size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-600" />
                   <span>
                     New Drop
-                    {projects.length === 0 ? (
-                      <span className="block text-[11px] font-normal text-navy-500">Join a project to create work.</span>
-                    ) : null}
+                    <span className="block text-[11px] font-normal text-navy-500">
+                      {projects.length === 0 ? "Join a project to create work." : "Trackable work inside one of your projects."}
+                    </span>
                   </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPending("update")}
-                  disabled={projects.length === 0}
-                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] font-medium text-navy-800 hover:bg-navy-50 disabled:cursor-not-allowed disabled:text-navy-400"
-                >
-                  <Megaphone size={18} aria-hidden="true" className="text-brand-600" />
-                  Share an update
                 </button>
               </div>
             ) : (
@@ -147,11 +169,7 @@ export function BottomTabs({
                 {projects.map((project) => (
                   <li key={project.id}>
                     <Link
-                      href={
-                        pending === "drop"
-                          ? `/projects/${project.id}/tasks`
-                          : `/projects/${project.id}?tab=progress#update-title`
-                      }
+                      href={`/projects/${project.id}/tasks`}
                       className="flex min-h-[48px] items-center rounded-xl px-3 text-[14px] text-navy-800 hover:bg-navy-50"
                     >
                       {project.name}

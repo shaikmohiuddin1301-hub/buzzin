@@ -200,12 +200,23 @@ workAreaDropdown(projectId) · deleteWorkArea(areaId, viewer)
 
 A work area is a project-scoped row, not a global role: it owns a group conversation, is the preferred grouping for Accepted Work, and never grants access on its own — project membership still decides who can see anything.
 
+### `profileContent.ts` — what a profile can show
+```ts
+acceptedWorkForUser(userId)                          // attributions + approved deliverables, same records as the project
+learningHistoryFor(userId)                           // completed learning only
+sharesLearningHistory(userId)                        // explicit opt-in, default false
+```
+
+Learning history is never public unless `user_preferences.share_learning_history` is true. Teaching visibility uses the existing `profileVisibility.learning` setting; contribution records use `profileVisibility.contributions`.
+
 ### `social.ts` — feed and discussion
 ```ts
 feed(filters) · createPost(authorId, input) · deletePost(id, viewer) · hidePost(id, userId)
 addComment(authorId, { targetType, targetId, body, parentId? }) · listComments(targetType, targetId, viewer)
 toggleReaction(userId, targetType, targetId) · reactionState(...)
 toggleSaved(userId, targetType, targetId) · savedFor(userId) · savedSearches?
+createPost(authorId, { body, kind?, projectId?, resourceId?, imageId?, altText?, visibility?, publish? }): string
+postDetail(postId, viewer) · postsByAuthor(authorId, viewerId, limit?)
 searchAll(query, limit?) · listChallenges() · listBusinesses(query?) · teamMemberIds(projectId)
 ```
 

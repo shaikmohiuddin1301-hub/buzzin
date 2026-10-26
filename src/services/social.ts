@@ -20,7 +20,8 @@ import {
 import { getProjectAccess, getTaskAccess, type Viewer } from "@/lib/authz";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { notify } from "@/lib/notify";
-import type { FeedFilter, FeedKind } from "@/lib/types";
+import { getMedia } from "@/lib/storage";
+import type { FeedFilter, FeedKind, Visibility } from "@/lib/types";
 
 export type FeedItem = {
   id: string;
@@ -31,6 +32,8 @@ export type FeedItem = {
   projectId: string | null;
   projectName: string | null;
   taskId: string | null;
+  imageId: string | null;
+  altText: string | null;
   likeCount: number;
   commentCount: number;
   liked: boolean;
@@ -64,7 +67,13 @@ export function feed(
   const limit = options.limit ?? 20;
   const offset = options.offset ?? 0;
 
-  const conditions = [isNull(posts.hiddenAt), eq(posts.visibility, "public"), eq(users.status, "active")];
+  // Drafts are never public, whatever their visibility says.
+  const conditions = [
+    isNull(posts.hiddenAt),
+    eq(posts.visibility, "public"),
+    eq(posts.status, "published"),
+    eq(users.status, "active"),
+  ];
   if (filter === "projects") {
     conditions.push(inArray(posts.kind, ["project_update", "milestone", "launch", "challenge"]));
   }
@@ -169,6 +178,8 @@ export function feed(
       projectId: row.post.projectId,
       projectName: row.projectName,
       taskId: row.post.taskId,
+      imageId: row.post.imageId,
+      altText: row.post.altText,
       likeCount: likes.get(row.post.id) ?? 0,
       commentCount: commentCounts.get(row.post.id) ?? 0,
       liked: myLikes.includes(row.post.id),
@@ -183,6 +194,7 @@ export function feed(
 }
 
 export function postsByAuthor(authorId: string, viewerId: string | null, limit = 10) {
+  const isSelf = viewerId === authorId;
   return getDb()
     .select()
     .from(posts)
@@ -190,15 +202,40 @@ export function postsByAuthor(authorId: string, viewerId: string | null, limit =
     .orderBy(desc(posts.createdAt))
     .limit(limit)
     .all()
-    .filter((post) => viewerId !== null || post.visibility === "public");
+    .filter((post) => {
+      if (isSelf) return true;
+      return post.visibility === "public" && post.status === "published";
+    });
 }
 
-export function createPost(
-  authorId: string,
-  input: { body: string; kind?: FeedKind; projectId?: string | null; taskId?: string | null },
-): string {
+export type CreatePostInput = {
+  body: string;
+  kind?: FeedKind;
+  projectId?: string | null;
+  taskId?: string | null;
+  resourceId?: string | null;
+  imageId?: string | null;
+  altText?: string | null;
+  visibility?: Visibility;
+  publish?: boolean;
+};
+
+export function createPost(authorId: string, input: CreatePostInput): string {
   if (input.body.trim().length < 2) throw new AppError("Write something first.");
   if (input.body.length > 5000) throw new AppError("Posts are limited to 5,000 characters.");
+  if (input.imageId) {
+    const image = getMedia(input.imageId);
+    if (!image || image.ownerId !== authorId) throw new AppError("That image is not yours to attach.");
+    if (!image.mimeType.startsWith("image/")) throw new AppError("Posts can attach an image file.");
+  }
+  if (input.resourceId) {
+    const resource = getDb()
+      .select({ id: learningResources.id, status: learningResources.status })
+      .from(learningResources)
+      .where(eq(learningResources.id, input.resourceId))
+      .get();
+    if (!resource || resource.status !== "published") throw new AppError("That learning resource is not available.");
+  }
 
   const db = getDb();
   if (input.projectId) {
@@ -220,11 +257,66 @@ export function createPost(
       authorId,
       projectId: input.projectId ?? null,
       taskId: input.taskId ?? null,
+      resourceId: input.resourceId ?? null,
       kind: input.kind ?? "general",
       body: input.body.trim(),
+      imageId: input.imageId ?? null,
+      altText: input.altText?.trim().slice(0, 400) || null,
+      visibility: input.visibility ?? "public",
+      status: input.publish === false ? "draft" : "published",
     })
     .run();
   return id;
+}
+
+/** One post with the engagement state the detail page needs. */
+
+export function postDetail(postId: string, viewer: Viewer) {
+  const db = getDb();
+  const row = db
+    .select({
+      post: posts,
+      author: { id: users.id, username: users.username, displayName: users.displayName, avatarFileId: users.avatarFileId },
+      projectName: projects.name,
+    })
+    .from(posts)
+    .innerJoin(users, eq(users.id, posts.authorId))
+    .leftJoin(projects, eq(projects.id, posts.projectId))
+    .where(eq(posts.id, postId))
+    .get();
+  if (!row || row.post.hiddenAt) return null;
+
+  const isAuthor = viewer?.id === row.post.authorId;
+  if (!isAuthor && (row.post.visibility !== "public" || row.post.status !== "published")) return null;
+  if (!isAuthor && viewer?.id && blockedIds(viewer.id).includes(row.post.authorId)) return null;
+
+  const likeCount = db
+    .select({ count: sql<number>`count(*)` })
+    .from(reactions)
+    .where(and(eq(reactions.targetType, "post"), eq(reactions.targetId, postId)))
+    .get();
+  const commentCount = db
+    .select({ count: sql<number>`count(*)` })
+    .from(comments)
+    .where(and(eq(comments.targetType, "post"), eq(comments.targetId, postId), eq(comments.status, "visible")))
+    .get();
+  const mine = (table: typeof reactions | typeof savedItems) =>
+    viewer
+      ? db
+          .select({ id: table.id })
+          .from(table)
+          .where(and(eq(table.userId, viewer.id), eq(table.targetType, "post"), eq(table.targetId, postId)))
+          .get()
+      : undefined;
+
+  return {
+    ...row,
+    isAuthor,
+    likeCount: Number(likeCount?.count ?? 0),
+    commentCount: Number(commentCount?.count ?? 0),
+    liked: !!mine(reactions),
+    saved: !!mine(savedItems),
+  };
 }
 
 export function deletePost(postId: string, viewer: Viewer): void {

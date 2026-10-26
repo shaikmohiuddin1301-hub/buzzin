@@ -22,6 +22,7 @@ import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { slugify, truncate } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { awardReputation, REPUTATION_WEIGHTS } from "@/lib/reputation";
+import { createPost } from "@/services/social";
 import type { ResourceFormat, ResourceLevel, ResourceStatus } from "@/lib/types";
 
 /* ---------------------------------- journeys ------------------------------- */
@@ -357,6 +358,15 @@ export function createResource(creatorId: string, input: ResourceInput): { id: s
       reason: `Learning resource published: ${input.title}`,
       sourceType: "resource",
       sourceId: id,
+    });
+    // Teaching belongs in the feed too, but as a pointer to the resource rather than
+    // a second copy of its content.
+    createPost(creatorId, {
+      body: `${input.title}${input.summary ? `\n\n${input.summary}` : ""}`.slice(0, 2000),
+      kind: "lesson",
+      resourceId: id,
+      projectId: input.projectId ?? null,
+      publish: true,
     });
   }
   return { id, slug };

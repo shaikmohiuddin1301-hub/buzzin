@@ -123,11 +123,11 @@ export async function AppShell({
 
           <div className="px-3">
             <Link
-              href="/projects/new"
+              href="/create"
               className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand-600 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
             >
               <Plus size={16} aria-hidden="true" />
-              Start a project
+              Create
             </Link>
           </div>
 

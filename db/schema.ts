@@ -120,6 +120,8 @@ export const userPreferences = sqliteTable("user_preferences", {
   categories: text("categories", { mode: "json" }).$type<string[]>().notNull().default([]),
   interests: text("interests", { mode: "json" }).$type<string[]>().notNull().default([]),
   reduceMotion: integer("reduce_motion", { mode: "boolean" }).notNull().default(false),
+  /** Completed learning history is private unless the learner opts in. */
+  shareLearningHistory: integer("share_learning_history", { mode: "boolean" }).notNull().default(false),
   theme: text("theme").$type<"light" | "dark" | "system">().notNull().default("system"),
   updatedAt: updatedAt(),
 });
@@ -585,6 +587,9 @@ export const posts = sqliteTable(
     body: text("body").notNull(),
     imageId: text("image_id").references(() => mediaFiles.id, { onDelete: "set null" }),
     visibility: text("visibility").$type<Visibility>().notNull().default("public"),
+    /** Drafts belong to their author and never appear in feeds or profiles. */
+    status: text("status").$type<"draft" | "published">().notNull().default("published"),
+    altText: text("alt_text"),
     hiddenAt: text("hidden_at"),
     createdAt: createdAt(),
   },

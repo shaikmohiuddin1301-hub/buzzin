@@ -141,6 +141,8 @@ export default async function HomePage({
           <Card className="mb-4">
             <form action={createPostAction} className="p-4">
               <input type="hidden" name="returnTo" value="/home" />
+              {/* This composer publishes directly; drafts live in Create → New post. */}
+              <input type="hidden" name="publish" value="on" />
               <div className="flex items-start gap-3">
                 <Avatar name={user.displayName} size={36} src={user.avatarFileId ? `/api/files/${user.avatarFileId}` : null} />
                 <div className="min-w-0 flex-1">

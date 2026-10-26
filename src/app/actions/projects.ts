@@ -37,6 +37,7 @@ import {
 } from "@/services/tasks";
 import { addDependency, removeDependency } from "@/services/dependencies";
 import { ensureProjectGroup } from "@/services/chat";
+import { createPost } from "@/services/social";
 import { addWorkLogEntry, approveWorkLogEntry, updateWorkLogEntry, withdrawConsent } from "@/services/worklog";
 import type {
   CompensationType,
@@ -109,6 +110,46 @@ export async function createProjectAction(formData: FormData) {
     return {
       path: `/projects/${id}?${publish ? "notice=Project+published." : "notice=Draft+saved."}`,
       revalidate: ["/explore", "/home", "/projects/new"],
+    };
+  });
+}
+
+/**
+ * Share an Update: either a canonical project update (which notifies followers and
+ * creates a feed post when public) or a personal profile update.
+ */
+export async function createUpdateAction(formData: FormData) {
+  await runServerAction("/create/update", async () => {
+    const user = await requireUserOrThrow();
+    assertEmailVerified(user);
+    rateLimit(`update:${user.id}`, 20, 3_600_000);
+
+    const projectId = optional(formData, "projectId") ?? null;
+    const visibility = str(formData, "visibility", "public") as Visibility;
+    const text = str(formData, "body");
+
+    if (projectId) {
+      postProjectUpdate(projectId, user, {
+        title: str(formData, "title", "Project update"),
+        body: text,
+        visibility,
+      });
+      return {
+        path: `/projects/${projectId}?tab=progress&notice=Update+shared.`,
+        revalidate: [`/projects/${projectId}`, "/home"],
+      };
+    }
+
+    const title = optional(formData, "title");
+    createPost(user.id, {
+      body: title ? `${title}\n\n${text}` : text,
+      kind: "general",
+      visibility: visibility === "private" ? "private" : "public",
+      publish: true,
+    });
+    return {
+      path: `/u/${user.username}?tab=posts&notice=Update+shared.`,
+      revalidate: ["/home", `/u/${user.username}`],
     };
   });
 }

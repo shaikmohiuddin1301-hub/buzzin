@@ -383,6 +383,7 @@ export function updatePreferences(
     notifyMatrix?: Record<string, boolean>;
     notifyEmail?: boolean;
     showEmail?: boolean;
+    shareLearningHistory?: boolean;
     reduceMotion?: boolean;
     theme?: "light" | "dark" | "system";
   },

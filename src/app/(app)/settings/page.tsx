@@ -226,6 +226,12 @@ export default async function SettingsPage({
                     <Checkbox name="showContributions" label="Contribution records" defaultChecked={prefs.profileVisibility.contributions} />
                     <Checkbox name="showLearning" label="Learning content I published" defaultChecked={prefs.profileVisibility.learning} />
                     <Checkbox name="showFollowers" label="Follower counts" defaultChecked={prefs.profileVisibility.followers} />
+                    <Checkbox
+                      name="shareLearningHistory"
+                      label="Learning I completed"
+                      description="Off by default. Only completed items are listed, and you can turn this off again at any time."
+                      defaultChecked={prefs.shareLearningHistory}
+                    />
                     <Checkbox name="showEmail" label="My email address (not recommended)" defaultChecked={prefs.showEmail} />
                   </fieldset>
                   <SubmitButton pendingLabel="Saving…">Save privacy settings</SubmitButton>

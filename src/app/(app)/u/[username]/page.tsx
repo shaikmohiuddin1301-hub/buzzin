@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, MessageSquare, Star, TrendingUp } from "lucide-react";
+import { CheckCircle2, GraduationCap, MapPin, MessageSquare, Plus, Star } from "lucide-react";
 import { blockUserAction, followUserAction } from "@/app/actions/social";
 import { startDirectMessageAction } from "@/app/actions/chat";
-import { ReportForm } from "@/components/report-form";
 import { ProjectCard, ResourceCard } from "@/components/cards";
+import { ReportForm } from "@/components/report-form";
 import { SubmitButton } from "@/components/client/submit-button";
 import {
   Alert,
@@ -12,28 +12,28 @@ import {
   Badge,
   ButtonLink,
   Card,
-  DefinitionList,
   EmptyState,
   Flash,
-  Progress,
   SkillTag,
   Stat,
-  Tabs,
   cn,
 } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
+import { canViewProfile, isBlockedEitherWay } from "@/lib/authz";
 import { formatDate, relativeTime } from "@/lib/format";
 import { achievementsFor, reputationSummary } from "@/lib/reputation";
-import { isBlockedEitherWay } from "@/lib/authz";
-import { attributedSkills, contributionCounts, projectHistory, verifiedContributions } from "@/services/profile";
-import { followerCounts, getUserByUsername, getUserRolesList, isFollowing, userSkillsFor } from "@/services/users";
-import { resourcesForCreator, journeysFor } from "@/services/learning";
-import { productsForCreator } from "@/services/commerce";
+import { contributionCounts, projectHistory, verifiedContributions } from "@/services/profile";
+import { acceptedWorkForUser, learningHistoryFor, sharesLearningHistory } from "@/services/profileContent";
+import { followerCounts, getPreferences, getUserByUsername, getUserRolesList, isFollowing, userSkillsFor } from "@/services/users";
+import { journeysFor, resourcesForCreator } from "@/services/learning";
 import { listAttributions } from "@/services/tasks";
 import { postsByAuthor } from "@/services/social";
 
 export const dynamic = "force-dynamic";
+
+const TABS = ["posts", "projects", "teachings", "learnings", "accepted", "about"] as const;
+type Tab = (typeof TABS)[number];
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
@@ -58,7 +58,10 @@ export default async function ProfilePage({
   const viewer = await getCurrentUser();
   const isSelf = viewer?.id === person.id;
   const blocked = viewer ? isBlockedEitherWay(viewer.id, person.id) : false;
-  const tab = typeof query.tab === "string" ? query.tab : "about";
+
+  const requestedTab = typeof query.tab === "string" ? query.tab : "posts";
+  const tab: Tab = (TABS as readonly string[]).includes(requestedTab) ? (requestedTab as Tab) : "posts";
+  const projectFilter = query.filter === "contributing" || query.filter === "completed" ? query.filter : "created";
 
   const skills = userSkillsFor(person.id);
   const userRoles = getUserRolesList(person.id);
@@ -69,47 +72,71 @@ export default async function ProfilePage({
   const contributions = contributionCounts(person.id);
   const verified = verifiedContributions(person.id);
   const attributions = listAttributions(person.id);
-  const resources = resourcesForCreator(person.id).filter((resource) => resource.status === "published" || isSelf);
-  const journeys = journeysFor(person.id).filter((journey) => journey.status === "published" || isSelf);
-  const products = productsForCreator(person.id).filter((row) => row.product.status === "published" || isSelf);
-  const posts = postsByAuthor(person.id, viewer?.id ?? null);
-  const following = viewer ? isFollowing(viewer.id, person.id) : false;
-  const skillEvidence = attributedSkills(person.id);
+  const prefs = getPreferences(person.id);
+  const view = canViewProfile(person.id, viewer, prefs ?? null);
+  const sharesLearning = sharesLearningHistory(person.id);
 
-  const tabs = [
-    { id: "about", label: "About", href: `/u/${person.username}` },
-    { id: "work", label: "Work", href: `/u/${person.username}?tab=work`, count: contributions.total },
-    { id: "learning", label: "Learning", href: `/u/${person.username}?tab=learning`, count: resources.length + journeys.length },
-    { id: "reputation", label: "Reputation", href: `/u/${person.username}?tab=reputation` },
+  const posts = postsByAuthor(person.id, viewer?.id ?? null, 60);
+  const publishedPosts = posts.filter((post) => post.status === "published");
+  const resources = resourcesForCreator(person.id).filter(
+    (resource) => (resource.status === "published" && view.learning) || isSelf,
+  );
+  const journeys = journeysFor(person.id).filter((journey) => (journey.status === "published" && view.learning) || isSelf);
+  const learnings = isSelf || sharesLearning ? learningHistoryFor(person.id) : [];
+  const accepted = view.contributions ? acceptedWorkForUser(person.id) : [];
+  const following = viewer ? isFollowing(viewer.id, person.id) : false;
+
+  const projectList =
+    projectFilter === "contributing"
+      ? history.contributed
+      : projectFilter === "completed"
+        ? [...history.owned, ...history.contributed].filter((project) => project.stage === "completed")
+        : history.owned;
+
+  const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: "posts", label: "Posts", count: posts.length },
+    { id: "projects", label: "Projects", count: history.owned.length + history.contributed.length },
+    { id: "teachings", label: "Teachings", count: resources.length + journeys.length },
+    { id: "learnings", label: "Learnings", count: learnings.length },
+    { id: "accepted", label: "Accepted", count: accepted.length },
+    { id: "about", label: "About" },
   ];
 
   return (
     <div>
       <Flash error={error} notice={notice} />
 
+      {/* Header */}
       <Card className="overflow-hidden">
-        <div className="h-24 bg-gradient-to-r from-navy-900 via-navy-800 to-brand-800" aria-hidden="true" />
-        <div className="px-5 pb-5">
-          <div className="-mt-9 flex flex-wrap items-end justify-between gap-3">
+        <div
+          className="h-24 bg-gradient-to-r from-navy-900 via-navy-800 to-brand-800 sm:h-32"
+          aria-hidden="true"
+        />
+        <div className="px-4 pb-5 sm:px-5">
+          <div className="-mt-10 flex flex-wrap items-end justify-between gap-3">
             <div className="flex items-end gap-3">
               <span className="rounded-full ring-4 ring-white">
-                <Avatar
-                  name={person.displayName}
-                  size={72}
-                  src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null}
-                />
+                <Avatar name={person.displayName} size={80} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
               </span>
               <div className="pb-1">
                 <h1 className="text-xl font-semibold tracking-tight text-navy-950">{person.displayName}</h1>
-                <p className="text-[12.5px] text-navy-500">@{person.username}</p>
+                <p className="text-[12.5px] text-navy-500">
+                  @{person.username}
+                  {userRoles.length > 0 ? ` · ${userRoles.join(", ")}` : ""}
+                </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pb-1">
               {isSelf ? (
-                <ButtonLink href="/settings" size="sm" variant="secondary">
-                  Edit profile
-                </ButtonLink>
+                <>
+                  <ButtonLink href="/settings?tab=profile" size="sm" variant="secondary">
+                    Edit profile
+                  </ButtonLink>
+                  <ButtonLink href="/create" size="sm">
+                    <Plus size={13} aria-hidden="true" /> Create
+                  </ButtonLink>
+                </>
               ) : viewer ? (
                 <>
                   <form action={followUserAction}>
@@ -134,29 +161,40 @@ export default async function ProfilePage({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-navy-600">
+          {person.bio ? <p className="mt-3 max-w-2xl text-[13px] leading-6 text-navy-700">{person.bio}</p> : null}
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-navy-600">
             {person.location ? (
               <span className="inline-flex items-center gap-1">
                 <MapPin size={12} aria-hidden="true" /> {person.location}
               </span>
             ) : null}
             <span>Joined {formatDate(person.createdAt)}</span>
+            {person.portfolioUrls && person.portfolioUrls.length > 0 ? (
+              <a
+                href={person.portfolioUrls[0]}
+                target="_blank"
+                rel="nofollow noopener noreferrer"
+                className="text-brand-700 underline"
+              >
+                Portfolio
+              </a>
+            ) : null}
           </div>
 
-          {person.bio ? <p className="mt-3 max-w-3xl text-[13px] leading-6 text-navy-700">{person.bio}</p> : null}
-
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {skills.map((skill) => (
-              <SkillTag key={skill.id} name={skill.name} href={`/explore?tab=skills&skill=${encodeURIComponent(skill.name)}`} />
-            ))}
-            {skills.length === 0 ? <p className="text-[12px] text-navy-400">No skills listed yet.</p> : null}
-          </div>
+          {skills.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {skills.map((skill) => (
+                <SkillTag key={skill.id} name={skill.name} href={`/explore?tab=skills&skill=${encodeURIComponent(skill.name)}`} />
+              ))}
+            </div>
+          ) : null}
 
           <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-4 sm:grid-cols-4">
-            <Stat label="Followers" value={followers.followers} hint={`Following ${followers.following}`} />
-            <Stat label="Contributions" value={contributions.completed} hint={`${contributions.active} active`} />
-            <Stat label="Projects" value={history.owned.length} hint={`${history.contributed.length} contributed to`} />
-            <Stat label="Learners reached" value={reputation.totals.teaching} hint="Teaching points earned" />
+            <Stat label="Posts" value={publishedPosts.length} hint={`${posts.length - publishedPosts.length} draft`} />
+            <Stat label="Followers" value={view.followers ? followers.followers : "—"} hint={`Following ${followers.following}`} />
+            <Stat label="Accepted work" value={view.contributions ? contributions.completed : "—"} hint={`${reputation.totals.contribution} contribution pts`} />
+            <Stat label="Teaching" value={reputation.totals.teaching} hint="Points from learner feedback" />
           </div>
         </div>
       </Card>
@@ -179,22 +217,356 @@ export default async function ProfilePage({
         </div>
       ) : null}
 
-      <div className="mt-5">
-        <Tabs current={tab} items={tabs} />
+      {/* Tabs */}
+      <div className="mt-5 border-b border-navy-200">
+        <ul className="-mb-px flex gap-1 overflow-x-auto whitespace-nowrap" role="tablist" aria-label="Profile sections">
+          {tabs.map((item) => {
+            const active = tab === item.id;
+            return (
+              <li key={item.id}>
+                <Link
+                  href={`/u/${person.username}?tab=${item.id}`}
+                  role="tab"
+                  aria-selected={active}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-medium transition-colors",
+                    active
+                      ? "border-brand-600 text-navy-950"
+                      : "border-transparent text-navy-500 hover:border-navy-300 hover:text-navy-800",
+                  )}
+                >
+                  {item.label}
+                  {typeof item.count === "number" && item.count > 0 ? (
+                    <span className="rounded-full bg-navy-100 px-1.5 text-[10px] font-semibold text-navy-600">{item.count}</span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
-      {tab === "about" ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4">
+      {/* Posts */}
+      {tab === "posts" ? (
+        <div className="mt-4">
+          {posts.length === 0 ? (
+            <EmptyState
+              title={isSelf ? "You have not posted yet" : "No posts yet"}
+              description={
+                isSelf
+                  ? "Share a photo of what you are building. Posts appear here and, when public, in the feed."
+                  : "When this person publishes work, it appears here."
+              }
+              action={isSelf ? <ButtonLink href="/create/post" size="sm">Create a post</ButtonLink> : undefined}
+            />
+          ) : (
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {posts.map((post) => (
+                <li key={post.id}>
+                  <Link
+                    href={`/posts/${post.id}`}
+                    className="group relative block aspect-square overflow-hidden rounded-lg border border-navy-200/70 bg-navy-50"
+                  >
+                    {post.imageId ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/api/files/${post.imageId}`}
+                        alt={post.altText ?? ""}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-navy-50 to-brand-50 p-3 text-center text-[12px] leading-5 text-navy-700">
+                        <span className="line-clamp-6">{post.body}</span>
+                      </span>
+                    )}
+                    {post.status === "draft" ? (
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-navy-950/80 px-2 py-0.5 text-[10px] font-medium text-white">
+                        Draft
+                      </span>
+                    ) : null}
+                    {post.visibility !== "public" ? (
+                      <span className="absolute right-1.5 top-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-navy-700">
+                        Private
+                      </span>
+                    ) : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
+
+      {/* Projects */}
+      {tab === "projects" ? (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: "created", label: "Created" },
+              { id: "contributing", label: "Contributing" },
+              { id: "completed", label: "Completed" },
+            ].map((filter) => (
+              <Link
+                key={filter.id}
+                href={`/u/${person.username}?tab=projects&filter=${filter.id}`}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
+                  projectFilter === filter.id
+                    ? "border-brand-500 bg-brand-50 text-brand-700"
+                    : "border-navy-200 bg-white text-navy-600 hover:border-navy-300",
+                )}
+                aria-current={projectFilter === filter.id ? "page" : undefined}
+              >
+                {filter.label}
+              </Link>
+            ))}
+          </div>
+
+          {projectList.length === 0 ? (
+            <EmptyState
+              title="No projects in this view"
+              description={
+                projectFilter === "created"
+                  ? isSelf
+                    ? "Start a project and it appears here with its real status."
+                    : "This person has not created a public project yet."
+                  : projectFilter === "contributing"
+                    ? "Accepted contributions on other people's projects appear here."
+                    : "Completed projects appear here once their status says so."
+              }
+              action={isSelf && projectFilter === "created" ? <ButtonLink href="/projects/new" size="sm">Start a project</ButtonLink> : undefined}
+            />
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {projectList.map((project) => (
+                <li key={project.id} className="relative">
+                  <ProjectCard project={project} />
+                  <span className="absolute right-3 top-3">
+                    <Badge tone={history.owned.some((owned) => owned.id === project.id) ? "brand" : "neutral"}>
+                      {history.owned.some((owned) => owned.id === project.id) ? "Owner" : "Contributor"}
+                    </Badge>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {attributions.length > 0 && view.contributions ? (
             <Card>
               <div className="border-b border-navy-100 px-5 py-3.5">
-                <h2 className="text-[13px] font-semibold text-navy-900">Verified contribution record</h2>
-                <p className="text-[11px] text-navy-500">
-                  Each record names how it was confirmed. Owner confirmation is not the same as independent verification.
-                </p>
+                <h2 className="text-[13px] font-semibold text-navy-900">Contribution history</h2>
+                <p className="text-[11px] text-navy-500">Owner-confirmed records. These are not independent verification.</p>
               </div>
               <ul className="divide-y divide-navy-100">
-                {verified.slice(0, 6).map((row) => (
+                {attributions.map((row) => (
+                  <li key={row.attribution.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                    <Link href={`/projects/${row.attribution.projectId}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
+                      {row.projectName}
+                    </Link>
+                    {row.taskTitle ? <span className="text-[11.5px] text-navy-500">{row.taskTitle}</span> : null}
+                    <Badge tone={row.attribution.verificationMethod === "owner_confirmed" ? "info" : "success"}>
+                      {row.attribution.verificationMethod === "owner_confirmed" ? "Owner confirmed" : "Platform verified"}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Teachings */}
+      {tab === "teachings" ? (
+        <div className="mt-4 space-y-4">
+          {!view.learning && !isSelf ? (
+            <EmptyState
+              title="Teaching is private"
+              description="This person has chosen not to show the learning material they published."
+            />
+          ) : resources.length + journeys.length === 0 ? (
+            <EmptyState
+              icon={<GraduationCap size={22} aria-hidden="true" />}
+              title={isSelf ? "You have not published a teaching yet" : "No published teaching yet"}
+              description={
+                isSelf
+                  ? "Turn something you know into a guide or explainer. It appears in Learning and here."
+                  : "Tutorials, guides and explainers this person publishes appear here."
+              }
+              action={isSelf ? <ButtonLink href="/create/teaching" size="sm">Create a teaching</ButtonLink> : undefined}
+            />
+          ) : (
+            <>
+              {resources.length > 0 ? (
+                <ul className="grid gap-3">
+                  {resources.map((resource) => (
+                    <li key={resource.id}>
+                      <ResourceCard resource={{ ...resource, creatorName: person.displayName, creatorUsername: person.username }} />
+                      {resource.status !== "published" ? (
+                        <p className="mt-1 text-[10.5px] text-navy-400">Draft — only you can see this.</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {journeys.length > 0 ? (
+                <Card>
+                  <div className="border-b border-navy-100 px-5 py-3.5">
+                    <h2 className="text-[13px] font-semibold text-navy-900">Learning journeys</h2>
+                  </div>
+                  <ul className="divide-y divide-navy-100">
+                    {journeys.map((journey) => (
+                      <li key={journey.id} className="px-5 py-3">
+                        <Link href={`/learn/journeys/${journey.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
+                          {journey.title}
+                        </Link>
+                        <p className="text-[11px] capitalize text-navy-500">{journey.status}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {/* Learnings */}
+      {tab === "learnings" ? (
+        <div className="mt-4 space-y-4">
+          {!isSelf && !sharesLearning ? (
+            <EmptyState
+              title="Learning history is private"
+              description="Completed learning is only shown when the person chooses to share it."
+            />
+          ) : learnings.length === 0 ? (
+            <EmptyState
+              title={isSelf ? "You have not marked anything complete" : "Nothing completed yet"}
+              description={
+                isSelf
+                  ? "Completing a lesson in Learning records it here. It stays private unless you share it."
+                  : undefined
+              }
+              action={isSelf ? <ButtonLink href="/learn" size="sm">Browse Learning</ButtonLink> : undefined}
+            />
+          ) : (
+            <>
+              {isSelf ? (
+                <Alert tone={sharesLearning ? "info" : "warning"} title={sharesLearning ? "Your learning history is visible on your profile" : "Your learning history is private"}>
+                  {sharesLearning
+                    ? "Only completed items are shown. You can turn this off in Settings → Privacy."
+                    : "Only you can see this list. Sharing it is opt-in, in Settings → Privacy."}{" "}
+                  <Link href="/settings?tab=privacy" className="underline">
+                    Privacy settings
+                  </Link>
+                </Alert>
+              ) : null}
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {learnings.map((item) => (
+                  <li key={item.resourceId}>
+                    <Link href={`/learn/${item.resourceId}`} className="block">
+                      <Card className="motion-card h-full p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-[13px] font-semibold text-navy-950">{item.title}</h3>
+                          <Badge tone="success">
+                            <CheckCircle2 size={11} aria-hidden="true" /> Complete
+                          </Badge>
+                        </div>
+                        {item.summary ? <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-navy-600">{item.summary}</p> : null}
+                        <p className="mt-2 text-[10.5px] text-navy-500">
+                          {item.creatorName} · finished {relativeTime(item.completedAt)}
+                        </p>
+                      </Card>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {/* Accepted work */}
+      {tab === "accepted" ? (
+        <div className="mt-4 space-y-4">
+          {!view.contributions && !isSelf ? (
+            <EmptyState title="Accepted work is private" description="This person has chosen not to show their contribution records." />
+          ) : accepted.length === 0 ? (
+            <EmptyState
+              title={isSelf ? "No accepted work yet" : "No accepted work yet"}
+              description="Accepted work appears here when a project reviewer approves a Drop this person delivered."
+              action={isSelf ? <ButtonLink href="/projects" size="sm">See your Drops</ButtonLink> : undefined}
+            />
+          ) : (
+            <>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {accepted.map((item) => (
+                  <li key={`${item.attributionId}-${item.deliverable?.id ?? "none"}`}>
+                    <Card className="motion-card h-full p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={`/projects/${item.projectId}`} className="text-[12px] font-medium text-brand-700 hover:underline">
+                          {item.projectName}
+                        </Link>
+                        <Badge tone={item.verificationMethod === "owner_confirmed" ? "info" : "success"}>
+                          {item.verificationMethod === "owner_confirmed" ? "Owner confirmed" : "Platform verified"}
+                        </Badge>
+                        {item.status === "disputed" ? <Badge tone="danger">Disputed</Badge> : null}
+                      </div>
+                      <h3 className="mt-1 text-[13.5px] font-semibold text-navy-950">
+                        {item.deliverable?.title ?? item.taskTitle ?? "Contribution"}
+                      </h3>
+                      <p className="mt-0.5 text-[11.5px] text-navy-500">
+                        {item.role}
+                        {item.confirmedAt ? ` · accepted ${relativeTime(item.confirmedAt)}` : ""}
+                      </p>
+                      {item.summary ? <p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-navy-600">{item.summary}</p> : null}
+                      <div className="mt-2 flex flex-wrap gap-3 text-[11.5px]">
+                        {item.taskId ? (
+                          <Link href={`/tasks/${item.taskId}`} className="text-brand-700 underline">
+                            View the Drop
+                          </Link>
+                        ) : null}
+                        {item.deliverable?.url ? (
+                          <a
+                            href={item.deliverable.url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="text-brand-700 underline"
+                          >
+                            Open deliverable
+                          </a>
+                        ) : null}
+                        {item.deliverable?.fileId ? (
+                          <Link href={`/api/files/${item.deliverable.fileId}`} className="text-brand-700 underline">
+                            Download file
+                          </Link>
+                        ) : null}
+                      </div>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[10.5px] text-navy-400">
+                Acceptance by a project owner is a record of a decision, not independent verification of the work.
+              </p>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {/* About */}
+      {tab === "about" ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card>
+            <div className="border-b border-navy-100 px-5 py-3.5">
+              <h2 className="text-[13px] font-semibold text-navy-900">Verified contribution record</h2>
+              <p className="text-[11px] text-navy-500">Each record names how it was confirmed.</p>
+            </div>
+            <ul className="divide-y divide-navy-100">
+              {view.contributions ? (
+                verified.slice(0, 6).map((row) => (
                   <li key={row.attribution.id} className="px-5 py-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link href={`/projects/${row.attribution.projectId}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -203,86 +575,23 @@ export default async function ProfilePage({
                       <Badge tone={row.attribution.verificationMethod === "owner_confirmed" ? "info" : "success"}>
                         {row.attribution.verificationMethod === "owner_confirmed" ? "Owner confirmed" : "Platform verified"}
                       </Badge>
-                      {row.attribution.status === "disputed" ? <Badge tone="danger">Disputed</Badge> : null}
                     </div>
                     <p className="mt-0.5 text-[11.5px] text-navy-600">
-                      {row.attribution.role} · {row.attribution.summary}
+                      {row.attribution.role}
+                      {row.attribution.summary ? ` · ${row.attribution.summary}` : ""}
                     </p>
-                    <p className="text-[10.5px] text-navy-400">Confirmed {relativeTime(row.attribution.confirmedAt ?? row.attribution.createdAt)}</p>
                   </li>
-                ))}
-                {verified.length === 0 ? (
-                  <li className="p-5">
-                    <EmptyState
-                      title="No confirmed contributions yet"
-                      description="Contributions appear here once a project owner confirms a submitted task."
-                    />
-                  </li>
-                ) : null}
-              </ul>
-            </Card>
+                ))
+              ) : (
+                <li className="px-5 py-4 text-[12px] text-navy-500">Contribution records are private.</li>
+              )}
+              {view.contributions && verified.length === 0 ? (
+                <li className="px-5 py-4 text-[12px] text-navy-500">No confirmed contributions yet.</li>
+              ) : null}
+            </ul>
+          </Card>
 
-            <Card>
-              <div className="border-b border-navy-100 px-5 py-3.5">
-                <h2 className="text-[13px] font-semibold text-navy-900">Recent posts</h2>
-              </div>
-              <ul className="divide-y divide-navy-100">
-                {posts.slice(0, 5).map((post) => (
-                  <li key={post.id} className="px-5 py-3">
-                    <p className="text-[12.5px] font-medium capitalize text-navy-900">{post.kind.replace(/_/g, " ")}</p>
-                    <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-5 text-navy-600">{post.body}</p>
-                    <p className="mt-0.5 text-[10.5px] text-navy-400">{relativeTime(post.createdAt)}</p>
-                  </li>
-                ))}
-                {posts.length === 0 ? (
-                  <li className="px-5 py-6 text-center text-[12px] text-navy-500">No posts yet.</li>
-                ) : null}
-              </ul>
-            </Card>
-          </div>
-
-          <aside className="space-y-4">
-            <Card className="p-4">
-              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Reputation dimensions</h2>
-              <div className="mt-2 space-y-2.5">
-                {(
-                  [
-                    ["contribution", "Contribution", "Completed, documented work confirmed by an owner"],
-                    ["expertise", "Expertise", "Skills demonstrated across tasks and outcomes"],
-                    ["teaching", "Teaching", "Learner feedback on published material"],
-                    ["influence", "Influence", "Followers and reach — not a quality signal"],
-                  ] as const
-                ).map(([key, title, hint]) => (
-                  <div key={key}>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-[12px] font-medium text-navy-800">{title}</span>
-                      <span className="text-[11px] tabular-nums text-navy-500">{reputation.totals[key]}</span>
-                    </div>
-                    <Progress value={Math.min(100, Math.round((reputation.totals[key] / 200) * 100))} label={hint} />
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-[10px] leading-4 text-navy-400">
-                Points are traceable to individual records. There is no single combined score.
-              </p>
-            </Card>
-
-            {skillEvidence.length > 0 ? (
-              <Card className="p-4">
-                <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Skill evidence</h2>
-                <ul className="mt-2 space-y-1.5">
-                  {skillEvidence.map((entry) => (
-                    <li key={entry.skillId} className="flex items-center justify-between gap-2">
-                      <span className="text-[11.5px] text-navy-700">{entry.name}</span>
-                      <span className="text-[10.5px] text-navy-500">
-                        {entry.tasks} task{entry.tasks === 1 ? "" : "s"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ) : null}
-
+          <div className="space-y-4">
             <Card className="p-4">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Achievements</h2>
               <ul className="mt-2 space-y-2">
@@ -299,251 +608,57 @@ export default async function ProfilePage({
               </ul>
             </Card>
 
-            {attributions.length > 0 ? (
-              <Card className="p-4">
-                <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Attribution corrections</h2>
-                <p className="mt-1 text-[11px] leading-5 text-navy-600">
-                  If a record is wrong, open it to dispute or request a correction. Disputes are reviewed by moderation.
-                </p>
-                <ButtonLink href="/settings?tab=contributions" size="sm" variant="secondary" className="mt-2">
-                  Manage my records
-                </ButtonLink>
-              </Card>
-            ) : null}
-
             <Card className="p-4">
-              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Links</h2>
-              <DefinitionList
-                items={[
-                  {
-                    term: "Portfolio",
-                    value:
-                      person.portfolioUrls && person.portfolioUrls.length > 0 ? (
-                        <span className="space-x-2">
-                          {person.portfolioUrls.slice(0, 3).map((url) => (
-                            <a key={url} href={url} rel="nofollow noopener noreferrer" target="_blank" className="text-brand-700 underline">
-                              {new URL(url).hostname.replace(/^www\./, "")}
-                            </a>
-                          ))}
-                        </span>
-                      ) : (
-                        "—"
-                      ),
-                  },
-                  { term: "Timezone", value: person.timezone ?? "—" },
-                  { term: "Roles", value: userRoles.join(", ") },
-                ]}
-              />
-            </Card>
-          </aside>
-        </div>
-      ) : null}
-
-      {tab === "work" ? (
-        <div className="space-y-5">
-          <section>
-            <h2 className="mb-2 text-[13px] font-semibold text-navy-900">Projects created</h2>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {history.owned.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-              {history.owned.length === 0 ? (
-                <div className="sm:col-span-2 xl:col-span-3">
-                  <EmptyState title="No projects created" description={isSelf ? "Create a project to start building in public." : undefined} />
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="mb-2 text-[13px] font-semibold text-navy-900">Projects contributed to</h2>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {history.contributed.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-              {history.contributed.length === 0 ? (
-                <div className="sm:col-span-2 xl:col-span-3">
-                  <EmptyState title="No contributions yet" description="Accepted tasks on someone else's project appear here." />
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          <Card>
-            <div className="border-b border-navy-100 px-5 py-3.5">
-              <h2 className="text-[13px] font-semibold text-navy-900">Contribution history</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-[12px]">
-                <thead className="border-b border-navy-100 bg-navy-50/60 text-[10.5px] uppercase tracking-wide text-navy-500">
-                  <tr>
-                    <th scope="col" className="px-5 py-2 font-medium">Project</th>
-                    <th scope="col" className="px-5 py-2 font-medium">Role</th>
-                    <th scope="col" className="px-5 py-2 font-medium">Verification</th>
-                    <th scope="col" className="px-5 py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-navy-100">
-                  {attributions.map((row) => (
-                    <tr key={row.attribution.id}>
-                      <td className="px-5 py-2">
-                        <Link href={`/projects/${row.attribution.projectId}`} className="font-medium text-navy-800 hover:underline">
-                          {row.projectName}
-                        </Link>
-                        {row.taskTitle ? <span className="block text-[10.5px] text-navy-500">{row.taskTitle}</span> : null}
-                      </td>
-                      <td className="px-5 py-2 text-navy-600">{row.attribution.role}</td>
-                      <td className="px-5 py-2">
-                        <Badge tone={row.attribution.verificationMethod === "owner_confirmed" ? "info" : "success"}>
-                          {row.attribution.verificationMethod === "owner_confirmed" ? "Owner confirmed" : "Platform verified"}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-2">
-                        <span className={cn("capitalize", row.attribution.status === "disputed" && "text-red-700")}>
-                          {row.attribution.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {attributions.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-5 py-6 text-center text-navy-500">
-                        No contribution records.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      ) : null}
-
-      {tab === "learning" ? (
-        <div className="space-y-5">
-          <section>
-            <h2 className="mb-2 text-[13px] font-semibold text-navy-900">Learning resources</h2>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {resources.map((resource) => (
-                <ResourceCard
-                  key={resource.id}
-                  resource={{ ...resource, creatorName: person.displayName, creatorUsername: person.username }}
-                />
-              ))}
-              {resources.length === 0 ? (
-                <div className="sm:col-span-2 xl:col-span-3">
-                  <EmptyState title="No published learning resources" description="Free lessons and premium products appear here." />
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          {journeys.length > 0 ? (
-            <Card>
-              <div className="border-b border-navy-100 px-5 py-3.5">
-                <h2 className="text-[13px] font-semibold text-navy-900">Learning journeys</h2>
-              </div>
-              <ul className="divide-y divide-navy-100">
-                {journeys.map((journey) => (
-                  <li key={journey.id} className="px-5 py-3">
-                    <Link href={`/learn/journeys/${journey.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
-                      {journey.title}
-                    </Link>
-                    <p className="text-[11px] capitalize text-navy-500">{journey.status}</p>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ) : null}
-
-          {products.length > 0 ? (
-            <Card>
-              <div className="border-b border-navy-100 px-5 py-3.5">
-                <h2 className="text-[13px] font-semibold text-navy-900">Premium products</h2>
-                <p className="text-[11px] text-navy-500">Access is granted in test mode — no payment is taken.</p>
-              </div>
-              <ul className="divide-y divide-navy-100">
-                {products.map((row) => (
-                  <li key={row.product.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                    <div>
-                      <Link href={`/checkout/${row.product.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
-                        {row.product.title}
-                      </Link>
-                      <p className="text-[11px] text-navy-500">{row.product.format.replace(/_/g, " ")}</p>
-                    </div>
-                    <span className="text-[12px] font-medium tabular-nums text-navy-800">
-                      {row.product.priceCents === 0
-                        ? "Free"
-                        : `${row.product.currency} ${(row.product.priceCents / 100).toFixed(2)}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ) : null}
-        </div>
-      ) : null}
-
-      {tab === "reputation" ? (
-        <div className="grid gap-5 lg:grid-cols-2">
-          <Card>
-            <div className="border-b border-navy-100 px-5 py-3.5">
-              <h2 className="text-[13px] font-semibold text-navy-900">Reputation events</h2>
-              <p className="text-[11px] text-navy-500">Every point names the record that produced it.</p>
-            </div>
-            <ul className="divide-y divide-navy-100">
-              {reputation.recent.map((event, index) => (
-                <li key={`${event.createdAt}-${index}`} className="flex items-start justify-between gap-3 px-5 py-2.5">
-                  <div>
-                    <p className="text-[12px] text-navy-800">{event.reason}</p>
-                    <p className="text-[10.5px] capitalize text-navy-500">
-                      {event.dimension} · {relativeTime(event.createdAt)}
-                    </p>
-                  </div>
-                  <span className="text-[12px] font-medium tabular-nums text-brand-700">+{event.points}</span>
+              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Reputation</h2>
+              <ul className="mt-2 space-y-1.5 text-[12px] text-navy-700">
+                <li className="flex justify-between">
+                  <span>Contribution</span>
+                  <span className="tabular-nums">{reputation.totals.contribution}</span>
                 </li>
-              ))}
-              {reputation.recent.length === 0 ? (
-                <li className="px-5 py-6 text-center text-[12px] text-navy-500">No reputation events yet.</li>
-              ) : null}
-            </ul>
-          </Card>
-
-          <div className="space-y-4">
-            <Card className="p-4">
-              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Skill reputation</h2>
-              <ul className="mt-2 space-y-2">
-                {reputation.skills.map((skill) => (
-                  <li key={skill.skillId}>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-[12px] text-navy-800">{skill.name}</span>
-                      <span className="text-[10.5px] text-navy-500">
-                        {skill.points} pts · {skill.events} event{skill.events === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <Progress value={Math.min(100, skill.points)} />
-                  </li>
-                ))}
-                {reputation.skills.length === 0 ? <li className="text-[11px] text-navy-400">No skill-linked events.</li> : null}
+                <li className="flex justify-between">
+                  <span>Expertise</span>
+                  <span className="tabular-nums">{reputation.totals.expertise}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Teaching</span>
+                  <span className="tabular-nums">{reputation.totals.teaching}</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Influence</span>
+                  <span className="tabular-nums">{reputation.totals.influence}</span>
+                </li>
               </ul>
-            </Card>
-
-            <Card className="p-4">
-              <h2 className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-navy-500">
-                <TrendingUp size={12} aria-hidden="true" /> Teaching feedback
-              </h2>
-              <p className="mt-1 text-[12px] text-navy-700">
-                {reputation.feedback.count > 0
-                  ? `${reputation.feedback.average.toFixed(1)} average from ${reputation.feedback.count} learner rating${reputation.feedback.count === 1 ? "" : "s"}.`
-                  : "No learner feedback yet."}
+              <p className="mt-2 text-[10px] leading-4 text-navy-400">
+                Points are traceable to individual records. There is no combined score.
               </p>
             </Card>
 
-            <Alert tone="info" title="How these numbers are produced">
-              Contribution, expertise, teaching and influence are calculated separately from recorded events. Follower counts
-              never adjust contribution or expertise. Manipulation (duplicate submissions, reciprocal reviews) is reviewed by
-              moderation and can be reversed.
-            </Alert>
+            <Card className="p-4">
+              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Links</h2>
+              <ul className="mt-2 space-y-1 text-[12px]">
+                {person.portfolioUrls && person.portfolioUrls.length > 0 ? (
+                  person.portfolioUrls.slice(0, 3).map((url) => (
+                    <li key={url}>
+                      <a href={url} rel="nofollow noopener noreferrer" target="_blank" className="text-brand-700 underline">
+                        {new URL(url).hostname.replace(/^www\./, "")}
+                      </a>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-navy-400">No links added.</li>
+                )}
+              </ul>
+              {isSelf ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ButtonLink href="/settings?tab=privacy" size="sm" variant="secondary">
+                    Privacy
+                  </ButtonLink>
+                  <ButtonLink href="/settings?tab=contributions" size="sm" variant="ghost">
+                    My records
+                  </ButtonLink>
+                </div>
+              ) : null}
+            </Card>
           </div>
         </div>
       ) : null}

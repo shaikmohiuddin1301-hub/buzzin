@@ -43,7 +43,27 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
             <Badge tone={kindTone[post.kind] ?? "neutral"}>{label(post.kind)}</Badge>
           </div>
 
-          <div className="mt-2 whitespace-pre-line text-[13.5px] leading-6 text-navy-800">{post.body}</div>
+        </div>
+      </div>
+
+      {post.imageId ? (
+        <Link href={`/posts/${post.id}`} className="block bg-navy-50">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/api/files/${post.imageId}`}
+            alt={post.altText ?? ""}
+            loading="lazy"
+            className="max-h-[520px] w-full object-cover"
+          />
+        </Link>
+      ) : null}
+
+      <div className="px-4 pb-1 pt-3">
+          <div className="whitespace-pre-line text-[13.5px] leading-6 text-navy-800">{post.body}</div>
+
+          <Link href={`/posts/${post.id}`} className="mt-1 inline-block text-[11.5px] font-medium text-navy-500 hover:text-brand-700 hover:underline">
+            View post
+          </Link>
 
           {post.projectId ? (
             <Link
@@ -68,7 +88,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
             </form>
 
             <Link
-              href={post.projectId ? `/projects/${post.projectId}?tab=discussion` : "#comments"}
+              href={`/posts/${post.id}#comments`}
               className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-navy-500 hover:bg-navy-100 hover:text-navy-800"
             >
               <MessageCircle size={14} aria-hidden="true" />
@@ -115,7 +135,6 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
               </SubmitIconButton>
             </form>
           ) : null}
-        </div>
       </div>
     </Card>
   );

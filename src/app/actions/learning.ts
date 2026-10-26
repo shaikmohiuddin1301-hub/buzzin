@@ -2,7 +2,8 @@
 
 import { runServerAction } from "@/lib/actions";
 import { assertEmailVerified, requireUserOrThrow } from "@/lib/auth";
-import { bool, int, optional, str } from "@/lib/form";
+import { bool, file, int, optional, str } from "@/lib/form";
+import { saveUploadedFile } from "@/lib/storage";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   addFeedback,
@@ -25,7 +26,80 @@ import {
   submitStoryForReview,
   updateScene,
 } from "@/services/stories";
-import type { ResourceFormat, ResourceLevel } from "@/lib/types";
+import { createPost } from "@/services/social";
+import type { ResourceFormat, ResourceLevel, Visibility } from "@/lib/types";
+
+/**
+ * The Create → New Teaching flow: a focused form that still lands in the same
+ * `learning_resources` record as the full studio editor.
+ */
+export async function createTeachingAction(formData: FormData) {
+  const returnTo = str(formData, "returnTo", "/create/teaching");
+  await runServerAction(returnTo, async () => {
+    const user = await requireUserOrThrow();
+    assertEmailVerified(user);
+    rateLimit(`resource:${user.id}`, 12, 3_600_000);
+
+    let coverImageId: string | null = null;
+    const cover = file(formData, "cover");
+    if (cover) {
+      const stored = await saveUploadedFile(cover, { ownerId: user.id, visibility: "public" });
+      coverImageId = stored.id;
+    }
+
+    const { id } = createResource(user.id, {
+      title: str(formData, "title"),
+      summary: optional(formData, "summary"),
+      body: optional(formData, "body"),
+      previewBody: optional(formData, "previewBody"),
+      topic: optional(formData, "topic"),
+      level: str(formData, "level", "beginner") as ResourceLevel,
+      format: str(formData, "format", "article") as ResourceFormat,
+      durationMinutes: int(formData, "durationMinutes", 0) || undefined,
+      priceCents: 0,
+      projectId: optional(formData, "projectId") ?? null,
+      coverImageId,
+      publish: bool(formData, "publish"),
+    });
+
+    return {
+      path: `/learn/${id}?notice=${bool(formData, "publish") ? "Teaching+published." : "Draft+saved."}`,
+      revalidate: ["/learn", "/studio"],
+    };
+  });
+}
+
+/**
+ * Share a Learning: a reflection post, optionally about a resource the learner
+ * actually opened. Completion is only recorded when the learner ticks the box —
+ * nothing here guesses that they finished anything.
+ */
+export async function createReflectionAction(formData: FormData) {
+  await runServerAction("/create/learning", async () => {
+    const user = await requireUserOrThrow();
+    assertEmailVerified(user);
+    rateLimit(`reflection:${user.id}`, 20, 3_600_000);
+
+    const resourceId = optional(formData, "resourceId") ?? null;
+    const completed = bool(formData, "markCompleted");
+    const publish = bool(formData, "publish");
+
+    createPost(user.id, {
+      body: str(formData, "body"),
+      kind: "lesson",
+      resourceId,
+      visibility: str(formData, "visibility", "public") as Visibility,
+      publish,
+    });
+
+    if (resourceId && completed) recordProgress(user.id, resourceId, null, true);
+
+    return {
+      path: "/create/learning?notice=" + (publish ? "Reflection+shared." : "Reflection+saved+as+a+draft."),
+      revalidate: ["/create/learning", "/home"],
+    };
+  });
+}
 
 export async function createResourceAction(formData: FormData) {
   await runServerAction("/studio", async () => {

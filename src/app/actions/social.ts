@@ -3,7 +3,8 @@
 import { runServerAction } from "@/lib/actions";
 import { assertEmailVerified, requireUserOrThrow } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
-import { bool, optional, str } from "@/lib/form";
+import { bool, file, optional, str } from "@/lib/form";
+import { saveUploadedFile } from "@/lib/storage";
 import { rateLimit } from "@/lib/rate-limit";
 import { getDb } from "@/db/client";
 import { reports } from "@/db/schema";
@@ -22,12 +23,26 @@ export async function createPostAction(formData: FormData) {
     const user = await requireUserOrThrow();
     assertEmailVerified(user);
     rateLimit(`post:${user.id}`, 12, 3_600_000);
+
+    let imageId: string | null = null;
+    const upload = file(formData, "image");
+    if (upload) {
+      const stored = await saveUploadedFile(upload, { ownerId: user.id, visibility: "public" });
+      imageId = stored.id;
+    }
+
     createPost(user.id, {
       body: str(formData, "body"),
       kind: str(formData, "kind", "general") as FeedKind,
       projectId: optional(formData, "projectId") ?? null,
+      resourceId: optional(formData, "resourceId") ?? null,
+      imageId,
+      altText: optional(formData, "altText"),
+      visibility: str(formData, "visibility", "public") as "public" | "private",
+      publish: bool(formData, "publish"),
     });
-    return { path: `${returnTo}${returnTo.includes("?") ? "&" : "?"}notice=Posted.`, revalidate: [returnTo.split("?")[0] ?? "/", "/home"] };
+    const label = bool(formData, "publish") ? "Published" : "Draft+saved";
+    return { path: `${returnTo}${returnTo.includes("?") ? "&" : "?"}notice=${label}.`, revalidate: [returnTo.split("?")[0] ?? "/", "/home"] };
   });
 }
 
@@ -147,6 +162,7 @@ export async function updatePrivacyAction(formData: FormData) {
         followers: bool(formData, "showFollowers"),
       },
       showEmail: bool(formData, "showEmail"),
+      shareLearningHistory: bool(formData, "shareLearningHistory"),
     });
     return { path: "/settings?tab=privacy&notice=Privacy+settings+saved.", revalidate: ["/settings"] };
   });
