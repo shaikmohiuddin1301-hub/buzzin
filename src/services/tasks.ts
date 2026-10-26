@@ -17,6 +17,7 @@ import {
   users,
 } from "@/db/schema";
 import { getTaskAccess, requireProjectAccess, requireTaskAccess, type Viewer } from "@/lib/authz";
+import { notifyDependentsReady } from "@/services/dependencies";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { notify, notifyMany } from "@/lib/notify";
 import { awardReputation, REPUTATION_WEIGHTS } from "@/lib/reputation";
@@ -598,6 +599,9 @@ export function reviewSubmission(
       body: "This is now recorded in your contribution history as owner-confirmed.",
       href: "/settings?tab=contributions",
     });
+    // Approval can unblock work that was waiting on this deliverable. Readiness is
+    // derived from the prerequisite status, so this only notifies people it applies to.
+    notifyDependentsReady(task.id, viewer!.id);
   } else {
     notify({
       userId: submission.userId,

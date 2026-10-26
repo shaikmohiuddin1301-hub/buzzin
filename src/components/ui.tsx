@@ -257,7 +257,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors duration-150",
         tones[tone],
         className,
       )}
@@ -297,7 +297,7 @@ const statusTones: Record<string, Tone> = {
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
   return (
-    <Badge tone={statusTones[status] ?? "neutral"} className={className}>
+    <Badge tone={statusTones[status] ?? "neutral"} className={cn("motion-status", className)}>
       <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
       {humanLabel(status)}
     </Badge>
@@ -467,7 +467,7 @@ export function Progress({ value, label }: { value: number; label?: string }) {
         aria-valuemax={100}
         aria-label={label ?? "Progress"}
       >
-        <div className="h-full rounded-full bg-brand-600 transition-[width]" style={{ width: `${clamped}%` }} />
+        <div className="h-full rounded-full bg-brand-600 transition-[width] duration-300 ease-out" style={{ width: `${clamped}%` }} />
       </div>
       {label ? <p className="mt-1 text-xs text-navy-500">{label}</p> : null}
     </div>

@@ -490,6 +490,27 @@ export const taskReviews = sqliteTable(
   (t) => [index("task_reviews_task_idx").on(t.taskId)],
 );
 
+/**
+ * A simple prerequisite link: `taskId` cannot start until `dependsOnTaskId` is
+ * approved. One row per pair, enforced by a unique index, so re-adding the same
+ * link cannot create duplicate blockers.
+ */
+export const taskDependencies = sqliteTable(
+  "task_dependencies",
+  {
+    id: uuid(),
+    taskId: text("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+    dependsOnTaskId: text("depends_on_task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+    reason: text("reason"),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("task_dependencies_uq").on(t.taskId, t.dependsOnTaskId),
+    index("task_dependencies_prereq_idx").on(t.dependsOnTaskId),
+  ],
+);
+
 export const deliverables = sqliteTable(
   "deliverables",
   {

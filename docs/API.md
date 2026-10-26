@@ -101,7 +101,24 @@ correctAttribution(attributionId, viewer, { role?, summary? })
 openTasksForProject(projectId) · upcomingDeadlines(userId)
 ```
 
-Acceptance semantics: `reviewSubmission("accepted")` is the **only** path that creates a `contributor_attributions` row, marks deliverables approved, awards reputation, and notifies the contributor. An upload on its own is never evidence.
+Acceptance semantics: `reviewSubmission("accepted")` is the **only** path that creates a `contributor_attributions` row, marks deliverables approved, awards reputation, and notifies the contributor. An upload on its own is never evidence. Acceptance also calls `notifyDependentsReady` so work whose prerequisites are now all approved is reported as ready.
+
+### `dependencies.ts` — prerequisites between Drops
+```ts
+addDependency(taskId, viewer, { dependsOnTaskId, reason? }): string   // same project, no self-links, no cycles
+removeDependency(dependencyId, viewer) · listTaskDependencies(taskId, viewer)
+taskReady(taskId): boolean                                  // every prerequisite completed
+notifyDependentsReady(completedTaskId, actorId)             // called after acceptance only
+```
+
+Dependency state is always derived from the prerequisite task's status, so there is no second status to keep in sync. Readiness never auto-approves dependent work and never changes its status.
+
+### `accepted.ts` — the canonical Accepted Work collection
+```ts
+projectAcceptedWork(projectId, viewer) // { items, areas, canViewFiles }
+```
+
+One row per approved `deliverables` record — the same record the Drop page renders. Grouping uses the task's skill category ("Design", "Software", …) and falls back to "General". Outsiders see only accepted work from public tasks on projects they may view; file links are members-only.
 
 ### `worklog.ts` — contributor documentation
 ```ts

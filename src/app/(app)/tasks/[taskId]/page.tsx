@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { ClipboardList, FileUp, MessageSquare, NotebookPen } from "lucide-react";
+import { ClipboardList, FileUp, Link2, MessageSquare, NotebookPen } from "lucide-react";
 import { getDb } from "@/db/client";
 import { projectMembers, users } from "@/db/schema";
 import {
+  addDependencyAction,
   assignContributorAction,
   confirmScopeAction,
   disputeAttributionAction,
   expressInterestAction,
   removeAssigneeAction,
+  removeDependencyAction,
   reviewSubmissionAction,
   setTaskStatusAction,
   submitWorkAction,
@@ -40,7 +42,8 @@ import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { formatDate, relativeTime } from "@/lib/format";
 import { label, TASK_STATUSES } from "@/lib/types";
-import { taskDetail } from "@/services/tasks";
+import { listTaskDependencies } from "@/services/dependencies";
+import { listTasks, taskDetail } from "@/services/tasks";
 import { listComments } from "@/services/social";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +68,10 @@ export default async function TaskPage({
   const comments = listComments("task", taskId, user);
   // Set by reviewSubmissionAction only after the approval was written.
   const justApproved = query.approved === "1";
+  const dependencies = listTaskDependencies(taskId, user);
+  const prerequisiteCandidates = canEdit
+    ? listTasks(project.id, user).filter((candidate) => candidate.id !== taskId)
+    : [];
 
   const candidateMembers = canReview
     ? getDb()
@@ -122,6 +129,40 @@ export default async function TaskPage({
 
       <Flash error={error} notice={notice} />
       <AcceptedWorkCelebration show={justApproved} title={task.title} />
+
+      {dependencies.blocked ? (
+        <div className="mb-5">
+          <Alert tone="warning" title="Waiting on a prerequisite">
+            <ul className="space-y-1">
+              {dependencies.items
+                .filter((item) => !item.satisfied)
+                .map((item) => (
+                  <li key={item.id}>
+                    <Link href={`/tasks/${item.prerequisite.id}`} className="font-medium underline">
+                      {item.prerequisite.title}
+                    </Link>{" "}
+                    <span className="text-[12px]">
+                      is {label(item.prerequisite.status).toLowerCase()}
+                      {item.reason ? ` — ${item.reason}` : "."}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+            {dependencies.restricted > 0 ? (
+              <p className="mt-1">
+                {dependencies.restricted} further {dependencies.restricted === 1 ? "prerequisite is" : "prerequisites are"} not
+                visible to you.
+              </p>
+            ) : null}
+          </Alert>
+        </div>
+      ) : dependencies.ready ? (
+        <div className="mb-5">
+          <Alert tone="success" title="Prerequisites approved">
+            Every task this work depends on has been accepted, so it can start. The people responsible were notified.
+          </Alert>
+        </div>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
@@ -357,6 +398,72 @@ export default async function TaskPage({
               </form>
             ) : null}
           </Card>
+
+          {dependencies.items.length > 0 || canEdit ? (
+            <Card className="p-4">
+              <h2 className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-navy-500">
+                <Link2 size={12} aria-hidden="true" /> Prerequisites
+              </h2>
+              {dependencies.items.length > 0 ? (
+                <ul className="mt-2 space-y-2">
+                  {dependencies.items.map((item) => (
+                    <li key={item.id} className="text-[12px]">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <Link href={`/tasks/${item.prerequisite.id}`} className="block font-medium text-navy-900 hover:underline">
+                            {item.prerequisite.title}
+                          </Link>
+                          <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-navy-500">
+                            <StatusBadge status={item.prerequisite.status} />
+                            {item.satisfied ? "Prerequisite met" : "Not approved yet"}
+                          </p>
+                          {item.reason ? <p className="mt-0.5 text-[11px] text-navy-500">{item.reason}</p> : null}
+                        </div>
+                        {canEdit ? (
+                          <form action={removeDependencyAction}>
+                            <input type="hidden" name="taskId" value={taskId} />
+                            <input type="hidden" name="dependencyId" value={item.id} />
+                            <SubmitButton size="sm" variant="ghost" pendingLabel="…">
+                              Remove
+                            </SubmitButton>
+                          </form>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-[12px] text-navy-500">
+                  No prerequisites. This work is ready whenever someone starts it.
+                </p>
+              )}
+
+              {canEdit && prerequisiteCandidates.length > 0 ? (
+                <form action={addDependencyAction} className="mt-3 space-y-2 border-t border-navy-100 pt-3">
+                  <input type="hidden" name="taskId" value={taskId} />
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <Field label="Requires" htmlFor="dependsOnTaskId" hint="The prerequisite is satisfied when that task is approved.">
+                    <Select id="dependsOnTaskId" name="dependsOnTaskId" required defaultValue="">
+                      <option value="">Choose a task…</option>
+                      {prerequisiteCandidates
+                        .filter((candidate) => !dependencies.items.some((item) => item.prerequisite.id === candidate.id))
+                        .map((candidate) => (
+                          <option key={candidate.id} value={candidate.id}>
+                            {candidate.title} ({label(candidate.status)})
+                          </option>
+                        ))}
+                    </Select>
+                  </Field>
+                  <Field label="Why" htmlFor="reason">
+                    <Input id="reason" name="reason" maxLength={500} placeholder="Builds on this research" />
+                  </Field>
+                  <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="…">
+                    Add prerequisite
+                  </SubmitButton>
+                </form>
+              ) : null}
+            </Card>
+          ) : null}
 
           {skills.length > 0 ? (
             <Card className="p-4">

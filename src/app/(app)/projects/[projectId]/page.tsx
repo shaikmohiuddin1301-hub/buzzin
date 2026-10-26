@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
-import { CalendarDays, ExternalLink, FolderKanban, Heart, MessageSquare, Pencil, Users } from "lucide-react";
+import { CalendarDays, ExternalLink, FolderCheck, FolderKanban, Heart, MessageSquare, Pencil, Users } from "lucide-react";
 import { getDb } from "@/db/client";
 import { consentRecords, deliverables, storyScenes, tasks, users, workLogEntries } from "@/db/schema";
 import {
@@ -248,6 +248,9 @@ export default async function ProjectPage({
                 </div>
               </details>
             ) : null}
+            <ButtonLink href={`/projects/${projectId}/accepted`} variant="secondary" size="sm">
+              <FolderCheck size={13} aria-hidden="true" /> Accepted work
+            </ButtonLink>
             {access.canReview ? (
               <form action={openProjectChatAction}>
                 <input type="hidden" name="projectId" value={projectId} />
@@ -1143,7 +1146,12 @@ export default async function ProjectPage({
           </Card>
 
           <Card className="p-5">
-            <h2 className="text-[14px] font-semibold text-navy-950">Approved deliverables</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-[14px] font-semibold text-navy-950">Approved deliverables</h2>
+              <Link href={`/projects/${projectId}/accepted`} className="text-[11.5px] font-medium text-brand-700 hover:underline">
+                Accepted work
+              </Link>
+            </div>
             <ul className="mt-2 divide-y divide-navy-100">
               {approvedDeliverables.map((row) => (
                 <li key={row.deliverable.id} className="py-2.5">

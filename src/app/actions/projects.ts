@@ -34,6 +34,7 @@ import {
   submitWork,
   updateTask,
 } from "@/services/tasks";
+import { addDependency, removeDependency } from "@/services/dependencies";
 import { addWorkLogEntry, approveWorkLogEntry, updateWorkLogEntry, withdrawConsent } from "@/services/worklog";
 import type {
   CompensationType,
@@ -420,6 +421,32 @@ export async function reviewSubmissionAction(formData: FormData) {
           : `/tasks/${taskId}?notice=Changes+requested.`,
       revalidate: [`/tasks/${taskId}`],
     };
+  });
+}
+
+/* ------------------------------- dependencies ------------------------------- */
+
+export async function addDependencyAction(formData: FormData) {
+  const taskId = str(formData, "taskId");
+  await runServerAction(`/tasks/${taskId}`, async () => {
+    const user = await requireUserOrThrow();
+    addDependency(taskId, user, {
+      dependsOnTaskId: str(formData, "dependsOnTaskId"),
+      reason: optional(formData, "reason"),
+    });
+    return {
+      path: `/tasks/${taskId}?notice=Prerequisite+added.`,
+      revalidate: [`/tasks/${taskId}`, `/projects/${str(formData, "projectId")}`],
+    };
+  });
+}
+
+export async function removeDependencyAction(formData: FormData) {
+  const taskId = str(formData, "taskId");
+  await runServerAction(`/tasks/${taskId}`, async () => {
+    const user = await requireUserOrThrow();
+    removeDependency(str(formData, "dependencyId"), user);
+    return { path: `/tasks/${taskId}?notice=Prerequisite+removed.`, revalidate: [`/tasks/${taskId}`] };
   });
 }
 
