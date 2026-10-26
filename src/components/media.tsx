@@ -15,7 +15,7 @@ export function VideoPlayer({
   transcript?: string | null;
 }) {
   return (
-    <figure className="overflow-hidden rounded-xl border border-navy-200 bg-navy-950">
+    <figure className="overflow-hidden rounded-xl border border-navy-200 ink-surface">
       <video controls preload="metadata" className="aspect-video w-full" aria-label={title}>
         <source src={src} />
         {captionsSrc ? <track kind="captions" src={captionsSrc} srcLang="en" label="English captions" default /> : null}
@@ -25,12 +25,12 @@ export function VideoPlayer({
         </a>
         .
       </video>
-      <figcaption className="flex items-center justify-between gap-3 bg-white px-4 py-2.5 text-[12px] text-navy-600">
+      <figcaption className="flex items-center justify-between gap-3 bg-surface px-4 py-2.5 text-[12px] text-navy-600">
         <span>{title}</span>
         {!captionsSrc ? <Badge tone="warning">Captions not available</Badge> : <Badge tone="success">Captions available</Badge>}
       </figcaption>
       {transcript ? (
-        <details className="border-t border-navy-100 bg-white px-4 py-3">
+        <details className="border-t border-navy-100 bg-surface px-4 py-3">
           <summary className="cursor-pointer text-[12px] font-medium text-navy-700">Read the transcript</summary>
           <p className="mt-2 whitespace-pre-line text-[12.5px] leading-6 text-navy-600">{transcript}</p>
         </details>
@@ -41,7 +41,7 @@ export function VideoPlayer({
 
 export function AudioPlayer({ src, title }: { src: string; title: string }) {
   return (
-    <figure className="rounded-lg border border-navy-200 bg-white p-3">
+    <figure className="rounded-lg border border-navy-200 bg-surface p-3">
       <figcaption className="mb-1.5 text-[12px] font-medium text-navy-700">{title}</figcaption>
       <audio controls preload="none" className="w-full">
         <source src={src} />
@@ -67,7 +67,7 @@ export function AttachmentLink({
   const isImage = mimeType.startsWith("image/");
   const href = signed ?? `/api/files/${fileId}`;
   return (
-    <div className="rounded-lg border border-navy-200 bg-white">
+    <div className="rounded-lg border border-navy-200 bg-surface">
       {isImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={href} alt={filename} className="max-h-72 w-full rounded-t-lg object-contain" loading="lazy" />

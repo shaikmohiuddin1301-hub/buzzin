@@ -170,7 +170,7 @@ export default async function TaskJourneyPage({
             work-log entry that proves it.
           </Alert>
 
-          <div className="rounded-lg border border-navy-200 bg-white p-3 text-[11px] leading-5 text-navy-600">
+          <div className="rounded-lg border border-navy-200 bg-surface p-3 text-[11px] leading-5 text-navy-600">
             <p className="flex items-center gap-1.5 font-semibold text-navy-800">
               <BookOpen size={12} aria-hidden="true" /> Publishing rules
             </p>

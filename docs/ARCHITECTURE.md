@@ -51,11 +51,30 @@ There is no separate API tier. The service layer **is** the API: it is the only 
 
 ## 3. Request flows
 
+### Entry and return paths
+
+```
+GET /                        → session resolved on the server (never a client flag)
+  ├─ no session              → (entry) Login / Sign Up screen, noindex
+  └─ valid session           → redirect /home
+GET /welcome                 → public marketing landing page (canonical /welcome)
+GET /projects/p-river?tab=tasks   (signed out)
+  → layout requireUser()     → redirect /auth/sign-in?next=%2Fprojects%2Fp-river%3Ftab%3Dtasks
+  → signInAction             → safeNextPath() validates next → session cookie → redirect next
+```
+
+`src/lib/redirects.ts` is the only place that decides whether a post-login
+return path is safe: same-origin absolute paths only, never `/`, `/welcome` or
+the `/auth/*` screens, so a signed-in visitor cannot be sent back into a login
+loop. The requested path and query are captured in middleware headers
+(`x-pathname`, `x-search`); authentication itself is still enforced per page and
+per action.
+
 ### Read: project page
 
 ```
 GET /projects/p-river?tab=tasks
-  → middleware adds x-pathname (nav highlighting only; never auth)
+  → middleware adds x-pathname/x-search (nav highlighting and return paths; never auth)
   → layout resolves the session (src/lib/auth.ts)
   → page calls projectDetail(id, viewer), listTasks(id, viewer), projectJourneys(...)
   → projectDetail → getProjectAccess(id, viewer) → canView? → rows

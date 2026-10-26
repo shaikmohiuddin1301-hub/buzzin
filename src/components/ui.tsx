@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
-import { label as humanLabel } from "@/lib/types";
+import { label as humanLabel, taskStatusLabel } from "@/lib/types";
 
 export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
@@ -15,9 +15,9 @@ const variants: Record<Variant, string> = {
   primary:
     "bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-300",
   secondary:
-    "border border-navy-200 bg-white text-navy-800 shadow-sm hover:border-navy-300 hover:bg-navy-50",
+    "border border-navy-200 bg-surface text-navy-800 shadow-sm hover:border-navy-300 hover:bg-navy-50",
   ghost: "text-navy-700 hover:bg-navy-100",
-  danger: "bg-red-600 text-white shadow-sm hover:bg-red-700",
+  danger: "bg-red-700 text-white shadow-sm hover:bg-red-800",
   subtle: "bg-brand-50 text-brand-700 hover:bg-brand-100",
 };
 
@@ -217,7 +217,7 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-xl border border-navy-200/80 bg-white shadow-card", className)}>
+    <section className={cn("card-surface", className)}>
       {title ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy-100 px-5 py-4">
           <div>
@@ -239,7 +239,7 @@ const tones = {
   brand: "bg-brand-50 text-brand-700",
   success: "bg-emerald-50 text-emerald-700",
   warning: "bg-amber-50 text-amber-800",
-  danger: "bg-red-50 text-red-700",
+  danger: "bg-red-50 text-red-600",
   info: "bg-sky-50 text-sky-700",
 } as const;
 
@@ -304,6 +304,16 @@ export function StatusBadge({ status, className }: { status: string; className?:
   );
 }
 
+/** Task statuses use work language (To do / Needs review / Approved), not system values. */
+export function TaskStatusBadge({ status, className }: { status: string; className?: string }) {
+  return (
+    <Badge tone={statusTones[status] ?? "neutral"} className={cn("motion-status", className)}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+      {taskStatusLabel(status)}
+    </Badge>
+  );
+}
+
 export function SkillTag({ name, href }: { name: string; href?: string }) {
   const content = <span className="rounded-md bg-navy-50 px-2 py-1 text-[12px] font-medium text-navy-700">{name}</span>;
   return href ? <Link href={href}>{content}</Link> : content;
@@ -315,7 +325,7 @@ export function Tooltip({ text, children }: { text: string; children: ReactNode 
       {children}
       <span
         role="tooltip"
-        className="pointer-events-none absolute -top-8 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-navy-950 px-2 py-1 text-[11px] font-medium text-white group-hover:block group-focus-within:block"
+        className="pointer-events-none absolute -top-8 left-1/2 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-navy-900 px-2 py-1 text-[11px] font-medium text-surface group-hover:block group-focus-within:block"
       >
         {text}
       </span>
@@ -346,7 +356,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy-800 font-semibold text-white",
+        "avatar-surface inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white",
         className,
       )}
       style={{ width: size, height: size, fontSize: Math.max(11, size * 0.36) }}
@@ -374,12 +384,12 @@ export function AvatarGroup({
   return (
     <div className="flex items-center">
       {shown.map((person, index) => (
-        <span key={`${person.displayName}-${index}`} className="-ml-2 first:ml-0 ring-2 ring-white">
+        <span key={`${person.displayName}-${index}`} className="-ml-2 first:ml-0 ring-2 ring-surface">
           <Avatar name={person.displayName} size={28} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
         </span>
       ))}
       {extra > 0 ? (
-        <span className="-ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-navy-100 px-1.5 text-[11px] font-semibold text-navy-600 ring-2 ring-white">
+        <span className="-ml-2 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-navy-100 px-1.5 text-[11px] font-semibold text-navy-600 ring-2 ring-surface">
           +{extra}
         </span>
       ) : null}
@@ -401,7 +411,7 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-navy-200 bg-white/60 px-6 py-12 text-center">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-navy-200 bg-surface/50 px-6 py-12 text-center">
       {icon ? <div className="mb-3 text-navy-400">{icon}</div> : null}
       <h3 className="text-sm font-semibold text-navy-900">{title}</h3>
       {description ? <p className="mt-1 max-w-md text-[13px] leading-6 text-navy-500">{description}</p> : null}
@@ -467,7 +477,10 @@ export function Progress({ value, label }: { value: number; label?: string }) {
         aria-valuemax={100}
         aria-label={label ?? "Progress"}
       >
-        <div className="h-full rounded-full bg-brand-600 transition-[width] duration-300 ease-out" style={{ width: `${clamped}%` }} />
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-brand-500 to-coral-500 transition-[width] duration-300 ease-out"
+          style={{ width: `${clamped}%` }}
+        />
       </div>
       {label ? <p className="mt-1 text-xs text-navy-500">{label}</p> : null}
     </div>
@@ -486,8 +499,8 @@ export function Stat({
   tone?: Tone;
 }) {
   return (
-    <div className="rounded-xl border border-navy-200/80 bg-white p-4 shadow-card">
-      <p className="text-xs font-medium uppercase tracking-wide text-navy-500">{label}</p>
+    <div className="card-surface p-4">
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy-400">{label}</p>
       <p className={cn("mt-1 text-2xl font-semibold tracking-tight", tone === "danger" ? "text-red-600" : "text-navy-950")}>
         {value}
       </p>
@@ -506,8 +519,8 @@ export function Tabs({
   current: string;
 }) {
   return (
-    <nav aria-label="Section navigation" className="-mx-1 mb-5 overflow-x-auto">
-      <div className="flex min-w-max gap-1 border-b border-navy-200 px-1">
+    <nav aria-label="Section navigation" className="mb-6 overflow-x-auto">
+      <div className="flex min-w-max gap-1.5 rounded-full border border-navy-200/70 bg-surface/70 p-1 shadow-card backdrop-blur">
         {items.map((item) => {
           const active = item.id === current;
           return (
@@ -516,15 +529,20 @@ export function Tabs({
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200",
                 active
-                  ? "border-brand-600 text-brand-700"
-                  : "border-transparent text-navy-500 hover:border-navy-300 hover:text-navy-800",
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "text-navy-600 hover:bg-navy-100/80 hover:text-navy-900",
               )}
             >
               {item.label}
               {typeof item.count === "number" ? (
-                <span className="rounded-full bg-navy-100 px-1.5 py-0.5 text-[10px] font-semibold text-navy-600">
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                    active ? "bg-white/20 text-white" : "bg-navy-100 text-navy-600",
+                  )}
+                >
                   {item.count}
                 </span>
               ) : null}

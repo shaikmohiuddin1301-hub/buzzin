@@ -6,6 +6,7 @@ import {
   businesses,
   challenges,
   comments,
+  courses,
   follows,
   learningResources,
   posts,
@@ -15,6 +16,8 @@ import {
   reactions,
   savedItems,
   skills,
+  taskAssignments,
+  userPreferences,
   users,
 } from "@/db/schema";
 import { getProjectAccess, getTaskAccess, type Viewer } from "@/lib/authz";
@@ -67,12 +70,21 @@ export function feed(
   const limit = options.limit ?? 20;
   const offset = options.offset ?? 0;
 
-  // Drafts are never public, whatever their visibility says.
+  // Drafts are never public, whatever their visibility says. A post that points
+  // at a teaching or course also disappears when that resource is unpublished or
+  // made private; the post record is kept so republishing restores the link.
   const conditions = [
     isNull(posts.hiddenAt),
     eq(posts.visibility, "public"),
     eq(posts.status, "published"),
     eq(users.status, "active"),
+    or(
+      isNull(posts.resourceId),
+      and(
+        eq(learningResources.status, "published"),
+        or(isNull(courses.visibility), eq(courses.visibility, "public")),
+      ),
+    )!,
   ];
   if (filter === "projects") {
     conditions.push(inArray(posts.kind, ["project_update", "milestone", "launch", "challenge"]));
@@ -95,6 +107,8 @@ export function feed(
     .from(posts)
     .innerJoin(users, eq(users.id, posts.authorId))
     .leftJoin(projects, eq(projects.id, posts.projectId))
+    .leftJoin(learningResources, eq(learningResources.id, posts.resourceId))
+    .leftJoin(courses, eq(courses.resourceId, learningResources.id))
     .where(and(...conditions))
     .orderBy(desc(posts.createdAt))
     .limit(filter === "for_you" ? 240 : 60)
@@ -152,6 +166,32 @@ export function feed(
   const likes = new Map(likeRows.map((row) => [row.targetId, Number(row.count)]));
   const commentCounts = new Map(commentRows.map((row) => [row.targetId, Number(row.count)]));
 
+  // Content preferences are a gentle nudge, never a filter: chosen categories and
+  // interests give related posts a small boost so the feed reflects what somebody
+  // said they care about, without hiding everything else.
+  const preferences = viewer
+    ? db
+        .select({ categories: userPreferences.categories, interests: userPreferences.interests })
+        .from(userPreferences)
+        .where(eq(userPreferences.userId, viewer.id))
+        .get()
+    : undefined;
+  const preferredCategories = new Set(preferences?.categories ?? []);
+  const preferredInterests = (preferences?.interests ?? []).map((interest) => interest.toLowerCase()).filter(Boolean);
+  const projectCategories = new Map<string, string>();
+  if (preferredCategories.size > 0) {
+    const projectIds = [...new Set(rows.map((row) => row.post.projectId).filter((id): id is string => !!id))];
+    if (projectIds.length > 0) {
+      for (const row of db
+        .select({ id: projects.id, category: projects.category })
+        .from(projects)
+        .where(inArray(projects.id, projectIds))
+        .all()) {
+        projectCategories.set(row.id, row.category);
+      }
+    }
+  }
+
   const kindWeight: Record<string, number> = {
     project_update: 3,
     milestone: 3,
@@ -169,6 +209,11 @@ export function feed(
     if (followingIds.includes(row.post.authorId)) score += 4;
     if (row.post.projectId && followedProjectIds.includes(row.post.projectId)) score += 3;
     if (row.post.kind === "question") score += 1;
+    if (row.post.projectId && preferredCategories.has(projectCategories.get(row.post.projectId) ?? "")) score += 1.5;
+    if (preferredInterests.length > 0) {
+      const haystack = `${row.post.body} ${row.projectName ?? ""}`.toLowerCase();
+      if (preferredInterests.some((interest) => haystack.includes(interest))) score += 1;
+    }
     return {
       id: row.post.id,
       body: row.post.body,
@@ -196,16 +241,26 @@ export function feed(
 export function postsByAuthor(authorId: string, viewerId: string | null, limit = 10) {
   const isSelf = viewerId === authorId;
   return getDb()
-    .select()
+    .select({
+      post: posts,
+      resourceStatus: learningResources.status,
+      courseVisibility: courses.visibility,
+    })
     .from(posts)
+    .leftJoin(learningResources, eq(learningResources.id, posts.resourceId))
+    .leftJoin(courses, eq(courses.resourceId, learningResources.id))
     .where(and(eq(posts.authorId, authorId), isNull(posts.hiddenAt)))
     .orderBy(desc(posts.createdAt))
     .limit(limit)
     .all()
-    .filter((post) => {
+    .filter((row) => {
       if (isSelf) return true;
-      return post.visibility === "public" && post.status === "published";
-    });
+      if (row.post.visibility !== "public" || row.post.status !== "published") return false;
+      if (row.post.resourceId && row.resourceStatus !== "published") return false;
+      if (row.post.resourceId && row.courseVisibility && row.courseVisibility !== "public") return false;
+      return true;
+    })
+    .map((row) => row.post);
 }
 
 export type CreatePostInput = {
@@ -289,6 +344,15 @@ export function postDetail(postId: string, viewer: Viewer) {
   const isAuthor = viewer?.id === row.post.authorId;
   if (!isAuthor && (row.post.visibility !== "public" || row.post.status !== "published")) return null;
   if (!isAuthor && viewer?.id && blockedIds(viewer.id).includes(row.post.authorId)) return null;
+  if (!isAuthor && row.post.resourceId) {
+    const linked = db
+      .select({ status: learningResources.status, visibility: courses.visibility })
+      .from(learningResources)
+      .leftJoin(courses, eq(courses.resourceId, learningResources.id))
+      .where(eq(learningResources.id, row.post.resourceId))
+      .get();
+    if (!linked || linked.status !== "published" || (linked.visibility && linked.visibility !== "public")) return null;
+  }
 
   const likeCount = db
     .select({ count: sql<number>`count(*)` })
@@ -371,20 +435,64 @@ export function addComment(
   const id = randomUUID();
   db.insert(comments).values({ id, authorId, ...input, parentId: input.parentId ?? null, body: input.body.trim() }).run();
 
-  // Notify the target owner where there is one.
+  // Notify the people the comment is actually for, and link to the comment's own
+  // page rather than the feed. One row per recipient: a reply to the owner of the
+  // post must not arrive twice. The comment body is never copied into a
+  // notification preview.
+  const recipients = new Map<string, string>();
+  let href: string | null = null;
   if (input.targetType === "post") {
     const post = db.select().from(posts).where(eq(posts.id, input.targetId)).get();
-    if (post) notify({ userId: post.authorId, actorId: authorId, kind: "comment", title: "New comment on your post", href: "/home" });
+    if (post) {
+      href = `/posts/${post.id}`;
+      recipients.set(post.authorId, "New comment on your post");
+    }
   }
   if (input.targetType === "project") {
     const project = db.select().from(projects).where(eq(projects.id, input.targetId)).get();
     if (project) {
-      notify({ userId: project.ownerId, actorId: authorId, kind: "comment", title: `New comment on ${project.name}`, href: `/projects/${project.id}?tab=discussion` });
+      href = `/projects/${project.id}?tab=discussion`;
+      recipients.set(project.ownerId, `New comment on ${project.name}`);
+    }
+  }
+  if (input.targetType === "task") {
+    const access = getTaskAccess(input.targetId, { id: authorId });
+    if (access) {
+      href = `/tasks/${access.task.id}`;
+      recipients.set(access.projectAccess.project.ownerId, `New comment on ${access.task.title}`);
+      const assignees = db
+        .select({ userId: taskAssignments.userId })
+        .from(taskAssignments)
+        .where(and(eq(taskAssignments.taskId, input.targetId), eq(taskAssignments.status, "active")))
+        .all();
+      for (const row of assignees) {
+        if (!recipients.has(row.userId)) recipients.set(row.userId, `New comment on ${access.task.title}`);
+      }
+    }
+  }
+  if (input.targetType === "resource") {
+    const resource = db.select().from(learningResources).where(eq(learningResources.id, input.targetId)).get();
+    if (resource) {
+      href = `/learn/${resource.id}`;
+      recipients.set(resource.creatorId, `New comment on ${resource.title}`);
     }
   }
   if (input.parentId) {
     const parent = db.select().from(comments).where(eq(comments.id, input.parentId)).get();
-    if (parent) notify({ userId: parent.authorId, actorId: authorId, kind: "comment", title: "Someone replied to you", href: "/home" });
+    if (parent) recipients.set(parent.authorId, "Someone replied to your comment");
+  }
+
+  for (const [userId, title] of recipients) {
+    notify({
+      userId,
+      actorId: authorId,
+      kind: "comment",
+      title,
+      href,
+      dedupeKey: `comment:${id}:${userId}`,
+      entityType: "comment",
+      entityId: id,
+    });
   }
   return id;
 }
@@ -535,7 +643,7 @@ export function searchAll(query: string, limit = 6): SearchResults {
     businesses: db
       .select({ id: businesses.id, name: businesses.name, slug: businesses.slug, industry: businesses.industry, description: businesses.description })
       .from(businesses)
-      .where(or(like(businesses.name, term), like(businesses.industry, term)))
+      .where(and(eq(businesses.visibility, "public"), or(like(businesses.name, term), like(businesses.industry, term))))
       .limit(limit)
       .all(),
   };

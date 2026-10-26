@@ -10,6 +10,7 @@ import {
 import { blockUserAction, updatePrivacyAction } from "@/app/actions/social";
 import { correctAttributionAction, disputeAttributionAction } from "@/app/actions/projects";
 import { SubmitButton } from "@/components/client/submit-button";
+import { ThemeToggle } from "@/components/client/theme-toggle";
 import { ReportForm } from "@/components/report-form";
 import {
   Alert,
@@ -32,7 +33,7 @@ import {
 import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { NOTIFICATION_KINDS, PROJECT_CATEGORIES, label } from "@/lib/types";
+import { ESSENTIAL_NOTIFICATION_KINDS, OPTIONAL_NOTIFICATION_KINDS, PROJECT_CATEGORIES, label } from "@/lib/types";
 import { getUserById, getPreferences, listBlocked, userSkillsFor, getUserRolesList } from "@/services/users";
 import { listAttributions } from "@/services/tasks";
 import { entitlementsForUser, productsForCreator, salesSummary } from "@/services/commerce";
@@ -47,6 +48,7 @@ const TABS = [
   { id: "notifications", label: "Notifications" },
   { id: "privacy", label: "Privacy" },
   { id: "preferences", label: "Content" },
+  { id: "appearance", label: "Appearance" },
   { id: "contributions", label: "Contributions" },
   { id: "creator", label: "Creator" },
   { id: "account", label: "Account" },
@@ -182,14 +184,14 @@ export default async function SettingsPage({
             <Card className="p-5">
               <h2 className="text-[14px] font-semibold text-navy-950">Notification preferences</h2>
               <p className="mt-0.5 text-[12px] text-navy-500">
-                In-app notifications are always stored; these switches control which categories are delivered. Email delivery is
-                not configured in this build.
+                These switches control optional in-app categories. Turning one off stops new notifications of that kind; existing
+                ones stay in your history. Email delivery is not configured in this build, so that switch has no effect yet.
               </p>
               <form action={updateNotificationsAction} className="mt-4 space-y-4">
                 <fieldset>
                   <legend className="field-label">Categories</legend>
                   <div className="grid gap-1.5 sm:grid-cols-2">
-                    {NOTIFICATION_KINDS.filter((kind) => kind !== "system").map((kind) => (
+                    {OPTIONAL_NOTIFICATION_KINDS.map((kind) => (
                       <Checkbox
                         key={kind}
                         name={`notify_${kind}`}
@@ -199,6 +201,10 @@ export default async function SettingsPage({
                     ))}
                   </div>
                 </fieldset>
+                <p className="rounded-lg bg-navy-50 px-3 py-2 text-[11.5px] leading-5 text-navy-600">
+                  Always delivered, because they concern account safety or moderation:{" "}
+                  {ESSENTIAL_NOTIFICATION_KINDS.map((kind) => label(kind)).join(", ")}.
+                </p>
                 <Checkbox name="notifyEmail" label="Send me email digests when email delivery is configured" defaultChecked={prefs.notifyEmail} />
                 <SubmitButton pendingLabel="Saving…">Save preferences</SubmitButton>
               </form>
@@ -279,7 +285,7 @@ export default async function SettingsPage({
                   Status: <Badge tone={user.status === "active" ? "success" : "danger"}>{user.status}</Badge>
                 </p>
                 {user.suspendedReason ? (
-                  <p className="mt-1 text-[12px] text-red-700">Reason on record: {user.suspendedReason}</p>
+                  <p className="mt-1 text-[12px] text-red-600">Reason on record: {user.suspendedReason}</p>
                 ) : null}
                 <p className="mt-2 text-[11px] text-navy-500">
                   If a restriction is wrong you can appeal through the{" "}
@@ -295,7 +301,10 @@ export default async function SettingsPage({
           {tab === "preferences" ? (
             <Card className="p-5">
               <h2 className="text-[14px] font-semibold text-navy-950">Content preferences</h2>
-              <p className="mt-0.5 text-[12px] text-navy-500">Used to rank your home feed and recommendations.</p>
+              <p className="mt-0.5 text-[12px] text-navy-500">
+                A gentle boost in your home feed, never a filter: posts from these categories, and posts or projects that
+                mention your interests, rank slightly higher.
+              </p>
               <form action={updateContentPrefsAction} className="mt-4 space-y-4">
                 <fieldset>
                   <legend className="field-label">Categories I care about</legend>
@@ -314,14 +323,13 @@ export default async function SettingsPage({
                 <Field label="Other interests" htmlFor="interests" hint="Comma separated, e.g. accessibility, hardware, research.">
                   <Input id="interests" name="interests" defaultValue={(prefs.interests ?? []).join(", ")} />
                 </Field>
-                <Field label="Theme" htmlFor="theme" hint="Dark mode tokens exist in the design system; the dark theme is not shipped yet.">
-                  <Select id="theme" name="theme" defaultValue={prefs.theme}>
-                    <option value="system">Follow system</option>
-                    <option value="light">Light</option>
-                    <option value="dark">Dark (preview)</option>
-                  </Select>
-                </Field>
-                <Checkbox name="reduceMotion" label="Reduce motion across the interface" defaultChecked={prefs.reduceMotion} />
+                <p className="rounded-lg border border-navy-100 bg-navy-50/60 px-3 py-2 text-[11.5px] leading-5 text-navy-600">
+                  Theme is set in{" "}
+                  <Link href="/settings?tab=appearance" className="text-brand-700 underline">
+                    Appearance
+                  </Link>
+                  . Animations follow your device&rsquo;s reduce-motion setting automatically.
+                </p>
                 <SubmitButton pendingLabel="Saving…">Save preferences</SubmitButton>
               </form>
             </Card>
@@ -455,6 +463,20 @@ export default async function SettingsPage({
             </div>
           ) : null}
 
+          {tab === "appearance" ? (
+            <Card className="p-5">
+              <h2 className="text-[14px] font-semibold text-navy-950">Appearance</h2>
+              <p className="mt-0.5 text-[12px] text-navy-500">
+                Choose how BuildTogether looks. The change applies immediately and is saved on this device.
+              </p>
+              <ThemeToggle className="mt-4" />
+              <p className="mt-4 text-[11.5px] leading-5 text-navy-500">
+                Every page, panel and input uses the same colour tokens, so both themes stay consistent. Animations follow
+                your device&rsquo;s reduced-motion setting.
+              </p>
+            </Card>
+          ) : null}
+
           {tab === "account" ? (
             <div className="space-y-4">
               <Card className="p-5">
@@ -489,7 +511,7 @@ export default async function SettingsPage({
                 </form>
               </Card>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy-200 bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy-200 bg-surface p-3">
                 <p className="text-[11px] text-navy-500">See something wrong with these settings?</p>
                 <ReportForm targetType="user" targetId={user.id} returnTo="/settings?tab=account" />
               </div>

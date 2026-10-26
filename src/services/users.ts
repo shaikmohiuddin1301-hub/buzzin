@@ -456,7 +456,17 @@ export function blockUser(blockerId: string, blockedId: string, reason?: string)
   const db = getDb();
   db.insert(blockedUsers).values({ blockerId, blockedId }).onConflictDoNothing().run();
   db.delete(follows).where(and(eq(follows.followerId, blockedId), eq(follows.followeeId, blockerId))).run();
-  notify({ userId: blockedId, kind: "system", title: "A user restricted interaction with you", body: reason ?? undefined });
+  // A privacy notice, not a social update. The reason is deliberately not
+  // copied into the notification: it is the blocker's private note, and could
+  // itself be abusive.
+  notify({
+    userId: blockedId,
+    kind: "security",
+    title: "A user restricted interaction with you",
+    dedupeKey: `block:${blockerId}:${blockedId}`,
+    entityType: "user",
+    entityId: blockerId,
+  });
 }
 
 export function unblockUser(blockerId: string, blockedId: string): void {

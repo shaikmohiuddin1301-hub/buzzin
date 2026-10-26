@@ -4,6 +4,7 @@ import { ButtonLink } from "@/components/ui";
 
 const primaryLinks = [
   { href: "/how-it-works", label: "How it works" },
+  { href: "/courses", label: "Courses" },
   { href: "/for-creators", label: "For creators" },
   { href: "/for-businesses", label: "For businesses" },
   { href: "/for-learners", label: "For learners" },
@@ -12,9 +13,9 @@ const primaryLinks = [
 
 export function SiteHeader({ signedIn, username }: { signedIn: boolean; username?: string }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-navy-200/70 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-navy-200/70 glass">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
-        <Logo />
+        <Logo href="/welcome" />
 
         <nav aria-label="Primary" className="hidden flex-1 items-center gap-1 md:flex">
           {primaryLinks.map((link) => (
@@ -58,7 +59,7 @@ export function SiteHeader({ signedIn, username }: { signedIn: boolean; username
               <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round" />
             </svg>
           </summary>
-          <div className="absolute right-0 top-12 w-64 rounded-xl border border-navy-200 bg-white p-2 shadow-raised">
+          <div className="absolute right-0 top-12 w-64 rounded-xl border border-navy-200 bg-surface p-2 shadow-raised">
             <nav aria-label="Mobile primary">
               <ul>
                 {primaryLinks.map((link) => (
@@ -102,8 +103,10 @@ const footerGroups = [
   {
     title: "Product",
     links: [
+      { href: "/welcome", label: "Welcome" },
       { href: "/how-it-works", label: "How it works" },
       { href: "/explore", label: "Explore projects" },
+      { href: "/courses", label: "Courses" },
       { href: "/learn", label: "Learning centre" },
       { href: "/pricing", label: "Pricing" },
     ],
@@ -138,11 +141,11 @@ const footerGroups = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-navy-200 bg-white">
+    <footer className="border-t border-navy-200 bg-surface">
       <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div>
-            <Logo />
+            <Logo href="/welcome" />
             <p className="mt-3 max-w-xs text-[13px] leading-6 text-navy-500">
               Build real things, document the work, teach what you learn, and grow a reputation from evidence rather than
               follower counts.

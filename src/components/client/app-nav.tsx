@@ -32,7 +32,7 @@ export function MobileNav({ items, footer }: { items: NavItem[]; footer?: React.
         aria-expanded={open}
         aria-controls="mobile-menu"
         aria-label={open ? "Close menu" : "Open menu"}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-navy-200 bg-white text-navy-700"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-navy-200/70 bg-surface text-navy-700 transition hover:bg-navy-50"
       >
         {open ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
       </button>
@@ -40,7 +40,7 @@ export function MobileNav({ items, footer }: { items: NavItem[]; footer?: React.
       {open ? (
         <div
           id="mobile-menu"
-          className="absolute left-0 right-0 top-full z-40 border-b border-navy-200 bg-white px-4 pb-4 pt-3 shadow-raised"
+          className="motion-sheet absolute left-2 right-2 top-[calc(100%+0.5rem)] z-40 rounded-2xl border border-navy-200/70 glass p-2 shadow-float"
         >
           <nav aria-label="Main navigation">
             <ul className="space-y-1">
@@ -51,8 +51,8 @@ export function MobileNav({ items, footer }: { items: NavItem[]; footer?: React.
                     <Link
                       href={item.href}
                       className={cn(
-                        "flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium",
-                        active ? "bg-brand-50 text-brand-700" : "text-navy-700 hover:bg-navy-50",
+                        "flex items-center justify-between rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-colors",
+                        active ? "bg-brand-50 text-brand-800" : "text-navy-700 hover:bg-navy-50",
                       )}
                     >
                       <span className="flex items-center gap-2.5">

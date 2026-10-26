@@ -2,15 +2,214 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --ring: 109 74 255;
-  }
+/*
+ * Theme tokens.
+ *
+ * `navy` is the ink/indigo neutral ramp. In dark mode it is inverted (50 becomes the
+ * quietest surface, 950 the strongest text) so every `text-navy-*` / `bg-navy-*` /
+ * `border-navy-*` class keeps its meaning without a parallel set of classes.
+ * `brand` is electric violet, `coral` the human warm accent, and the state ramps are
+ * re-tinted rather than inverted so success stays green and danger stays red.
+ */
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
+  --navy-50: 244 243 250;
+  --navy-100: 237 235 246;
+  --navy-200: 232 230 240;
+  --navy-300: 207 204 222;
+  --navy-400: 124 121 145;
+  --navy-500: 111 112 133;
+  --navy-600: 85 84 106;
+  --navy-700: 62 61 82;
+  --navy-800: 44 43 65;
+  --navy-900: 32 32 51;
+  --navy-950: 20 20 31;
+
+  --brand-50: 241 239 255;
+  --brand-100: 230 226 255;
+  --brand-200: 211 204 255;
+  --brand-300: 180 168 255;
+  --brand-400: 143 124 250;
+  --brand-500: 112 97 232;
+  --brand-600: 97 85 217;
+  --brand-700: 81 69 192;
+  --brand-800: 66 56 160;
+  --brand-900: 53 44 128;
+
+  --coral-50: 255 241 237;
+  --coral-100: 255 227 219;
+  --coral-200: 255 200 185;
+  --coral-300: 255 167 145;
+  --coral-400: 255 146 125;
+  --coral-500: 255 128 102;
+  --coral-600: 228 98 76;
+  --coral-700: 194 76 57;
+  --coral-800: 158 59 44;
+  --coral-900: 124 46 34;
+
+  --emerald-50: 236 253 245;
+  --emerald-100: 209 250 229;
+  --emerald-200: 167 243 208;
+  --emerald-300: 110 231 183;
+  --emerald-400: 52 211 153;
+  --emerald-500: 37 134 109;
+  --emerald-600: 28 107 87;
+  --emerald-700: 23 85 69;
+  --emerald-800: 18 68 53;
+  --emerald-900: 14 53 42;
+
+  --amber-50: 255 248 235;
+  --amber-100: 254 240 199;
+  --amber-200: 253 230 138;
+  --amber-300: 252 211 77;
+  --amber-400: 251 191 36;
+  --amber-500: 245 158 11;
+  --amber-600: 217 119 6;
+  --amber-700: 180 83 9;
+  --amber-800: 146 64 14;
+  --amber-900: 120 53 15;
+
+  --red-50: 254 242 242;
+  --red-100: 254 226 226;
+  --red-200: 254 202 202;
+  --red-300: 252 165 165;
+  --red-400: 248 113 113;
+  --red-500: 239 68 68;
+  --red-600: 205 24 24;
+  --red-700: 185 28 28;
+  --red-800: 153 27 27;
+  --red-900: 127 29 29;
+
+  --sky-50: 240 249 255;
+  --sky-100: 224 242 254;
+  --sky-200: 186 230 253;
+  --sky-300: 125 211 252;
+  --sky-400: 56 189 248;
+  --sky-500: 14 165 233;
+  --sky-600: 2 132 199;
+  --sky-700: 3 105 161;
+  --sky-800: 7 89 133;
+  --sky-900: 12 74 110;
+
+  --surface: 255 255 255;
+  --surface-muted: 247 246 252;
+  --surface-subtle: 241 239 249;
+
+  --ring: 97 85 217;
+  --selection: 211 204 255;
+  --shimmer: 255 255 255;
+
+  --shadow-card: 0 1px 2px 0 rgb(20 19 31 / 0.04), 0 8px 24px -18px rgb(20 19 31 / 0.35);
+  --shadow-raised: 0 18px 48px -28px rgb(20 19 31 / 0.4), 0 2px 8px -4px rgb(20 19 31 / 0.08);
+  --shadow-float: 0 18px 44px -18px rgb(20 19 31 / 0.38), 0 2px 10px -6px rgb(20 19 31 / 0.18);
+  --shadow-glow: 0 12px 32px -14px rgb(97 85 217 / 0.55);
+
+  --ease-out: cubic-bezier(0.22, 0.7, 0.24, 1);
+
+  color-scheme: light;
+}
+
+.dark {
+  --navy-50: 32 32 47;
+  --navy-100: 36 36 56;
+  --navy-200: 52 51 74;
+  --navy-300: 74 73 96;
+  --navy-400: 139 137 164;
+  --navy-500: 177 176 198;
+  --navy-600: 203 201 221;
+  --navy-700: 222 220 236;
+  --navy-800: 235 233 246;
+  --navy-900: 244 242 255;
+  --navy-950: 251 250 255;
+
+  --brand-50: 34 30 58;
+  --brand-100: 42 37 71;
+  --brand-200: 58 51 99;
+  --brand-300: 91 79 160;
+  --brand-400: 126 107 224;
+  --brand-500: 167 155 255;
+  --brand-600: 98 80 218;
+  --brand-700: 143 130 242;
+  --brand-800: 158 141 250;
+  --brand-900: 200 188 255;
+
+  --coral-50: 46 30 28;
+  --coral-100: 58 38 34;
+  --coral-200: 86 51 43;
+  --coral-300: 124 66 53;
+  --coral-400: 196 100 80;
+  --coral-500: 255 146 125;
+  --coral-600: 224 112 90;
+  --coral-700: 255 180 163;
+  --coral-800: 255 206 194;
+  --coral-900: 255 228 220;
+
+  --emerald-50: 16 35 30;
+  --emerald-100: 20 50 42;
+  --emerald-200: 27 74 60;
+  --emerald-300: 42 107 87;
+  --emerald-400: 67 161 131;
+  --emerald-500: 101 201 167;
+  --emerald-600: 126 217 186;
+  --emerald-700: 157 231 205;
+  --emerald-800: 194 242 226;
+  --emerald-900: 221 251 240;
+
+  --amber-50: 43 33 19;
+  --amber-100: 58 44 23;
+  --amber-200: 87 65 30;
+  --amber-300: 138 100 37;
+  --amber-400: 192 138 46;
+  --amber-500: 232 176 75;
+  --amber-600: 245 200 106;
+  --amber-700: 250 217 143;
+  --amber-800: 253 232 184;
+  --amber-900: 254 244 218;
+
+  --red-50: 44 22 24;
+  --red-100: 60 28 32;
+  --red-200: 92 38 44;
+  --red-300: 140 51 57;
+  --red-400: 196 81 87;
+  --red-500: 217 96 106;
+  --red-600: 231 139 145;
+  --red-700: 192 72 82;
+  --red-800: 240 160 164;
+  --red-900: 250 200 202;
+
+  --sky-50: 20 32 44;
+  --sky-100: 23 42 58;
+  --sky-200: 31 62 87;
+  --sky-300: 46 95 130;
+  --sky-400: 78 143 184;
+  --sky-500: 122 184 220;
+  --sky-600: 156 205 233;
+  --sky-700: 188 224 245;
+  --sky-800: 214 238 251;
+  --sky-900: 234 247 254;
+
+  --surface: 26 26 41;
+  --surface-muted: 17 17 27;
+  --surface-subtle: 36 36 56;
+
+  --ring: 167 155 255;
+  --selection: 58 51 99;
+  --shimmer: 148 143 190;
+
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.5), 0 10px 30px -24px rgb(0 0 0 / 0.9);
+  --shadow-raised: 0 24px 56px -32px rgb(0 0 0 / 0.85), 0 2px 10px -6px rgb(0 0 0 / 0.6);
+  --shadow-float: 0 22px 50px -20px rgb(0 0 0 / 0.75), 0 2px 12px -6px rgb(0 0 0 / 0.7);
+  --shadow-glow: 0 14px 38px -16px rgb(109 91 232 / 0.6);
+
+  color-scheme: dark;
+}
+
+@layer base {
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -34,12 +233,12 @@
   :focus-visible {
     outline: 2px solid rgb(var(--ring));
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 
   ::selection {
-    background: #d5cdff;
-    color: #131e33;
+    background: rgb(var(--selection));
+    color: rgb(var(--navy-950));
   }
 
   /* Respect the OS reduced-motion setting for all decorative animation. */
@@ -65,10 +264,10 @@
     @apply text-[15px] leading-7 text-navy-700;
   }
   .prose-bt h2 {
-    @apply mt-8 mb-2 text-xl font-semibold text-navy-950;
+    @apply mb-2 mt-8 text-xl font-semibold text-navy-950;
   }
   .prose-bt h3 {
-    @apply mt-6 mb-2 text-base font-semibold text-navy-950;
+    @apply mb-2 mt-6 text-base font-semibold text-navy-950;
   }
   .prose-bt p {
     @apply mb-4;
@@ -94,15 +293,55 @@
   }
   .skeleton::after {
     content: "";
-    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent;
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(to right, transparent, rgb(var(--shimmer) / 0.35), transparent);
   }
 
   .field-input {
-    @apply w-full rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm text-navy-900 placeholder:text-navy-400 shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-navy-50;
+    @apply w-full rounded-xl border border-navy-200 bg-surface px-3.5 py-2.5 text-sm text-navy-900 shadow-sm transition placeholder:text-navy-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 disabled:cursor-not-allowed disabled:bg-navy-50 disabled:text-navy-500;
   }
 
   .card-surface {
-    @apply rounded-xl border border-navy-200/80 bg-white shadow-card;
+    @apply rounded-2xl border border-navy-200/70 bg-surface shadow-card;
+  }
+
+  /* Floating navigation and sheets share one glass treatment. */
+  .glass {
+    background-color: rgb(var(--surface) / 0.82);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+  }
+
+  .surface-gutter {
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom));
+  }
+
+  /* The one doing-action: a fixed violet gradient that stays vivid in both themes. */
+  .create-glow {
+    background-image: linear-gradient(135deg, #7c5cff 0%, #5b3fd6 100%);
+    color: #fff;
+  }
+
+  /* Fixed indigo gradient so avatar initials stay legible in both themes. */
+  .avatar-surface {
+    background-image: linear-gradient(135deg, #7061e8, #4338a0);
+    color: #fff;
+  }
+
+  /* Deliberately dark regardless of theme: imagery treatment for stories and heroes. */
+  .ink-card {
+    background-image: linear-gradient(135deg, #3b2f8f 0%, #191827 55%, #101018 100%);
+    color: #fff;
+  }
+
+  .ink-hero {
+    background-image: linear-gradient(120deg, #1b1a2b 0%, #3b2f8f 60%, #6d4aff 140%);
+    color: #fff;
+  }
+
+  .ink-surface {
+    background-color: #14141f;
+    color: #fff;
   }
 }
 
@@ -110,46 +349,65 @@
  * Motion system.
  *
  * One vocabulary, three durations:
- *   - feedback (120–180 ms): hover, press, active indicators
- *   - transition (150–300 ms): pages, sheets, cards
+ *   - feedback (120–200 ms): hover, press, active indicators
+ *   - transition (180–400 ms): pages, sheets, card reveals
  *   - accepted work (400–700 ms): the one meaningful, celebratory movement
  *
- * Everything is transform/opacity only, and the reduced-motion rule at the top of this file
- * collapses all of it to near-zero, so no information depends on movement.
+ * Everything is transform/opacity only, and the reduced-motion rule at the top of this
+ * file collapses all of it to near-zero, so no information depends on movement.
  */
 @layer utilities {
   @media (prefers-reduced-motion: no-preference) {
     .motion-page {
-      animation: bt-page-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation: bt-page-in 240ms var(--ease-out) both;
     }
     .motion-fade {
       animation: bt-fade-in 160ms ease-out both;
     }
     .motion-sheet {
-      animation: bt-sheet-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation: bt-sheet-in 300ms var(--ease-out) both;
     }
     .motion-card {
       transition:
-        transform 160ms ease,
-        box-shadow 160ms ease;
+        transform 200ms var(--ease-out),
+        box-shadow 200ms var(--ease-out),
+        border-color 200ms var(--ease-out);
     }
     .motion-card:hover {
-      transform: translateY(-2px);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-raised);
     }
     .motion-card:active {
       transform: translateY(0) scale(0.995);
     }
     .motion-status {
-      animation: bt-status 180ms ease-out both;
+      animation: bt-status 200ms ease-out both;
     }
     .motion-lift {
-      animation: bt-lift 620ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation: bt-lift 620ms var(--ease-out) both;
     }
     .motion-check {
       animation: bt-check 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 180ms both;
     }
     .motion-file {
-      animation: bt-file 700ms cubic-bezier(0.2, 0.7, 0.2, 1) 160ms both;
+      animation: bt-file 700ms var(--ease-out) 160ms both;
+    }
+
+    /* Scroll reveal: hidden only once the client has confirmed motion is allowed, so the
+       markup stays visible without JavaScript. */
+    .motion-ready .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+      will-change: opacity, transform;
+    }
+    .motion-ready .reveal.is-visible {
+      opacity: 1;
+      transform: none;
+      transition:
+        opacity 460ms var(--ease-out),
+        transform 460ms var(--ease-out);
+      transition-delay: var(--reveal-delay, 0ms);
+      will-change: auto;
     }
   }
 }
@@ -168,7 +426,7 @@
 @keyframes bt-page-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -188,7 +446,7 @@
 @keyframes bt-sheet-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(18px) scale(0.99);
   }
   to {
     opacity: 1;

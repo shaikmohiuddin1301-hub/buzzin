@@ -6,6 +6,7 @@ import { Alert, Field, Input } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { safeNextPath } from "@/lib/redirects";
 
 export const metadata = { title: "Create your account" };
 
@@ -16,8 +17,10 @@ export default async function SignUpPage({
 }) {
   const params = await searchParams;
   const { error } = readFlash(params);
+  const next = safeNextPath(typeof params.next === "string" ? params.next : null);
   const user = await getCurrentUser();
-  if (user) redirect("/home");
+  // An existing session skips the form; new accounts are created deliberately.
+  if (user) redirect(next);
 
   return (
     <div>
@@ -33,6 +36,7 @@ export default async function SignUpPage({
       ) : null}
 
       <form action={signUpAction} className="mt-6 space-y-4" noValidate>
+        <input type="hidden" name="next" value={next} />
         <Field label="Display name" htmlFor="displayName" required>
           <Input id="displayName" name="displayName" autoComplete="name" required placeholder="Ada Okonkwo" maxLength={60} />
         </Field>
@@ -58,7 +62,10 @@ export default async function SignUpPage({
 
       <p className="mt-6 text-sm text-navy-600">
         Already have an account?{" "}
-        <Link href="/auth/sign-in" className="font-medium text-brand-700 hover:underline">
+        <Link
+          href={next === "/home" ? "/auth/sign-in" : `/auth/sign-in?next=${encodeURIComponent(next)}`}
+          className="font-medium text-brand-700 hover:underline"
+        >
           Sign in
         </Link>
       </p>

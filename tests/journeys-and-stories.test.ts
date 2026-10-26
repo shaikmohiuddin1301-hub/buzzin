@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { learningJourneys } from "@/db/schema";
+import { learningJourneys, notifications } from "@/db/schema";
 import { addWorkLogEntry, withdrawConsent } from "@/services/worklog";
 import { approveJourney, draftJourneyFromTask, journeyDetail, publishJourney } from "@/services/learning";
 import {
@@ -67,6 +67,16 @@ describe("learning journeys", () => {
     expect(() => publishJourney(journeyId, stranger.id)).toThrow();
 
     approveJourney(journeyId, owner);
+
+    // The approval notification must open the journey itself, not a resource page
+    // that happens to share the `/learn/` prefix.
+    const approval = getDb()
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.userId, contributor.id), eq(notifications.kind, "story_approval")))
+      .get();
+    expect(approval?.href).toBe(`/learn/journeys/${journeyId}`);
+
     publishJourney(journeyId, contributor.id);
 
     expect(getDb().select().from(learningJourneys).where(eq(learningJourneys.id, journeyId)).get()!.status).toBe("published");

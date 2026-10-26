@@ -6,6 +6,7 @@ import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { env } from "@/lib/env";
 import { AppError, ForbiddenError, UnauthorizedError } from "@/lib/errors";
+import { signInPath } from "@/lib/redirects";
 import { SESSION_COOKIE, resolveSession, revokeSession, type SessionUser } from "@/lib/session";
 
 /** Per-request memoised current user. */
@@ -16,7 +17,13 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/auth/sign-in");
+  if (!user) {
+    const headerStore = await headers();
+    const pathname = headerStore.get("x-pathname") ?? "/home";
+    const search = headerStore.get("x-search") ?? "";
+    // Keep the requested destination (path and query) so sign-in returns there.
+    redirect(signInPath(`${pathname}${search}`));
+  }
   return user;
 }
 
@@ -92,5 +99,5 @@ export function touchLastSeen(userId: string, lastSeenAt: string | null): void {
 
 export async function signOut(): Promise<never> {
   await clearSessionCookie();
-  redirect("/");
+  redirect("/?notice=You%20have%20been%20signed%20out.");
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ResourceCard, StoryCard } from "@/components/cards";
+import { Reveal } from "@/components/client/reveal";
 import {
   Badge,
   ButtonLink,
@@ -39,6 +40,7 @@ export default async function LearnPage({
   const topic = typeof query.topic === "string" ? query.topic : "";
 
   const resources = listResources({ q, format, level, price, topic, limit: 30 });
+  const courses = listResources({ format: "course", limit: 4 });
   const topics = learningTopics();
   const stories = publishedStories(3);
   const learning = myLearning(user.id);
@@ -101,7 +103,7 @@ export default async function LearnPage({
                 </Select>
               </Field>
               <div className="sm:col-span-5">
-                <button type="submit" className="rounded-lg bg-navy-950 px-4 py-2 text-[13px] font-medium text-white hover:bg-navy-800">
+                <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-brand-700">
                   Apply
                 </button>
               </div>
@@ -133,14 +135,39 @@ export default async function LearnPage({
             />
           ) : (
             <div className="grid gap-3">
-              {resources.map((resource) => (
-                <ResourceCard key={resource.id} resource={resource} />
+              {resources.map((resource, index) => (
+                <Reveal key={resource.id} delay={Math.min(index * 45, 180)}>
+                  <ResourceCard resource={resource} />
+                </Reveal>
               ))}
             </div>
           )}
         </div>
 
         <aside className="space-y-4">
+          <Card className="p-4">
+            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Structured courses</h2>
+            {courses.length === 0 ? (
+              <p className="mt-1.5 text-[11.5px] text-navy-500">No published courses yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {courses.map((course) => (
+                  <li key={course.id}>
+                    <Link href={`/learn/${course.id}`} className="text-[12px] font-medium text-navy-900 hover:underline">
+                      {course.title}
+                    </Link>
+                    <p className="text-[10px] text-navy-400">
+                      {course.creatorName} · {label(course.level)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link href="/courses" className="mt-2 inline-block text-[10.5px] font-medium text-brand-700 hover:underline">
+              Public course catalogue →
+            </Link>
+          </Card>
+
           <Card className="p-4">
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Continue learning</h2>
             {learning.inProgress.length === 0 ? (
@@ -189,7 +216,7 @@ export default async function LearnPage({
             )}
           </Card>
 
-          <div className="rounded-lg border border-navy-200 bg-white p-3">
+          <div className="rounded-lg border border-navy-200 bg-surface p-3">
             <p className="text-[10.5px] leading-4 text-navy-500">
               Media has captions and transcripts where the creator supplied them. No audio autoplays. Progress and feedback are
               visible only to you and the creator.

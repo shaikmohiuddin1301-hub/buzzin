@@ -16,6 +16,7 @@ import {
 } from "@/services/projects";
 import { expressInterest, projectInterests, respondToInterest } from "@/services/tasks";
 import { saveMedia } from "@/lib/storage";
+import { createBusiness } from "@/services/business";
 import { addMember, makeProject, makeUser, projectInput, projectRow } from "./helpers";
 
 function memberRow(projectId: string, userId: string) {
@@ -25,6 +26,17 @@ function memberRow(projectId: string, userId: string) {
     .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
     .get();
 }
+
+describe("business projects", () => {
+  it("refuses to publish a project under an organisation the owner does not belong to", async () => {
+    const stranger = await makeUser();
+    const orgOwner = await makeUser();
+    const businessId = createBusiness(orgOwner.id, { name: "Northwind Collective", visibility: "public" });
+
+    expect(() => createProject(stranger.id, projectInput({ businessId }))).toThrow(/organisation/i);
+    expect(() => createProject(orgOwner.id, projectInput({ businessId }))).not.toThrow();
+  });
+});
 
 describe("project creation", () => {
   it("creates a published project with the owner on the team and milestones attached", async () => {

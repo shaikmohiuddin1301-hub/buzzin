@@ -2,44 +2,38 @@ import type { Config } from "tailwindcss";
 
 /**
  * Design system tokens.
- * Light theme is the default; `.dark` class hooks are wired so a dark theme can
- * be added later without rewriting component styles.
+ *
+ * Every colour resolves to a CSS variable defined in `src/app/globals.css`, so the same
+ * class names work in light and dark mode. The `navy` ramp carries the ink/indigo neutral
+ * scale (50 = quietest surface, 950 = strongest text); in dark mode the ramp is inverted,
+ * which keeps `text-navy-900`, `border-navy-200` and `bg-navy-50` semantically correct
+ * everywhere without a second set of classes.
  */
+const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
+
+function ramp(name: string, shades: readonly number[] = SHADES): Record<string, string> {
+  return Object.fromEntries(shades.map((shade) => [shade, `rgb(var(--${name}-${shade}) / <alpha-value>)`]));
+}
+
 const config: Config = {
   darkMode: "class",
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        navy: {
-          50: "#f2f5fa",
-          100: "#e3e9f2",
-          200: "#c6d2e4",
-          300: "#9aafcd",
-          400: "#6885ae",
-          500: "#476694",
-          600: "#33507a",
-          700: "#2a4063",
-          800: "#1b2a44",
-          900: "#131e33",
-          950: "#0b1220",
-        },
-        brand: {
-          50: "#f3f1ff",
-          100: "#e9e5ff",
-          200: "#d5cdff",
-          300: "#b7a6ff",
-          400: "#9575ff",
-          500: "#7c4dff",
-          600: "#6d4aff",
-          700: "#5b34e6",
-          800: "#4a2bbd",
-          900: "#3e2699",
-        },
+        navy: ramp("navy", [...SHADES, 950]),
+        brand: ramp("brand"),
+        coral: ramp("coral"),
+        // State colours are re-tinted rather than inverted, so success stays green-ish
+        // and danger stays red-ish in both themes.
+        emerald: ramp("emerald"),
+        amber: ramp("amber"),
+        red: ramp("red"),
+        sky: ramp("sky"),
         surface: {
-          DEFAULT: "#ffffff",
-          muted: "#f7f8fb",
-          subtle: "#eef1f7",
+          DEFAULT: "rgb(var(--surface) / <alpha-value>)",
+          muted: "rgb(var(--surface-muted) / <alpha-value>)",
+          subtle: "rgb(var(--surface-subtle) / <alpha-value>)",
         },
       },
       fontFamily: {
@@ -58,10 +52,17 @@ const config: Config = {
       borderRadius: {
         xl: "0.875rem",
         "2xl": "1.125rem",
+        "3xl": "1.5rem",
+        floating: "1.75rem",
       },
       boxShadow: {
-        card: "0 1px 2px 0 rgb(11 18 32 / 0.04), 0 1px 3px 0 rgb(11 18 32 / 0.06)",
-        raised: "0 8px 24px -12px rgb(11 18 32 / 0.24)",
+        card: "var(--shadow-card)",
+        raised: "var(--shadow-raised)",
+        float: "var(--shadow-float)",
+        glow: "var(--shadow-glow)",
+      },
+      transitionTimingFunction: {
+        out: "cubic-bezier(0.22, 0.7, 0.24, 1)",
       },
       keyframes: {
         "fade-in": {

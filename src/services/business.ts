@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { getDb, transaction } from "@/db/client";
 import { analyticsEvents, businessMembers, businesses, projectFollows, projects, users } from "@/db/schema";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
@@ -68,10 +68,11 @@ export function businessDetail(businessId: string, viewerId?: string | null) {
     .where(eq(businessMembers.businessId, businessId))
     .all();
 
+  // A private project is not part of a public portfolio, even for its own organisation.
   const portfolio = db
     .select()
     .from(projects)
-    .where(and(eq(projects.businessId, businessId), eq(projects.status, "published")))
+    .where(and(eq(projects.businessId, businessId), eq(projects.status, "published"), ne(projects.visibility, "private")))
     .orderBy(desc(projects.publishedAt))
     .all();
 

@@ -104,7 +104,7 @@ openTasksForProject(projectId) · upcomingDeadlines(userId)
 
 Acceptance semantics: `reviewSubmission("accepted")` is the **only** path that creates a `contributor_attributions` row, marks deliverables approved, awards reputation, and notifies the contributor. An upload on its own is never evidence. Acceptance also calls `notifyDependentsReady` so work whose prerequisites are now all approved is reported as ready.
 
-### `dependencies.ts` — prerequisites between Drops
+### `dependencies.ts` — prerequisites between tasks
 ```ts
 addDependency(taskId, viewer, { dependsOnTaskId, reason? }): string   // same project, no self-links, no cycles
 removeDependency(dependencyId, viewer) · listTaskDependencies(taskId, viewer)
@@ -119,7 +119,7 @@ Dependency state is always derived from the prerequisite task's status, so there
 projectAcceptedWork(projectId, viewer) // { items, areas, canViewFiles }
 ```
 
-One row per approved `deliverables` record — the same record the Drop page renders. Grouping uses the task's skill category ("Design", "Software", …) and falls back to "General". Outsiders see only accepted work from public tasks on projects they may view; file links are members-only.
+One row per approved `deliverables` record — the same record the task page renders. Grouping uses the task's skill category ("Design", "Software", …) and falls back to "General". Outsiders see only accepted work from public tasks on projects they may view; file links are members-only.
 
 ### `worklog.ts` — contributor documentation
 ```ts
@@ -181,16 +181,18 @@ listConversations(userId) · unreadMessageCount(userId)
 getOrCreateDirectConversation(a, b): string                // enforces blocks + recipient DM policy
 ensureProjectGroup(projectId, actorId): string             // active members only; syncs team membership
 ensureGroupConversation(projectId, title, actorId, existingId?): string
+ensureTaskChat(taskId, viewer): string                     // the task's chat, created on first open
+conversationScope(conversationId)                          // { projectId, taskId } for filing uploads
 conversationDetail(id, userId) · markConversationRead(id, userId)
 sendMessage(id, senderId, { body, attachmentId?, parentId? }): string   // one reply level
-createDropFromMessage(messageId, viewer): string            // project edit permission; private Drop in the chat's area
+createDropFromMessage(messageId, viewer): string            // project edit permission; private task in the chat's area
 muteConversation(id, userId, muted) · leaveConversation(id, userId)
 reportMessage(messageId, reporterId, reasonCode, details?)
 ```
 
 ### `workAreas.ts` — role-style workspaces inside a project
 ```ts
-listWorkAreas(projectId, viewer)                          // counts derived from real Drops
+listWorkAreas(projectId, viewer)                          // counts derived from real tasks
 createWorkArea(projectId, viewer, { name, description? }): string   // owner/admin only, creates its chat
 ensureWorkAreaChat(areaId, viewer): string                  // members only, creates lazily
 assignTaskToArea(taskId, viewer, areaId | null)

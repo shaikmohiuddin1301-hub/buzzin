@@ -63,7 +63,7 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-navy-800 bg-navy-950 text-white">
+    <div className="overflow-hidden rounded-xl border border-navy-800 ink-surface text-white">
       <div
         ref={regionRef}
         className="relative flex min-h-[300px] flex-col justify-between gap-6 p-6 sm:min-h-[380px] sm:p-8"
@@ -90,7 +90,7 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
             ) : (
               <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-300">Needs review</span>
             )}
-            <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-navy-100">
+            <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-white/85">
               {scene.aiGenerated ? "AI narration" : "Human written"}
             </span>
           </div>
@@ -98,16 +98,16 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
 
         <div className={cn("relative", playing && !reduced && "animate-fade-in")} key={scene.id}>
           <h3 className="max-w-2xl text-2xl font-semibold leading-tight sm:text-3xl">{scene.title}</h3>
-          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-navy-100">{scene.narration}</p>
+          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-white/85">{scene.narration}</p>
         </div>
 
         <div className="relative space-y-2">
           {scene.contributors.length > 0 ? (
-            <p className="text-xs text-navy-300">Contributors: {scene.contributors.join(" · ")}</p>
+            <p className="text-xs text-white/60">Contributors: {scene.contributors.join(" · ")}</p>
           ) : null}
           {scene.sourceLabel ? <p className="text-xs text-navy-400">{scene.sourceLabel}</p> : null}
           {scene.visualDescription ? (
-            <details className="text-xs text-navy-300">
+            <details className="text-xs text-white/60">
               <summary className="cursor-pointer select-none hover:text-white">Visual direction</summary>
               <p className="mt-1 text-navy-400">{scene.visualDescription}</p>
             </details>
@@ -115,14 +115,14 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-white/10 bg-navy-900/60 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-white/10 bg-black/40 px-4 py-3">
         <button
           type="button"
           onClick={() => {
             setPlaying(false);
             setIndex((current) => Math.max(0, current - 1));
           }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-navy-200 hover:bg-white/10"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/70 hover:bg-white/10"
           aria-label="Previous scene"
           disabled={index === 0}
         >
@@ -144,7 +144,7 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
             setPlaying(false);
             setIndex((current) => Math.min(scenes.length - 1, current + 1));
           }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-navy-200 hover:bg-white/10"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/70 hover:bg-white/10"
           aria-label="Next scene"
           disabled={index === scenes.length - 1}
         >
@@ -156,13 +156,13 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
             setPlaying(false);
             setIndex(0);
           }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-navy-200 hover:bg-white/10"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-white/70 hover:bg-white/10"
           aria-label="Restart story"
         >
           <RotateCcw size={15} aria-hidden="true" />
         </button>
 
-        <p className="ml-auto text-[11px] text-navy-300">
+        <p className="ml-auto text-[11px] text-white/60">
           {reduced ? "Reduced motion is on — use the scene buttons." : `${total}s total · no audio autoplay`}
         </p>
       </div>

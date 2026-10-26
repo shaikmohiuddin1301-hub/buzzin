@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-navy-200 bg-navy-950 px-4 py-3 text-white">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-navy-200 bg-brand-600 px-4 py-3 text-white">
         <div>
           <p className="text-[13px] font-semibold">Administration</p>
           <p className="text-[11px] text-white/60">

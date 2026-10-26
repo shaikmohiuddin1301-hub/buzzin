@@ -123,6 +123,28 @@ export function addDependency(
     })
     .run();
 
+  // Tell the people doing the work that they are waiting on something. This is
+  // derived from the dependency that was just written, not a scheduler, and is
+  // deduplicated per dependency so re-saving the form cannot repeat it.
+  if (prerequisite.status !== "completed") {
+    const assignees = db
+      .select({ userId: taskAssignments.userId })
+      .from(taskAssignments)
+      .where(and(eq(taskAssignments.taskId, taskId), eq(taskAssignments.status, "active")))
+      .all()
+      .map((row) => row.userId);
+    notifyMany(assignees, {
+      actorId: viewer!.id,
+      kind: "system",
+      title: `Blocked until a prerequisite is approved: ${access.task.title}`,
+      body: `This task depends on "${prerequisite.title}", which is not completed yet.`,
+      href: `/tasks/${taskId}`,
+      dedupeKey: `dependency_blocked:${id}`,
+      entityType: "task",
+      entityId: taskId,
+    });
+  }
+
   return id;
 }
 
@@ -169,6 +191,9 @@ export function notifyDependentsReady(completedTaskId: string, actorId: string):
       title: `Ready to start: ${task.title}`,
       body: `"${completed.title}" was approved, so its prerequisite for this task is satisfied.`,
       href: `/tasks/${task.id}`,
+      dedupeKey: `dependency_ready:${task.id}:${completedTaskId}`,
+      entityType: "task",
+      entityId: task.id,
     });
   }
 }

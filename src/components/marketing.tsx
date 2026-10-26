@@ -18,7 +18,7 @@ export function MarketingHero({
   aside?: ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-navy-100 bg-white">
+    <section className="relative overflow-hidden border-b border-navy-100 bg-surface">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-[0.55]"
@@ -90,7 +90,7 @@ export function FeatureGrid({
   return (
     <div className={cn("grid gap-4", columns === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2")}>
       {features.map((feature) => (
-        <div key={feature.title} className="rounded-xl border border-navy-200 bg-white p-5">
+        <div key={feature.title} className="rounded-xl border border-navy-200 bg-surface p-5">
           {feature.icon ? <div className="mb-3 text-brand-600">{feature.icon}</div> : null}
           <h3 className="text-[14px] font-semibold text-navy-950">{feature.title}</h3>
           <p className="mt-1.5 text-[13px] leading-6 text-navy-600">{feature.body}</p>
@@ -104,8 +104,8 @@ export function StepList({ steps }: { steps: { title: string; body: string; deta
   return (
     <ol className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {steps.map((step, index) => (
-        <li key={step.title} className="rounded-xl border border-navy-200 bg-white p-5">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-navy-950 text-[13px] font-semibold text-white">
+        <li key={step.title} className="rounded-xl border border-navy-200 bg-surface p-5">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full ink-surface text-[13px] font-semibold text-white">
             {index + 1}
           </span>
           <h3 className="mt-3 text-[14px] font-semibold text-navy-950">{step.title}</h3>
@@ -119,7 +119,7 @@ export function StepList({ steps }: { steps: { title: string; body: string; deta
 
 export function FaqList({ items }: { items: { q: string; a: string }[] }) {
   return (
-    <div className="divide-y divide-navy-100 rounded-xl border border-navy-200 bg-white">
+    <div className="divide-y divide-navy-100 rounded-xl border border-navy-200 bg-surface">
       {items.map((item) => (
         <details key={item.q} className="group px-5 py-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[14px] font-medium text-navy-900 [&::-webkit-details-marker]:hidden">
@@ -147,11 +147,11 @@ export function CtaBand({
   secondary?: { href: string; label: string };
 }) {
   return (
-    <section className="rounded-2xl bg-navy-950 px-6 py-10 text-white sm:px-10">
+    <section className="rounded-2xl bg-brand-600 px-6 py-10 text-white sm:px-10">
       <div className="flex flex-wrap items-center justify-between gap-6">
         <div className="max-w-xl">
           <h2 className="text-[24px] font-semibold tracking-tight">{title}</h2>
-          <p className="mt-2 text-[14px] leading-6 text-navy-200">{description}</p>
+          <p className="mt-2 text-[14px] leading-6 text-white/75">{description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <ButtonLink href={primary.href} size="lg" className="bg-brand-600 hover:bg-brand-500">

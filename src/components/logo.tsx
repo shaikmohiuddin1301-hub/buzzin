@@ -11,7 +11,7 @@ export function Logo({ href = "/", light = false, compact = false }: { href?: st
       <span
         className={cn(
           "inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white",
-          light ? "bg-white/15 ring-1 ring-white/25" : "bg-navy-950",
+          light ? "bg-white/15 ring-1 ring-white/25" : "ink-surface",
         )}
         aria-hidden="true"
       >

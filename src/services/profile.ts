@@ -18,8 +18,14 @@ import {
   users,
 } from "@/db/schema";
 
-/** Card-shaped rows: the owner and the counters a project card needs. */
-function cardRows(ids: string[]) {
+/**
+ * Card-shaped rows: the owner and the counters a project card needs.
+ *
+ * `publicOnly` is used when somebody else is looking at a profile: drafts, archived
+ * projects and private projects are the owner's business until they are published
+ * publicly, so they must not appear in a visitor's view of a profile.
+ */
+function cardRows(ids: string[], publicOnly: boolean) {
   if (ids.length === 0) return [];
   return getDb()
     .select({
@@ -31,7 +37,11 @@ function cardRows(ids: string[]) {
     })
     .from(projects)
     .innerJoin(users, eq(users.id, projects.ownerId))
-    .where(inArray(projects.id, ids))
+    .where(
+      publicOnly
+        ? and(inArray(projects.id, ids), eq(projects.status, "published"), ne(projects.visibility, "private"))
+        : inArray(projects.id, ids),
+    )
     .orderBy(desc(projects.updatedAt))
     .all()
     .map((row) => ({
@@ -43,7 +53,8 @@ function cardRows(ids: string[]) {
     }));
 }
 
-export function projectHistory(userId: string) {
+export function projectHistory(userId: string, options: { publicOnly?: boolean } = {}) {
+  const publicOnly = !!options.publicOnly;
   const db = getDb();
   const ownedIds = db
     .select({ id: projects.id })
@@ -58,7 +69,7 @@ export function projectHistory(userId: string) {
     .where(and(eq(projectMembers.userId, userId), eq(projectMembers.status, "active"), ne(projects.ownerId, userId)))
     .all()
     .map((row) => row.id);
-  return { owned: cardRows(ownedIds), contributed: cardRows(contributedIds) };
+  return { owned: cardRows(ownedIds, publicOnly), contributed: cardRows(contributedIds, publicOnly) };
 }
 
 export function contributionCounts(userId: string) {
@@ -88,17 +99,19 @@ export function contributionCounts(userId: string) {
 }
 
 /** Attribution rows that have actually been confirmed — shown separately from proposed ones. */
-export function verifiedContributions(userId: string) {
+export function verifiedContributions(userId: string, options: { publicOnly?: boolean } = {}) {
+  const conditions = [
+    eq(contributorAttributions.userId, userId),
+    sql`${contributorAttributions.status} in ('confirmed','verified','corrected')`,
+  ];
+  if (options.publicOnly) {
+    conditions.push(eq(projects.status, "published"), ne(projects.visibility, "private"));
+  }
   return getDb()
     .select({ attribution: contributorAttributions, projectName: projects.name })
     .from(contributorAttributions)
     .innerJoin(projects, eq(projects.id, contributorAttributions.projectId))
-    .where(
-      and(
-        eq(contributorAttributions.userId, userId),
-        sql`${contributorAttributions.status} in ('confirmed','verified','corrected')`,
-      ),
-    )
+    .where(and(...conditions))
     .orderBy(desc(contributorAttributions.confirmedAt), desc(contributorAttributions.createdAt))
     .all();
 }

@@ -395,6 +395,9 @@ export function submitStoryForReview(storyboardId: string, viewer: Viewer): void
       kind: "story_approval",
       title: "A project story needs your approval",
       href: `/projects/${board.projectId}/story`,
+      dedupeKey: `story_review:${storyboardId}`,
+      entityType: "storyboard",
+      entityId: storyboardId,
     });
   }
 }
@@ -444,6 +447,9 @@ export function decideStory(
     title: decision === "approved" ? "Your project story was approved" : "Your project story needs changes",
     body: note ?? undefined,
     href: `/projects/${board.projectId}/story`,
+    dedupeKey: `story_decision:${storyboardId}:${decision}`,
+    entityType: "storyboard",
+    entityId: storyboardId,
   });
 }
 

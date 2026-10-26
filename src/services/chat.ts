@@ -8,11 +8,12 @@ import {
   projectMembers,
   projects,
   reports,
+  tasks,
   userPreferences,
   users,
   workAreas,
 } from "@/db/schema";
-import { assertConversationMember, isBlockedEitherWay, requireProjectAccess } from "@/lib/authz";
+import { assertConversationMember, isBlockedEitherWay, requireProjectAccess, type Viewer } from "@/lib/authz";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { notify } from "@/lib/notify";
 import { rateLimit } from "@/lib/rate-limit";
@@ -23,6 +24,8 @@ export type ConversationSummary = {
   kind: "direct" | "group";
   title: string;
   projectId: string | null;
+  /** Set when this conversation is the dedicated chat for one task. */
+  taskId: string | null;
   lastMessage: string | null;
   lastAt: string | null;
   unread: number;
@@ -96,6 +99,7 @@ export function listConversations(userId: string): ConversationSummary[] {
         kind: row.conversation.kind,
         title,
         projectId: row.conversation.projectId,
+        taskId: row.conversation.taskId ?? null,
         lastMessage: last?.body ?? null,
         lastAt: last?.createdAt ?? row.conversation.createdAt,
         unread: unread.get(row.conversation.id) ?? 0,
@@ -275,6 +279,23 @@ export function ensureProjectGroup(projectId: string, actorId: string): string {
   return ensureGroupConversation(projectId, `${project.name} team`, actorId);
 }
 
+/** Project/task a conversation belongs to, used to file uploads against the work. */
+export function conversationScope(conversationId: string) {
+  return (
+    getDb()
+      .select({ projectId: conversations.projectId, taskId: conversations.taskId })
+      .from(conversations)
+      .where(eq(conversations.id, conversationId))
+      .get() ?? null
+  );
+}
+
+/**
+ * One task, one conversation. Created together with the task and kept in sync
+ * whenever responsibility for the work changes; see `services/taskChats.ts`.
+ */
+export { ensureTaskChat } from "@/services/taskChats";
+
 export function conversationDetail(conversationId: string, userId: string) {
   const { conversation, member } = assertConversationMember(conversationId, userId);
   const db = getDb();
@@ -315,7 +336,11 @@ export function conversationDetail(conversationId: string, userId: string) {
     .where(eq(workAreas.conversationId, conversationId))
     .get();
 
-  return { conversation, member, members, messages: rows, project: project ?? null, area: area ?? null };
+  const task = conversation.taskId
+    ? db.select({ id: tasks.id, title: tasks.title, status: tasks.status }).from(tasks).where(eq(tasks.id, conversation.taskId)).get()
+    : null;
+
+  return { conversation, member, members, messages: rows, project: project ?? null, area: area ?? null, task: task ?? null };
 }
 
 export function markConversationRead(conversationId: string, userId: string): void {
@@ -339,16 +364,19 @@ export function sendMessage(
 
   const db = getDb();
   let parentId: string | null = null;
+  let parentAuthorId: string | null = null;
   if (input.parentId) {
     const parent = db.select().from(messages).where(eq(messages.id, input.parentId)).get();
     if (!parent || parent.conversationId !== conversationId) throw new AppError("That message is not part of this conversation.");
     // One level keeps threads readable instead of turning a chat into a tree.
     if (parent.parentId) throw new AppError("Reply to the original message rather than a reply.");
     parentId = parent.id;
+    parentAuthorId = parent.senderId;
   }
   const members = db
-    .select({ userId: conversationMembers.userId })
+    .select({ userId: conversationMembers.userId, muted: conversationMembers.muted, username: users.username })
     .from(conversationMembers)
+    .innerJoin(users, eq(users.id, conversationMembers.userId))
     .where(and(eq(conversationMembers.conversationId, conversationId), isNull(conversationMembers.removedAt)))
     .all();
 
@@ -365,23 +393,55 @@ export function sendMessage(
 
   const conversation = db.select().from(conversations).where(eq(conversations.id, conversationId)).get();
   const href = `/chats/${conversationId}`;
+
+  // Mentions are explicit intent to reach a person. A busy group chat otherwise
+  // stays quiet: only the reply target and @mentioned members are notified. The
+  // message body is deliberately not copied into the notification (it may be
+  // confidential and would end up in a preview).
+  const mentioned = new Set(
+    [...input.body.matchAll(/(?:^|[\s(])@([a-z0-9_.-]{2,30})/gi)].map((match) =>
+      match[1]!.toLowerCase().replace(/[.-]+$/, ""),
+    ),
+  );
+  const recipients = new Map<string, { kind: "message" | "mention"; title: string }>();
+  const groupTitle = conversation?.title ?? "a conversation";
+
   for (const member of members) {
+    if (member.userId === senderId || member.muted) continue;
+    const isDirect = conversation?.kind !== "group";
+    const isMentioned = mentioned.has(member.username.toLowerCase());
+    const isReplyTarget = parentAuthorId === member.userId;
+    if (!isDirect && !isMentioned && !isReplyTarget) continue;
+
+    recipients.set(member.userId, {
+      kind: isMentioned ? "mention" : "message",
+      title: isDirect
+        ? "New direct message"
+        : isMentioned
+          ? `You were mentioned in ${groupTitle}`
+          : `New reply in ${groupTitle}`,
+    });
+  }
+
+  for (const [userId, message] of recipients) {
     notify({
-      userId: member.userId,
+      userId,
       actorId: senderId,
-      kind: "message",
-      title: conversation?.kind === "group" ? `New ${parentId ? "reply" : "message"} in ${conversation.title}` : "New direct message",
-      body: input.body.slice(0, 120),
+      kind: message.kind,
+      title: message.title,
       href,
+      dedupeKey: `message:${id}`,
+      entityType: "conversation",
+      entityId: conversationId,
     });
   }
   return id;
 }
 
 /**
- * Turn one chat message into a Drop.
+ * Turn one chat message into a task.
  *
- * The Drop keeps a reference to the message, takes the work area of the chat it
+ * The task keeps a reference to the message, takes the work area of the chat it
  * came from, and starts private to the team: a conversation is not an announcement,
  * so nothing becomes public just because someone filed it.
  */
@@ -390,15 +450,15 @@ export function createDropFromMessage(messageId: string, viewer: { id: string })
   const message = db.select().from(messages).where(eq(messages.id, messageId)).get();
   if (!message) throw new NotFoundError("Message not found.");
   assertConversationMember(message.conversationId, viewer.id);
-  if (message.taskId) throw new AppError("That message is already filed as a Drop.", { status: 409, code: "already_filed" });
+  if (message.taskId) throw new AppError("That message is already filed as a task.", { status: 409, code: "already_filed" });
 
   const conversation = db.select().from(conversations).where(eq(conversations.id, message.conversationId)).get();
-  if (!conversation?.projectId) throw new AppError("Only project conversations can produce Drops.");
+  if (!conversation?.projectId) throw new AppError("Only project conversations can produce tasks.");
   requireProjectAccess(conversation.projectId, viewer, "edit");
 
   const firstLine = message.body.split("\n").find((line) => line.trim().length > 0)?.trim() ?? "";
   const title = firstLine.replace(/^[#>*\-\s]+/, "").slice(0, 90).trim();
-  if (title.length < 4) throw new AppError("That message is too short to become a Drop. Add a clearer title first.");
+  if (title.length < 4) throw new AppError("That message is too short to become a task. Add a clearer title first.");
 
   const sender = db.select({ displayName: users.displayName }).from(users).where(eq(users.id, message.senderId)).get();
   const area = db
@@ -410,7 +470,7 @@ export function createDropFromMessage(messageId: string, viewer: { id: string })
   const taskId = createTask(conversation.projectId, viewer, {
     title,
     description: `${message.body}\n\n— from ${sender?.displayName ?? "a team member"} in ${conversation.title ?? "the project chat"}`,
-    objective: "Agreed in the project chat. The Drop is the place to track it.",
+    objective: "Agreed in the project chat. The task is the place to track it.",
     acceptanceCriteria: "The work answers the request in the original message and a reviewer accepts it here.",
     compensationType: "unpaid",
     compensationDetails: "Portfolio credit and a reference. No payment is implied.",
@@ -431,7 +491,7 @@ export function createDropFromMessage(messageId: string, viewer: { id: string })
       userId: member.userId,
       actorId: viewer.id,
       kind: "system",
-      title: `New Drop from chat: ${title}`,
+      title: `New task from chat: ${title}`,
       body: area ? `Filed under ${area.name}.` : "Filed in the project inbox.",
       href: `/tasks/${taskId}`,
     });

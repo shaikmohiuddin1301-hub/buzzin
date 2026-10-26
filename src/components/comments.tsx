@@ -67,7 +67,7 @@ export function CommentThread({
       ) : (
         <ul className="space-y-4">
           {comments.map((entry) => (
-            <li key={entry.comment.id} className="rounded-lg border border-navy-100 bg-white p-3">
+            <li key={entry.comment.id} className="rounded-lg border border-navy-100 bg-surface p-3">
               <div className="flex items-start gap-2.5">
                 <Avatar name={entry.authorName} size={28} src={entry.authorAvatar ? `/api/files/${entry.authorAvatar}` : null} />
                 <div className="min-w-0 flex-1">

@@ -260,7 +260,7 @@ export function revokeAccess(entitlementId: string, actorId: string, reason: str
     kind: "security",
     title: "Learning access was revoked",
     body: reason,
-    href: "/settings?tab=learning",
+    href: "/learn",
   });
 }
 

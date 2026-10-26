@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Bookmark, Heart, MessageCircle, Share2 } from "lucide-react";
+import { Bookmark, Heart, MessageCircle } from "lucide-react";
 import { commentAction, reactAction, saveAction } from "@/app/actions/social";
+import { ShareButton } from "@/components/client/share-button";
 import { SubmitIconButton } from "@/components/client/submit-button";
 import { Avatar, Badge, Card, cn } from "@/components/ui";
 import { relativeTime } from "@/lib/format";
@@ -107,10 +108,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
 
             <span className="ml-auto flex items-center gap-1">
               <ReportForm targetType="post" targetId={post.id} returnTo={returnTo} compact />
-              <span className="inline-flex h-8 items-center gap-1.5 px-2 text-[12px] text-navy-400" title="Use your browser's share menu">
-                <Share2 size={13} aria-hidden="true" />
-                <span className="sr-only">Share</span>
-              </span>
+              <ShareButton path={`/posts/${post.id}`} title={`${post.author.displayName} on BuildTogether`} />
             </span>
           </div>
 
@@ -128,9 +126,9 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
                 required
                 maxLength={3000}
                 placeholder="Add a comment…"
-                className="h-9 flex-1 rounded-lg border border-navy-200 bg-navy-50/50 px-3 text-[12.5px] focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/15"
+                className="h-9 flex-1 rounded-lg border border-navy-200 bg-navy-50/50 px-3 text-[12.5px] focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/15"
               />
-              <SubmitIconButton label="Post comment" className={cn("border border-navy-200 bg-white")}>
+              <SubmitIconButton label="Post comment" className={cn("border border-navy-200 bg-surface")}>
                 Reply
               </SubmitIconButton>
             </form>

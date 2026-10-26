@@ -54,8 +54,8 @@ export default async function ConversationPage({
     notFound();
   }
 
-  const { conversation, member, members, messages, project, area } = detail;
-  // Filing a Drop is a project-management action, not a chat action, so it follows
+  const { conversation, member, members, messages, project, area, task } = detail;
+  // Turning a message into a task is a project-management action, not a chat action, so it follows
   // the project's edit permission rather than conversation membership.
   const canFileDrop = project ? (getProjectAccess(project.id, user)?.canEdit ?? false) : false;
   const title =
@@ -73,11 +73,13 @@ export default async function ConversationPage({
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-navy-950">{title}</h1>
           <p className="mt-0.5 text-[12px] text-navy-500">
-            {area
-              ? `Private work area chat · ${area.name}`
-              : conversation.kind === "group"
-                ? "Private project group chat"
-                : "Direct message"} · {members.length} participant
+            {task
+              ? "Task chat"
+              : area
+                ? `Private work area chat · ${area.name}`
+                : conversation.kind === "group"
+                  ? "Private project group chat"
+                  : "Direct message"} · {members.length} participant
             {members.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -109,6 +111,19 @@ export default async function ConversationPage({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <Card className="flex min-h-[420px] flex-col">
+          {task ? (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-100 bg-brand-50/60 px-4 py-2 text-[11.5px] text-navy-700">
+              <Badge tone="brand">Task</Badge>
+              <span>
+                Chat for{" "}
+                <Link href={`/tasks/${task.id}`} className="font-medium text-brand-700 underline">
+                  {task.title}
+                </Link>
+                . Files shared here are attached to the task.
+              </span>
+            </div>
+          ) : null}
+
           {project ? (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-100 bg-navy-50/60 px-4 py-2 text-[11.5px] text-navy-600">
               {area ? <Badge tone="brand">{area.name}</Badge> : null}
@@ -177,7 +192,7 @@ export default async function ConversationPage({
                         {!row.message.parentId ? (
                           <details className="text-left">
                             <summary className="cursor-pointer text-navy-400 hover:text-navy-600">Reply</summary>
-                            <form action={sendMessageAction} className="mt-1 w-64 space-y-1 rounded-md border border-navy-200 bg-white p-2">
+                            <form action={sendMessageAction} className="mt-1 w-64 space-y-1 rounded-md border border-navy-200 bg-surface p-2">
                               <input type="hidden" name="conversationId" value={conversationId} />
                               <input type="hidden" name="parentId" value={row.message.id} />
                               <Textarea name="body" rows={2} required maxLength={4000} aria-label="Reply" placeholder="Write a reply…" />
@@ -190,14 +205,14 @@ export default async function ConversationPage({
                         {canFileDrop ? (
                           row.message.taskId ? (
                             <Link href={`/tasks/${row.message.taskId}`} className="text-brand-700 underline">
-                              Filed as a Drop
+                              Filed as a task
                             </Link>
                           ) : (
                             <form action={createDropFromMessageAction}>
                               <input type="hidden" name="conversationId" value={conversationId} />
                               <input type="hidden" name="messageId" value={row.message.id} />
                               <SubmitButton size="sm" variant="ghost" pendingLabel="Filing…" className="h-6 px-1.5 text-[10px]">
-                                Create Drop
+                                Create task
                               </SubmitButton>
                             </form>
                           )
@@ -207,7 +222,7 @@ export default async function ConversationPage({
                     {!mine && !row.message.deletedAt ? (
                       <details className="mt-0.5 text-left">
                         <summary className="cursor-pointer text-[10px] text-navy-400 hover:text-navy-600">Report message</summary>
-                        <form action={reportMessageAction} className="mt-1 space-y-1 rounded-md border border-navy-200 bg-white p-2">
+                        <form action={reportMessageAction} className="mt-1 space-y-1 rounded-md border border-navy-200 bg-surface p-2">
                           <input type="hidden" name="conversationId" value={conversationId} />
                           <input type="hidden" name="messageId" value={row.message.id} />
                           <select name="reasonCode" required className="field-input text-[11px]" aria-label="Reason">

@@ -136,7 +136,7 @@ export default async function JourneyPage({
                 <li key={step.id}>
                   <Card className="p-5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-950 text-[11px] font-semibold text-white">
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full ink-surface text-[11px] font-semibold text-white">
                         {index + 1}
                       </span>
                       <h2 className="text-[14px] font-semibold text-navy-950">{step.title}</h2>
@@ -261,7 +261,7 @@ export default async function JourneyPage({
             </Card>
           ) : null}
 
-          <div className="rounded-lg border border-navy-200 bg-white p-3 text-[10.5px] leading-4 text-navy-500">
+          <div className="rounded-lg border border-navy-200 bg-surface p-3 text-[10.5px] leading-4 text-navy-500">
             Journeys cite their sources. If a step has no source, it is the author's account and should say so. CC-style
             attribution must be agreed with contributors before publication.
           </div>

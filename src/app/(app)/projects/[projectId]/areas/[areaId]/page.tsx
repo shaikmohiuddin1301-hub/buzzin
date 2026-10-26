@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, FolderCheck, MessageSquare } from "lucide-react";
 import { openWorkAreaChatAction } from "@/app/actions/workAreas";
 import { SubmitButton } from "@/components/client/submit-button";
-import { Badge, ButtonLink, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
+import { Badge, ButtonLink, Card, EmptyState, PageHeader, TaskStatusBadge } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { getWorkArea } from "@/services/workAreas";
 import { projectAcceptedWork } from "@/services/accepted";
@@ -45,10 +45,10 @@ export default async function WorkAreaPage({
       <PageHeader
         eyebrow="Work area"
         title={area.area.name}
-        description={area.area.description ?? "The Drops filed here, the conversation about them, and the work that was accepted."}
+        description={area.area.description ?? "The tasks filed here, the conversation about them, and the work that was accepted."}
         meta={
           <>
-            <span>{open.length} open {open.length === 1 ? "Drop" : "Drops"}</span>
+            <span>{open.length} open {open.length === 1 ? "task" : "tasks"}</span>
             <span>{accepted.length} accepted</span>
           </>
         }
@@ -65,7 +65,7 @@ export default async function WorkAreaPage({
             ) : null}
             {area.access.canEdit ? (
               <ButtonLink href={`/projects/${projectId}/tasks`} variant="ghost" size="sm">
-                New Drop
+                New task
               </ButtonLink>
             ) : null}
           </>
@@ -74,10 +74,10 @@ export default async function WorkAreaPage({
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="p-5">
-          <h2 className="text-[14px] font-semibold text-navy-950">Drops in this area</h2>
-          <p className="mt-0.5 text-[12px] text-navy-500">Each Drop has exactly one home. Moving it updates this list.</p>
+          <h2 className="text-[14px] font-semibold text-navy-950">Tasks in this area</h2>
+          <p className="mt-0.5 text-[12px] text-navy-500">Each task has exactly one home. Moving it updates this list.</p>
           {drops.length === 0 ? (
-            <p className="mt-3 text-[13px] text-navy-500">No Drops filed here yet.</p>
+            <p className="mt-3 text-[13px] text-navy-500">No tasks filed here yet.</p>
           ) : (
             <ul className="mt-3 divide-y divide-navy-100">
               {drops.map((task) => (
@@ -86,7 +86,7 @@ export default async function WorkAreaPage({
                     <Link href={`/tasks/${task.id}`} className="text-[13px] font-medium text-navy-900 hover:underline">
                       {task.title}
                     </Link>
-                    <StatusBadge status={task.status} />
+                    <TaskStatusBadge status={task.status} />
                   </div>
                   <p className="mt-0.5 text-[11px] text-navy-500">
                     Updated {relativeTime(task.updatedAt)}
@@ -103,7 +103,7 @@ export default async function WorkAreaPage({
           <h2 className="flex items-center gap-1.5 text-[14px] font-semibold text-navy-950">
             <FolderCheck size={15} aria-hidden="true" /> Accepted work
           </h2>
-          <p className="mt-0.5 text-[12px] text-navy-500">Approved deliverables filed here, from the original Drop records.</p>
+          <p className="mt-0.5 text-[12px] text-navy-500">Approved deliverables filed here, from the original task records.</p>
           {accepted.length === 0 ? (
             <EmptyState
               icon={<CheckCircle2 size={20} aria-hidden="true" />}

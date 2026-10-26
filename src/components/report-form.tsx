@@ -33,7 +33,7 @@ export function ReportForm({
       </summary>
       <form
         action={reportAction}
-        className="absolute right-0 z-20 mt-1 w-72 space-y-2 rounded-lg border border-navy-200 bg-white p-3 shadow-raised"
+        className="absolute right-0 z-20 mt-1 w-72 space-y-2 rounded-lg border border-navy-200 bg-surface p-3 shadow-raised"
       >
         <input type="hidden" name="targetType" value={targetType} />
         <input type="hidden" name="targetId" value={targetId} />

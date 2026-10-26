@@ -22,16 +22,18 @@ import { requireUser } from "@/lib/auth";
 import { projectDetail } from "@/services/projects";
 import { listTasks } from "@/services/tasks";
 import { workAreaDropdown } from "@/services/workAreas";
-import { COMPENSATION_TYPES, TASK_STATUSES, VISIBILITIES, label } from "@/lib/types";
+import { COMPENSATION_TYPES, TASK_PRIORITIES, TASK_STATUSES, VISIBILITIES, label, taskStatusLabel } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+/** The same four steps people use everywhere else: To do → In progress → Needs review → Approved. */
 const COLUMNS: { id: string; label: string; statuses: string[] }[] = [
   { id: "draft", label: "Draft", statuses: ["draft"] },
-  { id: "open", label: "Open", statuses: ["open", "reviewing_interest"] },
+  { id: "open", label: "To do", statuses: ["open", "reviewing_interest"] },
   { id: "active", label: "In progress", statuses: ["assigned", "in_progress", "revision_requested"] },
-  { id: "review", label: "Review", statuses: ["submitted"] },
-  { id: "done", label: "Done", statuses: ["completed", "cancelled"] },
+  { id: "review", label: "Needs review", statuses: ["submitted"] },
+  { id: "done", label: "Approved", statuses: ["completed"] },
+  { id: "cancelled", label: "Cancelled", statuses: ["cancelled"] },
 ];
 
 export default async function ProjectTasksPage({
@@ -108,21 +110,21 @@ export default async function ProjectTasksPage({
       ) : null}
 
       {view === "board" ? (
-        <div className="grid gap-3 overflow-x-auto sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 overflow-x-auto sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {COLUMNS.map((column) => {
             const columnTasks = tasks.filter((task) => column.statuses.includes(task.status));
             return (
               <section key={column.id} className="min-w-[190px] rounded-xl border border-navy-200 bg-navy-50/60 p-2.5">
                 <h2 className="flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wide text-navy-600">
                   {column.label}
-                  <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] text-navy-500">{columnTasks.length}</span>
+                  <span className="rounded-full bg-surface px-1.5 py-0.5 text-[10px] text-navy-500">{columnTasks.length}</span>
                 </h2>
                 <ul className="mt-2 space-y-2">
                   {columnTasks.map((task) => (
                     <li key={task.id}>
                       <Link
                         href={`/tasks/${task.id}`}
-                        className="block rounded-lg border border-navy-200 bg-white p-2.5 shadow-sm hover:border-brand-300"
+                        className="block rounded-lg border border-navy-200 bg-surface p-2.5 shadow-sm hover:border-brand-300"
                       >
                         <p className="text-[12px] font-medium leading-5 text-navy-900">{task.title}</p>
                         <p className="mt-1 text-[10px] text-navy-500">
@@ -157,20 +159,22 @@ export default async function ProjectTasksPage({
               <Field label="Title" htmlFor="title" required>
                 <Input id="title" name="title" required maxLength={160} placeholder="Build the readings dashboard (alpha)" />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Objective" htmlFor="objective" hint="One sentence: what should be true when this is done?">
-                  <Textarea id="objective" name="objective" rows={2} maxLength={2000} />
-                </Field>
-                <Field label="Deliverables" htmlFor="deliverablesSpec" hint="What exactly will be handed over?">
-                  <Textarea id="deliverablesSpec" name="deliverablesSpec" rows={2} maxLength={4000} />
-                </Field>
-              </div>
-              <Field label="Detailed description" htmlFor="description">
-                <Textarea id="description" name="description" rows={4} maxLength={6000} />
+              <Field label="What does done look like?" htmlFor="objective" hint="One sentence: what should be true when this is done?">
+                <Textarea id="objective" name="objective" rows={2} maxLength={2000} />
               </Field>
-              <Field label="Acceptance criteria" htmlFor="acceptanceCriteria" required hint="Numbered, testable statements. Required before publishing.">
-                <Textarea id="acceptanceCriteria" name="acceptanceCriteria" rows={4} maxLength={4000} />
+              <Field label="Acceptance criteria" htmlFor="acceptanceCriteria" required hint="How you and the reviewer will know it is done. Required before publishing.">
+                <Textarea id="acceptanceCriteria" name="acceptanceCriteria" rows={3} maxLength={4000} />
               </Field>
+
+              <details className="rounded-lg border border-navy-200 bg-navy-50/40 px-3 py-2.5">
+                <summary className="cursor-pointer text-[12.5px] font-semibold text-navy-800">More options (optional)</summary>
+                <div className="mt-3 space-y-4">
+                  <Field label="Deliverables" htmlFor="deliverablesSpec" hint="What exactly will be handed over?">
+                    <Textarea id="deliverablesSpec" name="deliverablesSpec" rows={2} maxLength={4000} />
+                  </Field>
+                  <Field label="Detailed description" htmlFor="description">
+                    <Textarea id="description" name="description" rows={3} maxLength={6000} />
+                  </Field>
               <div className="grid gap-4 sm:grid-cols-4">
                 <Field label="Effort" htmlFor="effort">
                   <Input id="effort" name="effort" placeholder="12 hours" maxLength={80} />
@@ -192,6 +196,15 @@ export default async function ProjectTasksPage({
                 </Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Priority" htmlFor="priority">
+                  <Select id="priority" name="priority" defaultValue="normal">
+                    {TASK_PRIORITIES.map((priority) => (
+                      <option key={priority} value={priority}>
+                        {label(priority)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
                 <Field label="Work area" htmlFor="workAreaId" hint="Its home in the project. You can move it after creating it.">
                   <Select id="workAreaId" name="workAreaId" defaultValue="">
                     <option value="">Project inbox</option>
@@ -219,9 +232,11 @@ export default async function ProjectTasksPage({
                   <Textarea id="compensationDetails" name="compensationDetails" rows={2} maxLength={2000} />
                 </Field>
               </div>
-              <Field label="Confidentiality notes" htmlFor="confidentiality">
-                <Textarea id="confidentiality" name="confidentiality" rows={2} maxLength={2000} placeholder="What must not be published?" />
-              </Field>
+                  <Field label="Confidentiality notes" htmlFor="confidentiality">
+                    <Textarea id="confidentiality" name="confidentiality" rows={2} maxLength={2000} placeholder="What must not be published?" />
+                  </Field>
+                </div>
+              </details>
 
               <Alert tone="warning" title="Before publishing">
                 Unpaid collaboration must be genuinely voluntary and lawful in your jurisdiction. Listing a task does not make
@@ -245,7 +260,7 @@ export default async function ProjectTasksPage({
 
       {tasks.length > 0 ? (
         <p className="mt-3 text-[11px] text-navy-500">
-          Statuses: {TASK_STATUSES.map((status) => label(status)).join(" · ")}
+          Statuses: {TASK_STATUSES.map((status) => taskStatusLabel(status)).join(" · ")}
         </p>
       ) : null}
     </div>

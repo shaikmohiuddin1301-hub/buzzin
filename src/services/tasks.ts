@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { getDb, transaction } from "@/db/client";
 import {
   contributorAttributions,
@@ -19,6 +19,7 @@ import {
 } from "@/db/schema";
 import { getTaskAccess, requireProjectAccess, requireTaskAccess, type Viewer } from "@/lib/authz";
 import { notifyDependentsReady } from "@/services/dependencies";
+import { ensureTaskChat } from "@/services/taskChats";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { notify, notifyMany } from "@/lib/notify";
 import { awardReputation, REPUTATION_WEIGHTS } from "@/lib/reputation";
@@ -41,6 +42,7 @@ export type CreateTaskInput = {
   publish: boolean;
   /** Canonical home inside the project; validated against the same project. */
   workAreaId?: string | null;
+  priority?: "low" | "normal" | "high";
 };
 
 export function createTask(projectId: string, viewer: Viewer, input: CreateTaskInput): string {
@@ -76,6 +78,7 @@ export function createTask(projectId: string, viewer: Viewer, input: CreateTaskI
         compensationDetails: input.compensationDetails?.slice(0, 2000) ?? null,
         visibility: input.visibility,
         confidentiality: input.confidentiality?.slice(0, 2000) ?? null,
+        priority: input.priority ?? "normal",
         workAreaId: input.workAreaId ?? null,
         status: input.publish ? "open" : "draft",
         publishedAt: input.publish ? new Date().toISOString() : null,
@@ -90,8 +93,21 @@ export function createTask(projectId: string, viewer: Viewer, input: CreateTaskI
 
   const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
   if (input.publish) {
-    notify({ userId: access.project.ownerId, kind: "system", title: `Task published: ${input.title}`, href: `/tasks/${id}` });
+    // `actorId` keeps the owner from being notified about a task they just created.
+    notify({
+      userId: access.project.ownerId,
+      actorId: viewer!.id,
+      kind: "system",
+      title: `Task published: ${input.title}`,
+      href: `/tasks/${id}`,
+      dedupeKey: `task_published:${id}`,
+      entityType: "task",
+      entityId: id,
+    });
   }
+  // The conversation exists from the moment the task does, so it is waiting in
+  // Chats rather than appearing only after someone opens the task page.
+  ensureTaskChat(id, viewer);
   return id;
 }
 
@@ -111,6 +127,7 @@ export function updateTask(taskId: string, viewer: Viewer, input: Partial<Create
     "compensationDetails",
     "visibility",
     "confidentiality",
+    "priority",
   ] as const) {
     if (input[field] !== undefined) patch[field] = input[field];
   }
@@ -138,6 +155,26 @@ export function setTaskStatus(taskId: string, viewer: Viewer, status: TaskStatus
     .set({ status, updatedAt: new Date().toISOString(), ...(status === "open" ? { publishedAt: task.publishedAt ?? new Date().toISOString() } : {}) })
     .where(eq(tasks.id, taskId))
     .run();
+
+  if (status === "cancelled" && task.status !== "cancelled") {
+    const assignees = getDb()
+      .select({ userId: taskAssignments.userId })
+      .from(taskAssignments)
+      .where(and(eq(taskAssignments.taskId, taskId), eq(taskAssignments.status, "active")))
+      .all();
+    notifyMany(
+      assignees.map((row) => row.userId),
+      {
+        actorId: viewer!.id,
+        kind: "system",
+        title: `Task cancelled: ${task.title}`,
+        href: `/tasks/${taskId}`,
+        dedupeKey: `task_cancelled:${taskId}`,
+        entityType: "task",
+        entityId: taskId,
+      },
+    );
+  }
 }
 
 export function listTasks(projectId: string, viewer: Viewer) {
@@ -181,30 +218,37 @@ export function taskDetail(taskId: string, viewer: Viewer) {
     .where(and(eq(taskAssignments.taskId, taskId), eq(taskAssignments.status, "active")))
     .all();
 
-  const submissions = db
-    .select({
-      submission: taskSubmissions,
-      authorName: users.displayName,
-      authorUsername: users.username,
-    })
-    .from(taskSubmissions)
-    .innerJoin(users, eq(users.id, taskSubmissions.userId))
-    .where(eq(taskSubmissions.taskId, taskId))
-    .orderBy(desc(taskSubmissions.submittedAt))
-    .all();
+  // Handover notes, reviewer feedback and deliverable files belong to the people
+  // doing and reviewing the work. A public task exposes the brief and its result
+  // through Accepted Work, not the private submission history.
+  const submissions = access.canViewWorkspace
+    ? db
+        .select({
+          submission: taskSubmissions,
+          authorName: users.displayName,
+          authorUsername: users.username,
+        })
+        .from(taskSubmissions)
+        .innerJoin(users, eq(users.id, taskSubmissions.userId))
+        .where(eq(taskSubmissions.taskId, taskId))
+        .orderBy(desc(taskSubmissions.submittedAt))
+        .all()
+    : [];
 
   const submissionIds = submissions.map((row) => row.submission.id);
-  const files = submissionIds.length
+  const files = access.canViewWorkspace && submissionIds.length
     ? db.select().from(deliverables).where(eq(deliverables.taskId, taskId)).all()
     : [];
 
-  const reviews = db
-    .select({ review: taskReviews, reviewerName: users.displayName })
-    .from(taskReviews)
-    .innerJoin(users, eq(users.id, taskReviews.reviewerId))
-    .where(eq(taskReviews.taskId, taskId))
-    .orderBy(desc(taskReviews.createdAt))
-    .all();
+  const reviews = access.canViewWorkspace
+    ? db
+        .select({ review: taskReviews, reviewerName: users.displayName })
+        .from(taskReviews)
+        .innerJoin(users, eq(users.id, taskReviews.reviewerId))
+        .where(eq(taskReviews.taskId, taskId))
+        .orderBy(desc(taskReviews.createdAt))
+        .all()
+    : [];
 
   const interests = access.canReview
     ? db
@@ -306,6 +350,9 @@ export function expressInterest(viewerId: string, input: InterestInput): string 
     title: `New interest in ${project.name}`,
     body: input.intent === "help_task" ? "A contributor offered to help with a task." : "Someone wants to get involved.",
     href: `/projects/${project.id}?tab=team`,
+    dedupeKey: `interest:${id}`,
+    entityType: "project",
+    entityId: project.id,
   });
   return id;
 }
@@ -372,6 +419,8 @@ export function respondToInterest(
     }
   });
 
+  if (decision === "accepted" && eoi.taskId) ensureTaskChat(eoi.taskId, viewer);
+
   notify({
     userId: eoi.userId,
     actorId: viewer!.id,
@@ -382,8 +431,11 @@ export function respondToInterest(
         : decision === "declined"
           ? `Update on your interest in ${project.name}`
           : `Your interest in ${project.name} is being reviewed`,
-    body: responseMessage ?? undefined,
-    href: decision === "accepted" ? `/projects/${project.id}?tab=team` : "/home",
+    // The owner's reply is a private message; do not copy it into a preview.
+    href: decision === "accepted" ? `/projects/${project.id}?tab=team` : `/projects/${project.id}`,
+    dedupeKey: `interest_answered:${eoi.id}:${decision}`,
+    entityType: "project",
+    entityId: project.id,
   });
 }
 
@@ -393,6 +445,16 @@ export function assignContributor(taskId: string, viewer: Viewer, userId: string
   requireTaskAccess(taskId, viewer, "review");
   const db = getDb();
   const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()!;
+  const existingAssignment = db
+    .select({ id: taskAssignments.id })
+    .from(taskAssignments)
+    .where(and(eq(taskAssignments.taskId, taskId), eq(taskAssignments.userId, userId), eq(taskAssignments.status, "active")))
+    .get();
+  if (existingAssignment) {
+    // Re-submitting the assignment form must not send the same alert twice.
+    ensureTaskChat(taskId, viewer);
+    return;
+  }
   const member = db
     .select({ id: projectMembers.id })
     .from(projectMembers)
@@ -405,19 +467,25 @@ export function assignContributor(taskId: string, viewer: Viewer, userId: string
       .onConflictDoUpdate({ target: [projectMembers.projectId, projectMembers.userId], set: { status: "active" } })
       .run();
   }
+  const assignmentId = randomUUID();
   transaction((tx) => {
     tx.insert(taskAssignments)
-      .values({ taskId, userId, assignedBy: viewer!.id, responsibilities: responsibilities?.slice(0, 1200) ?? null })
+      .values({ id: assignmentId, taskId, userId, assignedBy: viewer!.id, responsibilities: responsibilities?.slice(0, 1200) ?? null })
       .onConflictDoNothing()
       .run();
     tx.update(tasks).set({ status: task.status === "open" || task.status === "reviewing_interest" ? "assigned" : task.status }).where(eq(tasks.id, taskId)).run();
   });
+  // Adding someone to the work adds them to its conversation, without a manual invite.
+  ensureTaskChat(taskId, viewer);
   notify({
     userId,
     actorId: viewer!.id,
     kind: "task_assigned",
     title: `You have been assigned: ${task.title}`,
     href: `/tasks/${taskId}`,
+    dedupeKey: `task_assigned:${assignmentId}`,
+    entityType: "task",
+    entityId: taskId,
   });
 }
 
@@ -434,12 +502,28 @@ export function confirmScope(taskId: string, userId: string): void {
 
 export function removeAssignee(taskId: string, viewer: Viewer, userId: string): void {
   requireTaskAccess(taskId, viewer, "review");
-  getDb()
-    .update(taskAssignments)
+  const db = getDb();
+  const assignment = db
+    .select({ id: taskAssignments.id })
+    .from(taskAssignments)
+    .where(and(eq(taskAssignments.taskId, taskId), eq(taskAssignments.userId, userId), eq(taskAssignments.status, "active")))
+    .get();
+  if (!assignment) return;
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+  db.update(taskAssignments)
     .set({ status: "removed" })
-    .where(and(eq(taskAssignments.taskId, taskId), eq(taskAssignments.userId, userId)))
+    .where(eq(taskAssignments.id, assignment.id))
     .run();
-  notify({ userId, kind: "system", title: "You were removed from a task", href: "/home" });
+  notify({
+    userId,
+    kind: "system",
+    title: `You were removed from a task: ${task?.title ?? "task"}`,
+    // The task itself may now be out of reach; the project page explains access.
+    href: task ? `/projects/${task.projectId}?tab=tasks` : "/home",
+    dedupeKey: `task_removed:${assignment.id}`,
+    entityType: "task",
+    entityId: taskId,
+  });
 }
 
 /* -------------------------------- submissions ------------------------------ */
@@ -496,13 +580,25 @@ export function submitWork(
     tx.update(tasks).set({ status: "submitted" }).where(eq(tasks.id, taskId)).run();
   });
 
-  const projectOwner = access.projectAccess.project.ownerId;
-  notify({
-    userId: projectOwner,
+  // The owner is not always the reviewer: notify the people who can actually make
+  // the review decision, once each, and link them to the submission.
+  const reviewers = getDb()
+    .select({ userId: projectMembers.userId, role: projectMembers.role })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, access.task.projectId), eq(projectMembers.status, "active")))
+    .all();
+  const recipientIds = [
+    access.projectAccess.project.ownerId,
+    ...reviewers.filter((row) => row.role === "reviewer" || row.role === "admin").map((row) => row.userId),
+  ];
+  notifyMany(recipientIds, {
     actorId: userId,
     kind: "submission_received",
     title: `Work submitted: ${access.task.title}`,
     href: `/tasks/${taskId}`,
+    dedupeKey: `submission:${id}`,
+    entityType: "task",
+    entityId: taskId,
   });
   return id;
 }
@@ -605,7 +701,10 @@ export function reviewSubmission(
       kind: "contribution_confirmed",
       title: `Work accepted: ${task.title}`,
       body: "This is now recorded in your contribution history as owner-confirmed.",
-      href: "/settings?tab=contributions",
+      href: `/projects/${task.projectId}/accepted`,
+      dedupeKey: `review:${submissionId}:contribution_confirmed`,
+      entityType: "submission",
+      entityId: submissionId,
     });
     // Approval can unblock work that was waiting on this deliverable. Readiness is
     // derived from the prerequisite status, so this only notifies people it applies to.
@@ -618,26 +717,27 @@ export function reviewSubmission(
       title: `Changes requested: ${task.title}`,
       body: reason ?? undefined,
       href: `/tasks/${task.id}`,
+      dedupeKey: `review:${submissionId}:changes_requested`,
+      entityType: "submission",
+      entityId: submissionId,
     });
   }
-
-  const followers = db
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.projectId, task.projectId), eq(projectMembers.status, "active")))
-    .all()
-    .map((row) => row.userId);
-  notifyMany(followers, {
-    kind: "system",
-    title: `Task ${decision === "accepted" ? "completed" : "needs revision"}: ${task.title}`,
-    href: `/tasks/${task.id}`,
-    actorId: viewer!.id,
-  });
 }
 
 /* -------------------------------- attribution ------------------------------ */
 
-export function listAttributions(userId: string) {
+/**
+ * A person's contribution records.
+ *
+ * `publicOnly` is used on a profile somebody else is viewing: a contribution to a
+ * project that is still a draft or is private must not become a public fact just
+ * because the work was accepted.
+ */
+export function listAttributions(userId: string, options: { publicOnly?: boolean } = {}) {
+  const conditions = [eq(contributorAttributions.userId, userId)];
+  if (options.publicOnly) {
+    conditions.push(eq(projects.status, "published"), ne(projects.visibility, "private"));
+  }
   return getDb()
     .select({
       attribution: contributorAttributions,
@@ -648,7 +748,7 @@ export function listAttributions(userId: string) {
     .from(contributorAttributions)
     .innerJoin(projects, eq(projects.id, contributorAttributions.projectId))
     .leftJoin(tasks, eq(tasks.id, contributorAttributions.taskId))
-    .where(eq(contributorAttributions.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(contributorAttributions.createdAt))
     .all();
 }
@@ -720,13 +820,28 @@ export function openTasksForProject(projectId: string) {
     .all();
 }
 
+/**
+ * Work assigned to someone that is not finished yet.
+ *
+ * A newly assigned task sits in `assigned` until the contributor confirms scope, and
+ * submitted work waits in `submitted`/`revision_requested`, so limiting this to
+ * `in_progress` hid exactly the work people needed to see. Anything completed or
+ * cancelled is left out.
+ */
 export function upcomingDeadlines(userId: string) {
   return getDb()
     .select({ task: tasks, projectName: projects.name })
     .from(taskAssignments)
     .innerJoin(tasks, eq(tasks.id, taskAssignments.taskId))
     .innerJoin(projects, eq(projects.id, tasks.projectId))
-    .where(and(eq(taskAssignments.userId, userId), eq(taskAssignments.status, "active"), eq(tasks.status, "in_progress")))
-    .orderBy(asc(tasks.deadline))
+    .where(
+      and(
+        eq(taskAssignments.userId, userId),
+        eq(taskAssignments.status, "active"),
+        inArray(tasks.status, ["assigned", "in_progress", "submitted", "revision_requested"]),
+      ),
+    )
+    // Dated work first; tasks without a deadline last rather than ahead of everything.
+    .orderBy(sql`${tasks.deadline} is null`, asc(tasks.deadline))
     .all();
 }

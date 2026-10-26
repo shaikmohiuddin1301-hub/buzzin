@@ -168,15 +168,28 @@ export async function quickCreateProjectAction(formData: FormData) {
     assertEmailVerified(user);
     rateLimit(`project:create:${user.id}`, 5, 3_600_000);
 
+    let coverImageId: string | null = null;
+    const cover = file(formData, "cover");
+    if (cover) {
+      const stored = await saveUploadedFile(cover, { ownerId: user.id, visibility: "public" });
+      coverImageId = stored.id;
+    }
+
+    const publish = bool(formData, "publish");
     const { id, conversationId } = createQuickProject(user.id, {
       name: str(formData, "name"),
-      goal: optional(formData, "goal"),
+      goal: optional(formData, "outcome"),
       shortDescription: str(formData, "shortDescription"),
       visibility: str(formData, "visibility", "public") as Visibility,
+      category: str(formData, "category", "other") as ProjectCategory,
+      skills: list(formData, "skills", 12),
+      coverImageId,
+      openToCollaborators: bool(formData, "collaborators"),
+      publish,
     });
 
     return {
-      path: `/projects/${id}?notice=Workspace+ready.+Your+team+chat+is+open.`,
+      path: `/projects/${id}?notice=${publish ? "Project+published.+Your+workspace+is+ready." : "Draft+saved.+Publish+when+you+are+ready."}`,
       revalidate: ["/explore", "/home", "/projects", "/projects/new", "/chats", `/chats/${conversationId}`],
     };
   });
@@ -366,6 +379,7 @@ export async function createTaskAction(formData: FormData) {
       skills: list(formData, "skills", 10),
       publish: bool(formData, "publish"),
       workAreaId: optional(formData, "workAreaId") ?? null,
+      priority: str(formData, "priority", "normal") as "low" | "normal" | "high",
     });
     return {
       path: `/tasks/${id}?notice=Task+${bool(formData, "publish") ? "published" : "saved+as+draft"}.`,

@@ -5,7 +5,7 @@ import { requireUserOrThrow } from "@/lib/auth";
 import { bool, file, list, optional, str } from "@/lib/form";
 import { saveUploadedFile } from "@/lib/storage";
 import { changePassword, updatePreferences, updateProfile, updateSkills } from "@/services/users";
-import type { NotificationKind } from "@/lib/types";
+import { OPTIONAL_NOTIFICATION_KINDS, type NotificationKind } from "@/lib/types";
 
 export async function updateProfileAction(formData: FormData) {
   await runServerAction("/settings?tab=profile", async () => {
@@ -36,12 +36,9 @@ export async function updateContentPrefsAction(formData: FormData) {
     const user = await requireUserOrThrow();
     const categories = list(formData, "categories");
     const interests = list(formData, "interests");
-    updatePreferences(user.id, {
-      categories,
-      interests,
-      reduceMotion: bool(formData, "reduceMotion"),
-      theme: str(formData, "theme", "system") as "light" | "dark" | "system",
-    });
+    // Theme is a per-device choice owned by the Appearance tab, and motion follows the
+    // device preference, so neither is written from this form.
+    updatePreferences(user.id, { categories, interests });
     return { path: "/settings?tab=preferences&notice=Content+preferences+saved.", revalidate: ["/settings", "/home"] };
   });
 }
@@ -49,22 +46,9 @@ export async function updateContentPrefsAction(formData: FormData) {
 export async function updateNotificationsAction(formData: FormData) {
   await runServerAction("/settings?tab=notifications", async () => {
     const user = await requireUserOrThrow();
-    const kinds: NotificationKind[] = [
-      "message",
-      "interest_received",
-      "interest_answered",
-      "invitation",
-      "task_assigned",
-      "submission_received",
-      "submission_reviewed",
-      "contribution_confirmed",
-      "comment",
-      "new_follower",
-      "learning_feedback",
-      "story_approval",
-      "moderation",
-      "security",
-    ];
+    // The same list the settings form renders, so a visible switch is always
+    // actually stored. Safety notices are not part of the optional matrix.
+    const kinds: NotificationKind[] = [...OPTIONAL_NOTIFICATION_KINDS];
     const matrix: Record<string, boolean> = {};
     for (const kind of kinds) matrix[kind] = bool(formData, `notify_${kind}`);
     updatePreferences(user.id, { notifyMatrix: matrix, notifyEmail: bool(formData, "notifyEmail") });

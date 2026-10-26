@@ -21,11 +21,18 @@ import { projectInvitations } from "@/db/schema";
 import { signOutAction } from "@/app/actions/auth";
 import { Avatar, Badge, cn } from "@/components/ui";
 import { BottomTabs } from "@/components/client/bottom-tabs";
+import { NotificationMenu } from "@/components/client/notification-menu";
+import { NotificationSync } from "@/components/client/notification-sync";
+import { QuickThemeToggle } from "@/components/client/theme-toggle";
 import { MobileNav } from "@/components/client/app-nav";
 import { Logo } from "@/components/logo";
+import { accountKindLabel } from "@/lib/account";
+import { accountContext } from "@/services/account";
 import { unreadMessageCount } from "@/services/chat";
 import { projectsForUser } from "@/services/projects";
-import { unreadNotificationCount } from "@/services/notifications";
+import { listNotifications, unreadNotificationCount } from "@/services/notifications";
+import { relativeTime } from "@/lib/format";
+import { label } from "@/lib/types";
 import type { SessionUser } from "@/lib/session";
 
 function NavLink({
@@ -46,8 +53,10 @@ function NavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-        active ? "bg-brand-50 text-brand-700" : "text-navy-600 hover:bg-navy-50 hover:text-navy-900",
+        "group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200",
+        active
+          ? "bg-brand-50 text-brand-800 shadow-sm"
+          : "text-navy-600 hover:bg-navy-50/80 hover:text-navy-900",
       )}
     >
       <span className="flex items-center gap-2.5">
@@ -58,6 +67,12 @@ function NavLink({
         <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
           {badge > 99 ? "99+" : badge}
         </span>
+      ) : null}
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="absolute -left-1 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-brand-600"
+        />
       ) : null}
     </Link>
   );
@@ -72,7 +87,19 @@ export async function AppShell({
   activePath: string;
   children: React.ReactNode;
 }) {
+  const account = accountContext(user);
   const notifications = unreadNotificationCount(user.id);
+  const recentNotifications = listNotifications(user.id, { limit: 6 }).map((row) => ({
+    id: row.notification.id,
+    title: row.notification.title,
+    kind: row.notification.kind,
+    kindLabel: label(row.notification.kind),
+    actorName: row.actorName,
+    actorAvatar: row.actorAvatar ? `/api/files/${row.actorAvatar}` : null,
+    createdAtLabel: relativeTime(row.notification.createdAt),
+    createdAtIso: row.notification.createdAt,
+    read: !!row.notification.readAt,
+  }));
   const messages = unreadMessageCount(user.id);
   const invitations = getDb()
     .select({ id: projectInvitations.id })
@@ -104,10 +131,17 @@ export async function AppShell({
     name: project.name,
   }));
 
+  // Workspace entries follow the account's real records: teaching surfaces for
+  // creators (and businesses that publish), organisations for business members.
+  const showsStudio = account.isCreator || account.isBusiness;
   const secondary = [
-    { href: "/notifications", label: "Notifications", icon: <Bell size={16} aria-hidden="true" /> },
-    { href: "/studio", label: "Creator studio", icon: <LayoutDashboard size={16} aria-hidden="true" /> },
-    { href: "/business", label: "Business", icon: <Briefcase size={16} aria-hidden="true" /> },
+    { href: "/notifications", label: "Notifications", icon: <Bell size={16} aria-hidden="true" />, badge: notifications },
+    ...(showsStudio
+      ? [{ href: "/studio", label: "Creator studio", icon: <LayoutDashboard size={16} aria-hidden="true" /> }]
+      : []),
+    ...(account.isBusiness
+      ? [{ href: "/business", label: "Business", icon: <Briefcase size={16} aria-hidden="true" /> }]
+      : []),
     { href: "/challenges", label: "Challenges", icon: <Blocks size={16} aria-hidden="true" /> },
     { href: "/settings", label: "Settings", icon: <Settings size={16} aria-hidden="true" /> },
   ];
@@ -116,43 +150,50 @@ export async function AppShell({
     <div className="min-h-screen bg-surface-muted">
       <div className="mx-auto flex w-full max-w-[1440px]">
         {/* Desktop sidebar */}
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-navy-200 bg-white lg:flex">
-          <div className="px-5 py-5">
+        <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 p-3 lg:flex">
+          <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-navy-200/60 bg-surface shadow-card">
+          <div className="px-5 pb-3 pt-5">
             <Logo href="/home" />
           </div>
 
           <div className="px-3">
             <Link
               href="/create"
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand-600 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+              className="create-glow flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
             >
-              <Plus size={16} aria-hidden="true" />
+              <Plus size={17} aria-hidden="true" />
               Create
             </Link>
           </div>
 
-          <nav aria-label="Main navigation" className="mt-4 flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
+          <nav aria-label="Main navigation" className="mt-4 flex-1 space-y-1 overflow-y-auto px-2.5 pb-4">
             {primary.map((item) => (
               <NavLink key={item.href} {...item} active={isActive(item.href)} />
             ))}
 
-            <p className="px-3 pb-1 pt-5 text-[10px] font-semibold uppercase tracking-wider text-navy-400">Workspace</p>
-            {secondary.map((item) => (
-              <NavLink key={item.href} {...item} active={isActive(item.href)} />
-            ))}
+            <details className="group pt-4" open={secondary.some((item) => isActive(item.href))}>
+              <summary className="cursor-pointer list-none px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-navy-400 [&::-webkit-details-marker]:hidden">
+                Workspace
+              </summary>
+              <div className="space-y-0.5">
+                {secondary.map((item) => (
+                  <NavLink key={item.href} {...item} active={isActive(item.href)} />
+                ))}
+              </div>
+            </details>
 
             {(user.isAdmin || user.isModerator) && (
-              <>
-                <p className="px-3 pb-1 pt-5 text-[10px] font-semibold uppercase tracking-wider text-navy-400">
+              <details className="group pt-3">
+                <summary className="cursor-pointer list-none px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-navy-400 [&::-webkit-details-marker]:hidden">
                   Administration
-                </p>
+                </summary>
                 <NavLink
                   href="/admin"
                   label="Admin & moderation"
                   icon={<Shield size={16} aria-hidden="true" />}
                   active={isActive("/admin")}
                 />
-              </>
+              </details>
             )}
           </nav>
 
@@ -174,6 +215,11 @@ export async function AppShell({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-semibold text-navy-900">{user.displayName}</p>
                 <p className="truncate text-[11px] text-navy-500">@{user.username}</p>
+                <span className="mt-1 inline-flex">
+                  <Badge tone={account.kind === "business" ? "info" : account.kind === "creator" ? "brand" : "neutral"}>
+                    {accountKindLabel(account.kind)}
+                  </Badge>
+                </span>
               </div>
               <form action={signOutAction}>
                 <button
@@ -185,11 +231,12 @@ export async function AppShell({
               </form>
             </div>
           </div>
+          </div>
         </aside>
 
         {/* Main column */}
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-navy-200 bg-white/95 backdrop-blur">
+          <header className="sticky top-0 z-30 border-b border-navy-200/70 glass">
             <div className="relative flex h-14 items-center gap-3 px-4 sm:px-6">
               <div className="lg:hidden">
                 <Logo href="/home" compact />
@@ -218,7 +265,7 @@ export async function AppShell({
                     name="q"
                     type="search"
                     placeholder="Search projects, people, skills, learning…"
-                    className="h-9 w-full rounded-lg border border-navy-200 bg-navy-50/60 pl-9 pr-3 text-[13px] text-navy-900 placeholder:text-navy-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    className="h-9 w-full rounded-lg border border-navy-200 bg-navy-50/60 pl-9 pr-3 text-[13px] text-navy-900 placeholder:text-navy-400 focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                   />
                 </div>
               </form>
@@ -229,16 +276,9 @@ export async function AppShell({
                     <Badge tone="warning">Email unverified</Badge>
                   </Link>
                 ) : null}
-                <Link
-                  href="/notifications"
-                  aria-label={`Notifications${notifications ? `, ${notifications} unread` : ""}`}
-                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-navy-600 hover:bg-navy-100"
-                >
-                  <Bell size={17} aria-hidden="true" />
-                  {notifications > 0 ? (
-                    <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-brand-600 ring-2 ring-white" />
-                  ) : null}
-                </Link>
+                <QuickThemeToggle />
+                <NotificationMenu unread={notifications} items={recentNotifications} />
+                <NotificationSync />
                 <Link
                   href={`/u/${user.username}`}
                   className="inline-flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-navy-100"
@@ -256,12 +296,17 @@ export async function AppShell({
 
           <main
             id="main"
-            className="mx-auto w-full max-w-6xl px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 lg:pb-8 lg:pt-8"
+            className="surface-gutter mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6 lg:pb-10 lg:pt-9"
           >
             {children}
           </main>
 
-          <BottomTabs username={user.username} unread={messages} projects={editableProjects} />
+          <BottomTabs
+            username={user.username}
+            unread={messages}
+            projects={editableProjects}
+            accountKind={account.kind}
+          />
         </div>
       </div>
     </div>

@@ -26,10 +26,10 @@ function assertName(name: string): string {
 }
 
 /**
- * Work areas for a project, with counts derived from real Drops.
+ * Work areas for a project, with counts derived from real tasks.
  *
  * Names are visible to anyone who can see the project; counts only include work
- * the viewer may see, so a public visitor never learns about private Drops.
+ * the viewer may see, so a public visitor never learns about private tasks.
  */
 export function listWorkAreas(projectId: string, viewer: Viewer): WorkAreaSummary[] {
   const access = requireProjectAccess(projectId, viewer, "view");
@@ -127,7 +127,7 @@ export function ensureWorkAreaChat(areaId: string, viewer: Viewer): string {
   return conversationId;
 }
 
-/** Move a Drop into a work area (or out of one). */
+/** Move a task into a work area (or out of one). */
 export function assignTaskToArea(taskId: string, viewer: Viewer, areaId: string | null): void {
   const db = getDb();
   const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get();
@@ -163,7 +163,7 @@ export function ensureStarterArea(projectId: string, viewer: Viewer): string | n
   if (existing) return existing.id;
   return createWorkArea(projectId, viewer, {
     name: "General",
-    description: "The default home for Drops that do not belong to a more specific area yet.",
+    description: "The default home for tasks that do not belong to a more specific area yet.",
   });
 }
 

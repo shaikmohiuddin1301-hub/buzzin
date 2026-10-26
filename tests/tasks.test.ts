@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { tasks } from "@/db/schema";
-import { createTask, confirmScope, listAttributions, reviewSubmission, submitWork } from "@/services/tasks";
+import {
+  assignContributor,
+  confirmScope,
+  createTask,
+  listAttributions,
+  reviewSubmission,
+  submitWork,
+  taskDetail,
+  upcomingDeadlines,
+} from "@/services/tasks";
 import { expressInterest, respondToInterest } from "@/services/tasks";
 import { listWorkLogEntries, addWorkLogEntry } from "@/services/worklog";
 import { reputationSummary } from "@/lib/reputation";
@@ -30,6 +39,59 @@ async function assignedTask(options: { allowPublicDocs?: boolean } = {}) {
 
   return { owner, contributor, projectId, taskId };
 }
+
+describe("assigned work in My Work", () => {
+  it("lists a task as soon as it is assigned, before the contributor starts it", async () => {
+    const owner = await makeUser();
+    const contributor = await makeUser();
+    const { id: projectId } = makeProject(owner.id);
+    const taskId = makeTask(projectId, owner.id);
+
+    assignContributor(taskId, owner, contributor.id);
+
+    expect(taskRow(taskId).status).toBe("assigned");
+    expect(upcomingDeadlines(contributor.id).map((row) => row.task.id)).toContain(taskId);
+    // It belongs to the assignee, not to the owner who assigned it.
+    expect(upcomingDeadlines(owner.id)).toHaveLength(0);
+  });
+
+  it("keeps accepted work out of the active list but keeps it while review is pending", async () => {
+    const { owner, contributor, taskId } = await assignedTask();
+
+    expect(upcomingDeadlines(contributor.id).map((row) => row.task.id)).toEqual([taskId]);
+
+    const submissionId = submitWork(taskId, contributor.id, { note: "Ready for review.", files: [] });
+    expect(upcomingDeadlines(contributor.id).map((row) => row.task.id)).toEqual([taskId]);
+
+    reviewSubmission(submissionId, owner, "accepted");
+    expect(upcomingDeadlines(contributor.id)).toHaveLength(0);
+  });
+});
+
+describe("submission privacy", () => {
+  it("keeps handover notes, files and review feedback with the task team", async () => {
+    const { owner, contributor, taskId } = await assignedTask();
+    const submissionId = submitWork(taskId, contributor.id, {
+      note: "Detailed handover notes for the team.",
+      files: [{ title: "Private build artefact", url: "https://example.test/private-build" }],
+    });
+    reviewSubmission(submissionId, owner, "accepted", "Reviewed and accepted.");
+
+    const outsider = await makeUser();
+    const publicView = taskDetail(taskId, { id: outsider.id })!;
+    expect(publicView.canView).toBe(true);
+    expect(publicView.submissions).toHaveLength(0);
+    expect(publicView.files).toHaveLength(0);
+    expect(publicView.reviews).toHaveLength(0);
+
+    const ownerView = taskDetail(taskId, owner)!;
+    expect(ownerView.submissions).toHaveLength(1);
+    expect(ownerView.reviews).toHaveLength(1);
+
+    const contributorView = taskDetail(taskId, { id: contributor.id })!;
+    expect(contributorView.submissions).toHaveLength(1);
+  });
+});
 
 describe("task creation", () => {
   it("only lets the project owner create tasks", async () => {

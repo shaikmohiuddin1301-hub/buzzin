@@ -43,7 +43,7 @@ export default async function AcceptedWorkPage({
       <PageHeader
         eyebrow="What we&rsquo;ve built"
         title="Accepted work"
-        description="Every deliverable a reviewer approved, filed under the work area it belongs to. These are the original Drop records, not copies."
+        description="Every deliverable a reviewer approved, filed under the work area it belongs to. These are the original task records, not copies."
         meta={
           <>
             <span>{items.length} accepted {items.length === 1 ? "deliverable" : "deliverables"}</span>
@@ -64,7 +64,7 @@ export default async function AcceptedWorkPage({
               "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
               activeArea === null
                 ? "border-brand-500 bg-brand-50 text-brand-700"
-                : "border-navy-200 bg-white text-navy-600 hover:border-navy-300",
+                : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
             )}
             aria-current={activeArea === null ? "page" : undefined}
           >
@@ -78,7 +78,7 @@ export default async function AcceptedWorkPage({
                 "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
                 activeArea === area.key
                   ? "border-brand-500 bg-brand-50 text-brand-700"
-                  : "border-navy-200 bg-white text-navy-600 hover:border-navy-300",
+                  : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
               )}
               aria-current={activeArea === area.key ? "page" : undefined}
             >
@@ -99,7 +99,7 @@ export default async function AcceptedWorkPage({
           }
           action={
             items.length === 0 ? (
-              <ButtonLink href={`/projects/${projectId}/tasks`} size="sm">See open Drops</ButtonLink>
+              <ButtonLink href={`/projects/${projectId}/tasks`} size="sm">See open tasks</ButtonLink>
             ) : (
               <ButtonLink href={`/projects/${projectId}/accepted`} variant="secondary" size="sm">Show all accepted work</ButtonLink>
             )
@@ -151,7 +151,7 @@ export default async function AcceptedWorkPage({
                     </Link>
                   ) : null}
                   <Link href={`/tasks/${item.taskId}`} className="text-navy-500 hover:text-brand-700 hover:underline">
-                    View the Drop
+                    View the task
                   </Link>
                   {item.attributionStatus === "confirmed" ? (
                     <span className="ml-auto text-[10.5px] text-navy-400">Contribution recorded</span>

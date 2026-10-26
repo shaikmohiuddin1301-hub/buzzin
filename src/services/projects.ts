@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, like, ne, or, sql } from "drizzle-orm";
 import { getDb, transaction } from "@/db/client";
 import {
   analyticsEvents,
+  businessMembers,
   conversationMembers,
   conversations,
   expressionsOfInterest,
@@ -20,9 +21,9 @@ import {
   type Project,
 } from "@/db/schema";
 import { getProjectAccess, requireProjectAccess, type Viewer } from "@/lib/authz";
-import { AppError, NotFoundError } from "@/lib/errors";
+import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { slugify } from "@/lib/format";
-import { notify } from "@/lib/notify";
+import { notify, notifyMany } from "@/lib/notify";
 import { getMedia } from "@/lib/storage";
 import { awardReputation, REPUTATION_WEIGHTS } from "@/lib/reputation";
 import { ensureProjectGroup } from "@/services/chat";
@@ -130,9 +131,14 @@ export function toggleProjectFollow(projectId: string, userId: string): boolean 
   notify({
     userId: project.ownerId,
     actorId: userId,
-    kind: "system",
+    kind: "new_follower",
     title: `Someone is following ${project.name}`,
     href: `/projects/${projectId}`,
+    // To follow → unfollow → follow must not produce a second alert for the
+    // same relationship. This preference is user-controllable (new_follower).
+    dedupeKey: `project_follow:${projectId}:${userId}`,
+    entityType: "project",
+    entityId: projectId,
   });
   return true;
 }
@@ -163,6 +169,7 @@ export type CreateProjectInput = {
   compensationType: CompensationType;
   compensationDetails?: string;
   allowPublicDocs: boolean;
+  openToCollaborators?: boolean;
   confidentialityNotes?: string;
   ipNotes?: string;
   links: { label: string; url: string }[];
@@ -192,6 +199,20 @@ export function createProject(ownerId: string, input: CreateProjectInput): { id:
     throw new AppError("Add a short description of at least 20 characters so people know what they are joining.");
   }
   if (input.coverImageId) assertUsableCover(input.coverImageId, ownerId);
+
+  if (input.businessId) {
+    // The form only lists the organisations somebody belongs to; the server checks
+    // it too, so a crafted request cannot publish a project under another company.
+    const membership = getDb()
+      .select({ role: businessMembers.role })
+      .from(businessMembers)
+      .where(and(eq(businessMembers.businessId, input.businessId), eq(businessMembers.userId, ownerId)))
+      .get();
+    if (!membership) throw new ForbiddenError("You can only publish a project for an organisation you belong to.");
+    if (membership.role === "member") {
+      throw new ForbiddenError("Only business owners and admins can publish projects for the organisation.");
+    }
+  }
 
   if (input.publish && input.compensationType === "unpaid") {
     // We allow unpaid collaboration, but the listing must state that it is unpaid
@@ -229,6 +250,7 @@ export function createProject(ownerId: string, input: CreateProjectInput): { id:
         compensationType: input.compensationType,
         compensationDetails: input.compensationDetails?.slice(0, 2000) ?? null,
         allowPublicDocs: input.allowPublicDocs,
+        openToCollaborators: input.openToCollaborators ?? true,
         confidentialityNotes: input.confidentialityNotes?.slice(0, 2000) ?? null,
         ipNotes: input.ipNotes?.slice(0, 2000) ?? null,
         links: input.links.filter((link) => link.url),
@@ -269,6 +291,11 @@ export type QuickProjectInput = {
   goal?: string;
   shortDescription: string;
   visibility: Visibility;
+  category?: ProjectCategory;
+  skills?: string[];
+  coverImageId?: string | null;
+  openToCollaborators?: boolean;
+  publish?: boolean;
 };
 
 /**
@@ -283,17 +310,19 @@ export function createQuickProject(ownerId: string, input: QuickProjectInput) {
     name: input.name,
     shortDescription: input.shortDescription,
     overview: input.goal,
-    category: "other",
+    category: input.category ?? "other",
     stage: "idea",
     visibility: input.visibility,
     workMode: "remote",
     compensationType: "unpaid",
     compensationDetails: "Portfolio credit and a reference. No payment is implied.",
     allowPublicDocs: input.visibility === "public",
+    openToCollaborators: input.openToCollaborators ?? true,
+    coverImageId: input.coverImageId ?? null,
     links: [],
-    skills: [],
+    skills: input.skills ?? [],
     milestones: [],
-    publish: true,
+    publish: input.publish ?? true,
   });
 
   const conversationId = ensureProjectGroup(id, ownerId);
@@ -508,6 +537,7 @@ export function postProjectUpdate(
 
   const db = getDb();
   const id = randomUUID();
+  const project = db.select({ name: projects.name, visibility: projects.visibility }).from(projects).where(eq(projects.id, projectId)).get();
   transaction((tx) => {
     tx.insert(projectUpdates)
       .values({
@@ -520,7 +550,6 @@ export function postProjectUpdate(
       })
       .run();
     if (input.visibility === "public") {
-      const project = db.select({ name: projects.name }).from(projects).where(eq(projects.id, projectId)).get();
       tx.insert(posts)
         .values({
           authorId: viewer!.id,
@@ -529,23 +558,30 @@ export function postProjectUpdate(
           body: `${input.title}\n\n${input.body}`.slice(0, 4000),
         })
         .run();
-      const followerIds = db
-        .select({ userId: projectFollows.userId })
-        .from(projectFollows)
-        .where(eq(projectFollows.projectId, projectId))
-        .all()
-        .map((row) => row.userId);
-      for (const userId of followerIds) {
-        notify({
-          userId,
-          actorId: viewer!.id,
-          kind: "system",
-          title: `New update on ${project?.name ?? "a project you follow"}`,
-          href: `/projects/${projectId}?tab=overview`,
-        });
-      }
     }
   });
+
+  // Notifications are written after the update exists, so a failed insert cannot
+  // announce an update that was rolled back. Only a public update on a public
+  // project is announced to followers: a private or invite-only project has no
+  // public destination for them to open.
+  if (input.visibility === "public" && project?.visibility === "public") {
+    const followerIds = db
+      .select({ userId: projectFollows.userId })
+      .from(projectFollows)
+      .where(eq(projectFollows.projectId, projectId))
+      .all()
+      .map((row) => row.userId);
+    notifyMany(followerIds, {
+      actorId: viewer!.id,
+      kind: "project_update",
+      title: `New update on ${project.name}`,
+      href: `/projects/${projectId}?tab=progress`,
+      dedupeKey: `project_update:${id}`,
+      entityType: "project_update",
+      entityId: id,
+    });
+  }
   return id;
 }
 
@@ -569,8 +605,25 @@ export function inviteToProject(
     if (already) throw new AppError("That person is already on the team.");
   }
 
+  if (input.userId) {
+    const pending = db
+      .select({ id: projectInvitations.id })
+      .from(projectInvitations)
+      .where(
+        and(
+          eq(projectInvitations.projectId, projectId),
+          eq(projectInvitations.inviteeId, input.userId),
+          eq(projectInvitations.status, "pending"),
+        ),
+      )
+      .get();
+    if (pending) throw new AppError("That person already has a pending invitation.", { status: 409, code: "invitation_pending" });
+  }
+
+  const invitationId = randomUUID();
   db.insert(projectInvitations)
     .values({
+      id: invitationId,
       projectId,
       inviterId: viewer!.id,
       inviteeId: input.userId ?? null,
@@ -586,8 +639,12 @@ export function inviteToProject(
       actorId: viewer!.id,
       kind: "invitation",
       title: `Invitation to join ${project.name}`,
-      body: input.message ?? undefined,
+      // The invitation note stays on the invitation itself rather than in a
+      // notification preview.
       href: "/notifications",
+      dedupeKey: `invitation:${invitationId}`,
+      entityType: "invitation",
+      entityId: invitationId,
     });
   }
 }
@@ -619,15 +676,16 @@ export function respondToInvitation(invitationId: string, userId: string, accept
     }
   });
 
-  if (accept) {
-    notify({
-      userId: invitation.inviterId,
-      actorId: userId,
-      kind: "invitation",
-      title: "Your project invitation was accepted",
-      href: `/projects/${invitation.projectId}?tab=team`,
-    });
-  }
+  notify({
+    userId: invitation.inviterId,
+    actorId: userId,
+    kind: "invitation",
+    title: accept ? "Your project invitation was accepted" : "Your project invitation was declined",
+    href: `/projects/${invitation.projectId}?tab=team`,
+    dedupeKey: `invitation_response:${invitationId}`,
+    entityType: "invitation",
+    entityId: invitationId,
+  });
 }
 
 export function pendingInvitations(userId: string) {
@@ -652,6 +710,12 @@ export function removeMember(projectId: string, viewer: Viewer, memberUserId: st
   const access = requireProjectAccess(projectId, viewer, "edit");
   if (memberUserId === access.project.ownerId) throw new AppError("The project owner cannot be removed.");
   const db = getDb();
+  const membership = db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, memberUserId), eq(projectMembers.status, "active")))
+    .get();
+  if (!membership) return;
   transaction((tx) => {
     tx.update(projectMembers)
       .set({ status: "removed" })
@@ -673,7 +737,15 @@ export function removeMember(projectId: string, viewer: Viewer, memberUserId: st
     // Remove them from active task assignments without erasing the record.
     tx.run(sql`update task_assignments set status = 'removed' where user_id = ${memberUserId} and status = 'active' and task_id in (select id from tasks where project_id = ${projectId})`);
   });
-  notify({ userId: memberUserId, kind: "system", title: "You were removed from a project team", href: "/home" });
+  notify({
+    userId: memberUserId,
+    kind: "system",
+    title: "You were removed from a project team",
+    href: access.project.visibility === "public" ? `/projects/${projectId}` : "/home",
+    dedupeKey: `project_removed:${membership.id}`,
+    entityType: "project",
+    entityId: projectId,
+  });
 }
 
 export function projectAnalytics(projectId: string, viewer: Viewer) {

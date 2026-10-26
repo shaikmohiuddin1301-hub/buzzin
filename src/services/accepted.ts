@@ -58,7 +58,7 @@ function areaKeyOf(label: string): string {
  * Accepted work for a project — the canonical collection.
  *
  * Every item is a `deliverables` row whose submission was accepted. The same row
- * is what the Drop page shows, so "filed into Accepted Work" means a new view of
+ * is what the task page shows, so "filed into Accepted Work" means a new view of
  * the original record, never a copy. Grouping uses the task's skill category
  * ("Design", "Engineering", …) because that is the work-area vocabulary the
  * project already carries; tasks without skills fall back to "General".

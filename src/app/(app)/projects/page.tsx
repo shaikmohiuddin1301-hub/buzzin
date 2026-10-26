@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, FolderKanban, Plus } from "lucide-react";
-import { Badge, ButtonLink, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
+import { Badge, ButtonLink, Card, EmptyState, PageHeader, StatusBadge, TaskStatusBadge } from "@/components/ui";
+import { Reveal } from "@/components/client/reveal";
 import { requireUser } from "@/lib/auth";
 import { formatDate, relativeTime } from "@/lib/format";
 import { label, type ProjectStage } from "@/lib/types";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * The Projects destination: everything the signed-in person owns or contributes to, plus the
- * Drops assigned to them. It links into each project's workspace rather than duplicating it.
+ * Tasks assigned to them. It links into each project's workspace rather than duplicating it.
  */
 export default async function ProjectsPage() {
   const user = await requireUser();
@@ -24,7 +25,7 @@ export default async function ProjectsPage() {
       <PageHeader
         eyebrow="Projects"
         title="Your projects"
-        description="Projects you lead and projects you contribute to. Assigned work appears here and in each project's Drops."
+        description="Projects you lead and projects you contribute to. Assigned work appears here and in each project's tasks."
         actions={
           <ButtonLink href="/projects/new" size="sm">
             <Plus size={15} aria-hidden="true" /> New project
@@ -34,7 +35,10 @@ export default async function ProjectsPage() {
 
       {assigned.length > 0 ? (
         <section className="mt-6">
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-navy-500">Assigned to you</h2>
+          <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide text-navy-500">
+            My work
+            <span className="rounded-full bg-navy-100 px-1.5 py-0.5 text-[10px] text-navy-600">{assigned.length}</span>
+          </h2>
           <Card className="mt-2 divide-y divide-navy-100">
             {assigned.map(({ task, projectName }) => (
               <Link
@@ -52,7 +56,7 @@ export default async function ProjectsPage() {
                       <CalendarDays size={12} aria-hidden="true" /> {formatDate(task.deadline)}
                     </span>
                   ) : null}
-                  <StatusBadge status={task.status} />
+                  <TaskStatusBadge status={task.status} />
                 </span>
               </Link>
             ))}
@@ -86,7 +90,7 @@ export default async function ProjectsPage() {
         empty={
           <EmptyState
             title="No contributions yet"
-            description="Follow a project or apply to an open Drop and it will appear here once you join the team."
+            description="Follow a project or apply to an open task and it will appear here once you join the team."
             action={<ButtonLink href="/explore" variant="secondary" size="sm">Explore projects</ButtonLink>}
           />
         }
@@ -128,11 +132,11 @@ function ProjectGroup({
         <div className="mt-2">{empty}</div>
       ) : (
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
-          {projects.map((project) => (
+          {projects.map((project, index) => (
+            <Reveal key={project.id} delay={Math.min(index * 45, 180)}>
             <Link
-              key={project.id}
               href={`/projects/${project.id}`}
-              className="motion-card rounded-xl border border-navy-200 bg-white p-4 shadow-sm hover:shadow-raised"
+              className="motion-card block rounded-2xl border border-navy-200/70 bg-surface p-4 shadow-card"
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-[14px] font-semibold text-navy-950">{project.name}</h3>
@@ -145,6 +149,7 @@ function ProjectGroup({
                 <span className="ml-auto text-[11px] text-navy-400">updated {relativeTime(project.updatedAt)}</span>
               </div>
             </Link>
+            </Reveal>
           ))}
         </div>
       )}

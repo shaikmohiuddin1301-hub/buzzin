@@ -9,6 +9,7 @@ import { runServerAction } from "@/lib/actions";
 import { clearSessionCookie, requestMeta, requireUserOrThrow, setSessionCookie, getCurrentUser } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { bool, file, list, str } from "@/lib/form";
+import { safeNextPath, withNext } from "@/lib/redirects";
 import { createSession } from "@/lib/session";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -22,13 +23,12 @@ import {
 } from "@/services/users";
 import type { UserGoal, UserRole } from "@/lib/types";
 
-function safeNext(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/home";
-  return value;
-}
-
 export async function signUpAction(formData: FormData) {
-  await runServerAction("/auth/sign-up", async () => {
+  const next = safeNextPath(str(formData, "next") || null);
+  // Keep the intended destination through a failed registration attempt too.
+  const fallback = withNext("/auth/sign-up", next);
+
+  await runServerAction(fallback, async () => {
     const meta = await requestMeta();
     const result = await registerUser({
       email: str(formData, "email"),
@@ -40,24 +40,29 @@ export async function signUpAction(formData: FormData) {
 
     const session = createSession(result.userId, meta);
     await setSessionCookie(session.token, session.expiresAt);
-    return { path: "/onboarding", revalidate: ["/home"] };
+    // The account is now authenticated. Go where the visitor was heading, or Home.
+    const destination =
+      next === "/home" ? "/home?notice=Your%20account%20is%20ready.%20Add%20goals%20and%20skills%20when%20you%20like." : next;
+    return { path: destination, revalidate: ["/home"] };
   });
 }
 
 export async function signInAction(formData: FormData) {
-  await runServerAction("/auth/sign-in", async () => {
+  const next = safeNextPath(str(formData, "next") || null);
+  const fallback = withNext("/auth/sign-in", next);
+
+  await runServerAction(fallback, async () => {
     const meta = await requestMeta();
-    const { user, session } = authenticate(str(formData, "email"), str(formData, "password"), meta.ip);
+    const { session } = authenticate(str(formData, "email"), str(formData, "password"), meta.ip);
     await setSessionCookie(session.token, session.expiresAt);
-    const next = safeNext(str(formData, "next") || null);
-    const destination = user.onboardingCompletedAt ? next : "/onboarding";
-    return { path: destination, revalidate: ["/home"] };
+    // Only redirect once the session cookie has been set: the destination, or Home.
+    return { path: next, revalidate: ["/home"] };
   });
 }
 
 export async function signOutAction() {
   await clearSessionCookie();
-  redirect("/");
+  redirect("/?notice=You%20have%20been%20signed%20out.");
 }
 
 export async function resendVerificationAction() {
@@ -101,7 +106,8 @@ export async function resetPasswordAction(formData: FormData) {
 }
 
 export async function onboardingAction(formData: FormData) {
-  await runServerAction("/onboarding", async () => {
+  const next = safeNextPath(str(formData, "next") || null);
+  await runServerAction(withNext("/onboarding", next), async () => {
     const user = await requireUserOrThrow();
     const goals = list(formData, "goals") as UserGoal[];
 
@@ -130,7 +136,10 @@ export async function onboardingAction(formData: FormData) {
       avatarFileId,
     });
 
-    return { path: "/home?notice=Your%20profile%20is%20ready.", revalidate: ["/home", "/explore"] };
+    return {
+      path: withNext("/home?notice=Your%20profile%20is%20ready.", next),
+      revalidate: ["/home", "/explore"],
+    };
   });
 }
 

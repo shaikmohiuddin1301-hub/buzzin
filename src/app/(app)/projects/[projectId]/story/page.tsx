@@ -196,7 +196,7 @@ export default async function ProjectStoryPage({
                     <li key={scene.id} className="px-5 py-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-navy-950 text-[10px] font-semibold text-white">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full ink-surface text-[10px] font-semibold text-white">
                             {index + 1}
                           </span>
                           <p className="text-[13px] font-semibold text-navy-900">{scene.title}</p>
@@ -437,7 +437,7 @@ export default async function ProjectStoryPage({
             </Card>
           ) : null}
 
-          <div className="rounded-lg border border-navy-200 bg-white p-3">
+          <div className="rounded-lg border border-navy-200 bg-surface p-3">
             <p className="flex items-center gap-1.5 text-[11px] font-semibold text-navy-800">
               <AlertTriangle size={12} aria-hidden="true" className="text-amber-600" /> Safeguards in force
             </p>

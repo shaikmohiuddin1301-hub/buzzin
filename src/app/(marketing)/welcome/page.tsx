@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { asc, desc, eq } from "drizzle-orm";
 import {
@@ -23,11 +24,32 @@ import { listResources } from "@/services/learning";
 import { reputationSummary } from "@/lib/reputation";
 import { label } from "@/lib/types";
 
-export default async function LandingPage() {
+/**
+ * The public marketing landing page.
+ *
+ * It used to be the root URL. The root is now the app entry gate, so the landing
+ * page moved here unchanged, with its own canonical URL for search engines.
+ */
+export const metadata: Metadata = {
+  title: { absolute: "BuildTogether — build real things, teach what you learn" },
+  description:
+    "BuildTogether is where people discover real projects, collaborate on meaningful work, document the process, turn it into learning and build a credible reputation.",
+  alternates: { canonical: "/welcome" },
+  openGraph: {
+    title: "BuildTogether",
+    description:
+      "Discover real projects, contribute to work that matters, document the journey and teach what you learn.",
+    type: "website",
+    url: "/welcome",
+  },
+};
+
+export default async function WelcomePage() {
   const db = getDb();
   const projects = featuredProjects(3);
   const stories = publishedStories(2);
   const resources = listResources({ limit: 3 });
+  const courses = listResources({ format: "course", limit: 3 });
 
   const previewStory = stories[0];
   const scenes = previewStory
@@ -84,9 +106,9 @@ export default async function LandingPage() {
         secondary={{ href: "/projects/new", label: "Start building" }}
         aside={
           <Card className="overflow-hidden">
-            <div className="border-b border-navy-100 bg-navy-950 px-5 py-4 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-300">Live from the feed</p>
-              <p className="mt-1 text-[13px] text-navy-200">
+            <div className="border-b border-navy-100 bg-brand-600 px-5 py-4 text-white">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">Live from the feed</p>
+              <p className="mt-1 text-[13px] text-white/75">
                 Documentation → story → learning, connected to the same source records.
               </p>
             </div>
@@ -209,7 +231,7 @@ export default async function LandingPage() {
                         ["influence", "Reach: followers, stories and discovery"],
                       ] as const
                     ).map(([key, hint]) => (
-                      <div key={key} className="rounded-xl border border-navy-200 bg-white p-4">
+                      <div key={key} className="rounded-xl border border-navy-200 bg-surface p-4">
                         <div className="flex items-center justify-between">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">{label(key)}</p>
                           <BadgeCheck size={14} aria-hidden="true" className="text-brand-600" />
@@ -255,7 +277,7 @@ export default async function LandingPage() {
               description="One is an arrangement between collaborators. The other is a marketplace for learning content. They have different obligations, so they are modelled separately."
             />
             <div className="mt-6 grid gap-3">
-              <div className="rounded-xl border border-navy-200 bg-white p-5">
+              <div className="rounded-xl border border-navy-200 bg-surface p-5">
                 <div className="flex items-center gap-2">
                   <Users size={16} aria-hidden="true" className="text-brand-600" />
                   <h3 className="text-[14px] font-semibold text-navy-950">Project contributions</h3>
@@ -266,7 +288,7 @@ export default async function LandingPage() {
                   not create an employment relationship.
                 </p>
               </div>
-              <div className="rounded-xl border border-navy-200 bg-white p-5">
+              <div className="rounded-xl border border-navy-200 bg-surface p-5">
                 <div className="flex items-center gap-2">
                   <CircleDollarSign size={16} aria-hidden="true" className="text-brand-600" />
                   <h3 className="text-[14px] font-semibold text-navy-950">Educational content</h3>
@@ -300,6 +322,26 @@ export default async function LandingPage() {
             )}
           </div>
         </section>
+
+        {courses.length > 0 ? (
+          <section>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <SectionHeading
+                eyebrow="Structured courses"
+                title="A guided path, not just a pile of tutorials"
+                description="Free courses built from original lessons, credited external videos and practical project work."
+              />
+              <ButtonLink href="/courses" variant="ghost" size="sm">
+                All courses <ArrowRight size={14} aria-hidden="true" />
+              </ButtonLink>
+            </div>
+            <div className="mt-6 grid gap-3 lg:grid-cols-3">
+              {courses.map((course) => (
+                <ResourceCard key={course.id} resource={course} href={`/courses/${course.id}`} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section>
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -420,7 +462,7 @@ export default async function LandingPage() {
                 role: "Data analyst, fictional example",
               },
             ].map((item) => (
-              <figure key={item.name} className="rounded-xl border border-navy-200 bg-white p-5">
+              <figure key={item.name} className="rounded-xl border border-navy-200 bg-surface p-5">
                 <blockquote className="text-[13px] leading-6 text-navy-700">“{item.quote}”</blockquote>
                 <figcaption className="mt-3 border-t border-navy-100 pt-3 text-[11px] text-navy-500">
                   <span className="font-semibold text-navy-700">{item.name}</span>

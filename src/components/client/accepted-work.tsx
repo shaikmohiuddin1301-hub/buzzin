@@ -7,7 +7,7 @@ import { Check, FolderCheck } from "lucide-react";
  * The signature accepted-work moment.
  *
  * It is mounted only when the review action redirected with `approved=1`, which happens after
- * the approval was written and the Drop status changed — never before. The component strips
+ * the approval was written and the task status changed — never before. The component strips
  * that one-shot query flag so a refresh or a back navigation cannot replay the celebration.
  *
  * The card lifts, the check draws, and a "Accepted Work" pill settles. With reduced motion the
@@ -34,7 +34,7 @@ export function AcceptedWorkCelebration({ show, title }: { show: boolean; title:
       aria-live="polite"
       className="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-4 lg:bottom-6"
     >
-      <div className="motion-lift w-full max-w-sm rounded-xl border border-emerald-200 bg-white p-4 shadow-raised">
+      <div className="motion-lift w-full max-w-sm rounded-xl border border-emerald-200 bg-surface p-4 shadow-raised">
         <div className="flex items-start gap-3">
           <span className="motion-check grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
             <Check size={18} aria-hidden="true" />

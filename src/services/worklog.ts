@@ -90,6 +90,9 @@ export function addWorkLogEntry(taskId: string, userId: string, input: WorkLogIn
       title: "A contributor requested public documentation",
       body: input.title,
       href: `/tasks/${taskId}/workspace`,
+      dedupeKey: `worklog_public_request:${id}`,
+      entityType: "worklog_entry",
+      entityId: id,
     });
   }
   return id;
@@ -191,6 +194,9 @@ export function approveWorkLogEntry(entryId: string, viewer: Viewer): void {
     title: "Your documentation is now public",
     body: entry.title,
     href: `/tasks/${task.id}/workspace`,
+    dedupeKey: `worklog_public_approved:${entry.id}`,
+    entityType: "worklog_entry",
+    entityId: entry.id,
   });
 }
 

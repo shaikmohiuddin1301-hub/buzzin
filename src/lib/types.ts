@@ -88,6 +88,35 @@ export const TASK_STATUSES = [
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
+export const TASK_PRIORITIES = ["low", "normal", "high"] as const;
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
+/**
+ * Task statuses in the words people use for their own work.
+ *
+ * The database keeps its existing values (`submitted`, `completed`…) so no data
+ * migration is needed; only the label changes.
+ */
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  draft: "Draft",
+  open: "To do",
+  reviewing_interest: "To do",
+  assigned: "To do",
+  in_progress: "In progress",
+  submitted: "Needs review",
+  revision_requested: "Changes requested",
+  completed: "Approved",
+  cancelled: "Cancelled",
+};
+
+export function taskStatusLabel(status: string): string {
+  return TASK_STATUS_LABELS[status as TaskStatus] ?? status.replace(/_/g, " ");
+}
+
+export function taskStatusLabelWithNote(status: string): string {
+  return status === "assigned" ? "To do · assigned" : taskStatusLabel(status);
+}
+
 export const SUBMISSION_STATUSES = ["submitted", "accepted", "revision_requested"] as const;
 export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number];
 
@@ -138,8 +167,28 @@ export type ResourceFormat = (typeof RESOURCE_FORMATS)[number];
 export const RESOURCE_LEVELS = ["beginner", "intermediate", "advanced"] as const;
 export type ResourceLevel = (typeof RESOURCE_LEVELS)[number];
 
-export const RESOURCE_STATUSES = ["draft", "published", "scheduled", "archived"] as const;
+export const RESOURCE_STATUSES = ["draft", "published", "unpublished", "scheduled", "archived"] as const;
 export type ResourceStatus = (typeof RESOURCE_STATUSES)[number];
+
+/** Course visibility: public is listed, invite_only is link-only, private is editors-only. */
+export const COURSE_VISIBILITIES = ["public", "invite_only", "private"] as const;
+export type CourseVisibility = (typeof COURSE_VISIBILITIES)[number];
+
+export const COURSE_CATEGORIES = [
+  "software",
+  "design",
+  "data",
+  "business",
+  "marketing",
+  "content_creation",
+  "education",
+  "career",
+  "other",
+] as const;
+export type CourseCategory = (typeof COURSE_CATEGORIES)[number];
+
+export const ENROLLMENT_STATUSES = ["active", "completed"] as const;
+export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 
 export const JOURNEY_STATUSES = ["draft", "review", "approved", "published"] as const;
 export type JourneyStatus = (typeof JOURNEY_STATUSES)[number];
@@ -202,24 +251,38 @@ export type ReputationDimension = (typeof REPUTATION_DIMENSIONS)[number];
 
 /* ------------------------------- notifications ---------------------------- */
 
-export const NOTIFICATION_KINDS = [
+/**
+ * Categories a person can switch off from Settings.
+ *
+ * Only events the product can actually raise are listed: an option that never
+ * produces a notification is worse than no option at all. `task_deadline` was
+ * removed because this build has no scheduler to deliver deadline reminders.
+ */
+export const OPTIONAL_NOTIFICATION_KINDS = [
   "message",
+  "mention",
   "interest_received",
   "interest_answered",
   "invitation",
   "task_assigned",
-  "task_deadline",
   "submission_received",
   "submission_reviewed",
   "contribution_confirmed",
   "comment",
-  "mention",
   "new_follower",
+  "project_update",
+  "teaching_published",
   "learning_sale",
   "learning_feedback",
   "story_approval",
-  "moderation",
-  "security",
+] as const;
+
+/** Account-safety notices that are never suppressed by a preference switch. */
+export const ESSENTIAL_NOTIFICATION_KINDS = ["security", "moderation"] as const;
+
+export const NOTIFICATION_KINDS = [
+  ...OPTIONAL_NOTIFICATION_KINDS,
+  ...ESSENTIAL_NOTIFICATION_KINDS,
   "system",
 ] as const;
 
@@ -277,6 +340,10 @@ export const LABELS: Record<string, string> = {
   approved: "Approved",
   rejected: "Rejected",
   scheduled: "Scheduled",
+  unpublished: "Unpublished",
+  content_creation: "Content creation",
+  data: "Data",
+  career: "Career",
   review: "Review",
   triaging: "Triaging",
   resolved: "Resolved",

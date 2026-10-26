@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { ClipboardList, FileUp, Link2, MessageSquare, NotebookPen } from "lucide-react";
 import { getDb } from "@/db/client";
-import { projectMembers, users } from "@/db/schema";
+import { mediaFiles, projectMembers, users } from "@/db/schema";
 import {
   addDependencyAction,
   assignContributorAction,
@@ -36,12 +36,13 @@ import {
   Select,
   SkillTag,
   StatusBadge,
+  TaskStatusBadge,
   Textarea,
 } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { formatDate, relativeTime } from "@/lib/format";
-import { label, TASK_STATUSES } from "@/lib/types";
+import { label, TASK_STATUSES, taskStatusLabel } from "@/lib/types";
 import { assignTaskAreaAction } from "@/app/actions/workAreas";
 import { listTaskDependencies } from "@/services/dependencies";
 import { workAreaDropdown } from "@/services/workAreas";
@@ -76,6 +77,11 @@ export default async function TaskPage({
   const prerequisiteCandidates = canEdit
     ? listTasks(project.id, user).filter((candidate) => candidate.id !== taskId)
     : [];
+  // One list, one record per file: uploads from the task chat and the workspace are
+  // filed against this task, so they can be found here rather than copied around.
+  const taskFiles = canViewWorkspace
+    ? getDb().select().from(mediaFiles).where(eq(mediaFiles.taskId, taskId)).orderBy(desc(mediaFiles.createdAt)).all()
+    : [];
 
   const candidateMembers = canReview
     ? getDb()
@@ -100,7 +106,7 @@ export default async function TaskPage({
       <PageHeader
         eyebrow={
           <span className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={task.status} />
+            <TaskStatusBadge status={task.status} />
             {currentArea ? (
               <Link href={`/projects/${project.id}/areas/${currentArea.id}`}>
                 <Badge tone="brand">{currentArea.name}</Badge>
@@ -109,6 +115,9 @@ export default async function TaskPage({
               <Badge tone="neutral">Project inbox</Badge>
             )}
             <Badge tone={task.visibility === "public" ? "success" : "neutral"}>{label(task.visibility)}</Badge>
+            {task.priority !== "normal" ? (
+              <Badge tone={task.priority === "high" ? "danger" : "neutral"}>{label(task.priority)} priority</Badge>
+            ) : null}
             <Badge tone={task.compensationType === "paid" ? "success" : "neutral"}>{label(task.compensationType)}</Badge>
             {task.status === "draft" ? <Badge tone="warning">Not visible to contributors</Badge> : null}
           </span>
@@ -125,9 +134,14 @@ export default async function TaskPage({
         actions={
           <>
             {canViewWorkspace ? (
-              <ButtonLink href={`/tasks/${taskId}/workspace`} variant="secondary" size="sm">
-                <NotebookPen size={13} aria-hidden="true" /> Workspace
-              </ButtonLink>
+              <>
+                <ButtonLink href={`/tasks/${taskId}/chat`} variant="secondary" size="sm">
+                  <MessageSquare size={13} aria-hidden="true" /> Task chat
+                </ButtonLink>
+                <ButtonLink href={`/tasks/${taskId}/workspace`} variant="secondary" size="sm">
+                  <NotebookPen size={13} aria-hidden="true" /> Workspace
+                </ButtonLink>
+              </>
             ) : null}
             {canReview ? (
               <ButtonLink href={`/tasks/${taskId}/learning-journey`} variant="ghost" size="sm">
@@ -295,7 +309,7 @@ export default async function TaskPage({
                           <input type="hidden" name="taskId" value={taskId} />
                           <input type="hidden" name="submissionId" value={row.submission.id} />
                           <input type="hidden" name="decision" value="accepted" />
-                          <Field label="Accept with note" htmlFor={`accept-${row.submission.id}`}>
+                          <Field label="Approve with a note (optional)" htmlFor={`accept-${row.submission.id}`}>
                             <Textarea
                               id={`accept-${row.submission.id}`}
                               name="reason"
@@ -305,8 +319,11 @@ export default async function TaskPage({
                             />
                           </Field>
                           <SubmitButton size="sm" pendingLabel="…">
-                            Accept and record contribution
+                            Approve work
                           </SubmitButton>
+                          <p className="text-[10.5px] leading-4 text-navy-500">
+                            Approved work moves to Accepted Work on the project. This cannot be undone.
+                          </p>
                         </form>
                         <form action={reviewSubmissionAction} className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3">
                           <input type="hidden" name="taskId" value={taskId} />
@@ -328,6 +345,30 @@ export default async function TaskPage({
                         </form>
                       </div>
                     ) : null}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
+          {taskFiles.length > 0 ? (
+            <Card className="p-5">
+              <h2 className="text-[14px] font-semibold text-navy-950">Files on this task</h2>
+              <p className="mt-0.5 text-[12px] text-navy-500">
+                Shared in the task chat or the workspace. Each file is one record — this list points at it.
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {taskFiles.map((file) => (
+                  <li
+                    key={file.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-navy-50/60 px-2.5 py-1.5 text-[12px]"
+                  >
+                    <a href={`/api/files/${file.id}`} className="font-medium text-brand-700 underline">
+                      {file.filename}
+                    </a>
+                    <span className="text-[10.5px] text-navy-500">
+                      {Math.max(1, Math.round(file.sizeBytes / 1024))} KB · {relativeTime(file.createdAt)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -425,7 +466,7 @@ export default async function TaskPage({
                             {item.prerequisite.title}
                           </Link>
                           <p className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-navy-500">
-                            <StatusBadge status={item.prerequisite.status} />
+                            <TaskStatusBadge status={item.prerequisite.status} />
                             {item.satisfied ? "Prerequisite met" : "Not approved yet"}
                           </p>
                           {item.reason ? <p className="mt-0.5 text-[11px] text-navy-500">{item.reason}</p> : null}
@@ -496,7 +537,7 @@ export default async function TaskPage({
                   <Select id="status" name="status" defaultValue={task.status}>
                     {TASK_STATUSES.map((status) => (
                       <option key={status} value={status}>
-                        {label(status)}
+                        {taskStatusLabel(status)}
                       </option>
                     ))}
                   </Select>
@@ -519,7 +560,7 @@ export default async function TaskPage({
                   </Select>
                 </Field>
                 <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="…">
-                  Move Drop
+                  Move task
                 </SubmitButton>
               </form>
 
@@ -608,13 +649,13 @@ export default async function TaskPage({
             </div>
           </Card>
 
-          <div className="flex items-center justify-between rounded-lg border border-navy-200 bg-white px-3 py-2">
+          <div className="flex items-center justify-between rounded-lg border border-navy-200 bg-surface px-3 py-2">
             <span className="text-[11px] text-navy-500">Wrong credit or content?</span>
             <ReportForm targetType="project" targetId={task.projectId} returnTo={returnTo} />
           </div>
 
           {!canViewWorkspace ? (
-            <div className="rounded-lg border border-navy-200 bg-white p-3">
+            <div className="rounded-lg border border-navy-200 bg-surface p-3">
               <p className="text-[11px] leading-5 text-navy-600">
                 The contributor workspace is private to assigned contributors and the project team.
               </p>

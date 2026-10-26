@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
-import { CalendarDays, ExternalLink, FolderCheck, FolderKanban, Heart, MessageSquare, Pencil, Users } from "lucide-react";
+import { CalendarDays, ClipboardList, ExternalLink, FolderCheck, FolderKanban, Heart, MessageSquare, Pencil, Users } from "lucide-react";
 import { getDb } from "@/db/client";
 import { consentRecords, deliverables, storyScenes, tasks, users, workLogEntries } from "@/db/schema";
 import {
   addMilestoneAction,
   archiveProjectAction,
   createTaskAction,
+  publishProjectAction,
   deleteProjectAction,
   expressInterestAction,
   inviteToProjectAction,
@@ -110,6 +111,8 @@ export default async function ProjectPage({
   const projectTasks = listTasks(projectId, user);
   const interests = access.canReview ? projectInterests(projectId, user) : [];
   const workAreaList = listWorkAreas(projectId, user);
+  const pendingReview = projectTasks.filter((task) => task.status === "submitted").length;
+  const openTaskCount = projectTasks.filter((task) => !["completed", "cancelled"].includes(task.status)).length;
 
   const comments = listComments("project", projectId, user);
   const journeys = projectJourneys(projectId, user);
@@ -129,6 +132,17 @@ export default async function ProjectPage({
     .innerJoin(tasks, eq(tasks.id, deliverables.taskId))
     .where(and(eq(tasks.projectId, projectId), eq(deliverables.approved, true)))
     .all();
+
+  const nextStep =
+    members.length <= 1
+      ? "invite"
+      : projectTasks.length === 0
+        ? "task"
+        : pendingReview > 0
+          ? "review"
+          : approvedDeliverables.length === 0
+            ? "accepted"
+            : null;
 
   const lessons = isTeam
     ? db
@@ -160,15 +174,15 @@ export default async function ProjectPage({
         / <span className="text-navy-700">{project.name}</span>
       </nav>
 
-      <div className="overflow-hidden rounded-xl border border-navy-200 bg-white shadow-card">
+      <div className="overflow-hidden rounded-xl border border-navy-200 bg-surface shadow-card">
         <div className="relative h-40 bg-navy-900 sm:h-56">
           {project.coverImageId ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/api/files/${project.coverImageId}`} alt="" className="h-full w-full object-cover opacity-90" />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-navy-950 via-navy-800 to-brand-800" />
+            <div className="h-full w-full ink-hero" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-navy-950/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white sm:p-6">
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge tone="brand">{label(project.category)}</Badge>
@@ -219,10 +233,10 @@ export default async function ProjectPage({
             </form>
             {!access.isMember ? (
               <details className="relative">
-                <summary className="inline-flex h-8 cursor-pointer list-none items-center rounded-lg border border-navy-200 bg-white px-3 text-[13px] font-medium text-navy-800 hover:bg-navy-50 [&::-webkit-details-marker]:hidden">
+                <summary className="inline-flex h-8 cursor-pointer list-none items-center rounded-lg border border-navy-200 bg-surface px-3 text-[13px] font-medium text-navy-800 hover:bg-navy-50 [&::-webkit-details-marker]:hidden">
                   Express interest
                 </summary>
-                <div className="absolute right-0 z-30 mt-1 w-80 rounded-lg border border-navy-200 bg-white p-4 shadow-raised">
+                <div className="absolute right-0 z-30 mt-1 w-80 rounded-lg border border-navy-200 bg-surface p-4 shadow-raised">
                   <form action={expressInterestAction} className="space-y-3">
                     <input type="hidden" name="projectId" value={projectId} />
                     <input type="hidden" name="returnTo" value={returnTo} />
@@ -301,6 +315,23 @@ export default async function ProjectPage({
         <Flash error={error} notice={notice} />
       </div>
 
+      {access.canEdit && project.status === "draft" ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4">
+          <div>
+            <p className="text-[13px] font-semibold text-navy-950">Draft — only you and your team can see this</p>
+            <p className="mt-0.5 text-[12px] leading-5 text-navy-600">
+              Publish when you are ready and it appears on Explore and your profile. Tasks are optional and can come later.
+            </p>
+          </div>
+          <form action={publishProjectAction}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <SubmitButton size="sm" pendingLabel="Publishing…">
+              Publish project
+            </SubmitButton>
+          </form>
+        </div>
+      ) : null}
+
       <Tabs
         current={tab}
         items={[
@@ -322,7 +353,135 @@ export default async function ProjectPage({
       ) : null}
 
       {tab === "overview" && !isInviteOnlyLimited ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {access.canViewWorkspace ? (
+              <form action={openProjectChatAction}>
+                <button
+                  type="submit"
+                  className="motion-card flex h-full w-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 text-left shadow-card"
+                >
+                  <MessageSquare size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+                  <span>
+                    <span className="block text-[13px] font-semibold text-navy-950">Chats</span>
+                    <span className="block text-[11.5px] leading-5 text-navy-500">Talk and decide, together.</span>
+                  </span>
+                </button>
+              </form>
+            ) : (
+              <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+                <MessageSquare size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+                <span>
+                  <span className="block text-[13px] font-semibold text-navy-950">Chats</span>
+                  <span className="block text-[11.5px] leading-5 text-navy-500">Team only.</span>
+                </span>
+              </Link>
+            )}
+
+            <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+              <ClipboardList size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+              <span>
+                <span className="block text-[13px] font-semibold text-navy-950">Tasks</span>
+                <span className="block text-[11.5px] leading-5 text-navy-500">
+                  {openTaskCount} open{pendingReview > 0 ? ` · ${pendingReview} to review` : ""}
+                </span>
+              </span>
+            </Link>
+
+            <Link href={`/projects/${projectId}?tab=team`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+              <Users size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+              <span>
+                <span className="block text-[13px] font-semibold text-navy-950">Team</span>
+                <span className="block text-[11.5px] leading-5 text-navy-500">
+                  {members.length} {members.length === 1 ? "person" : "people"}
+                  {project.openToCollaborators ? " · open to collaborators" : ""}
+                </span>
+              </span>
+            </Link>
+
+            <Link href={`/projects/${projectId}/accepted`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+              <FolderCheck size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+              <span>
+                <span className="block text-[13px] font-semibold text-navy-950">Accepted work</span>
+                <span className="block text-[11.5px] leading-5 text-navy-500">
+                  {approvedDeliverables.length} {approvedDeliverables.length === 1 ? "deliverable" : "deliverables"}
+                </span>
+              </span>
+            </Link>
+          </div>
+
+          {access.canEdit ? (
+            <Card className="p-5">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-navy-950">Next steps</h2>
+                  <p className="mt-0.5 text-[12px] text-navy-500">
+                    Guidance only — you can work in any order. Nothing here blocks the project.
+                  </p>
+                </div>
+                {nextStep ? (
+                  <ButtonLink
+                    href={
+                      nextStep === "invite"
+                        ? `/projects/${projectId}?tab=team`
+                        : nextStep === "task"
+                          ? `/projects/${projectId}/tasks`
+                          : nextStep === "review"
+                            ? `/projects/${projectId}/tasks`
+                            : `/projects/${projectId}/accepted`
+                    }
+                    size="sm"
+                    variant="secondary"
+                  >
+                    {nextStep === "invite"
+                      ? "Invite a collaborator"
+                      : nextStep === "task"
+                        ? "Create the first task"
+                        : nextStep === "review"
+                          ? "Review submitted work"
+                          : "See what was built"}
+                  </ButtonLink>
+                ) : null}
+              </div>
+              <ol className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {[
+                  { key: "created", label: "Create your project", href: `/projects/${projectId}`, done: true },
+                  { key: "team", label: "Find collaborators", href: `/projects/${projectId}?tab=team`, done: members.length > 1 },
+                  { key: "tasks", label: "Organise the work", href: `/projects/${projectId}/tasks`, done: projectTasks.length > 0 },
+                  {
+                    key: "review",
+                    label: "Review and accept work",
+                    href: `/projects/${projectId}?tab=tasks`,
+                    done: approvedDeliverables.length > 0,
+                  },
+                  { key: "show", label: "Show what you built", href: `/projects/${projectId}/accepted`, done: approvedDeliverables.length > 0 },
+                ].map((step) => (
+                  <li key={step.key}>
+                    <Link
+                      href={step.href}
+                      className="flex items-start gap-2 rounded-lg border border-navy-100 bg-navy-50/50 px-3 py-2 text-[12px] hover:border-navy-200 hover:bg-surface"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold",
+                          step.done ? "bg-emerald-600 text-white" : "border border-navy-300 bg-surface text-navy-400",
+                        )}
+                      >
+                        {step.done ? "✓" : ""}
+                      </span>
+                      <span className={cn("leading-5", step.done ? "text-navy-500" : "font-medium text-navy-800")}>
+                        {step.label}
+                        {step.done ? <span className="sr-only"> (done)</span> : null}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </Card>
+          ) : null}
+
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-5">
             <Card className="p-5">
               <h2 className="text-[14px] font-semibold text-navy-950">What this is</h2>
@@ -552,12 +711,12 @@ export default async function ProjectPage({
                     </SubmitButton>
                   </form>
                   <details className="rounded-lg border border-red-200">
-                    <summary className="cursor-pointer list-none px-2 py-1.5 text-[12px] font-medium text-red-700 [&::-webkit-details-marker]:hidden">
+                    <summary className="cursor-pointer list-none px-2 py-1.5 text-[12px] font-medium text-red-600 [&::-webkit-details-marker]:hidden">
                       Delete project
                     </summary>
                     <form action={deleteProjectAction} className="space-y-2 border-t border-red-100 p-2">
                       <input type="hidden" name="projectId" value={projectId} />
-                      <p className="text-[11px] leading-5 text-red-700">
+                      <p className="text-[11px] leading-5 text-red-600">
                         This permanently deletes the project, tasks, documentation and linked stories. Type{" "}
                         <strong>{project.name}</strong> to confirm.
                       </p>
@@ -571,6 +730,7 @@ export default async function ProjectPage({
               </Card>
             ) : null}
           </aside>
+        </div>
         </div>
       ) : null}
 
@@ -742,7 +902,7 @@ export default async function ProjectPage({
                             </time>
                           </p>
                           <p className="mt-1 line-clamp-2 text-[12px] text-navy-600">{share.body}</p>
-                          {share.error ? <p className="mt-0.5 text-[11px] text-red-700">{share.error}</p> : null}
+                          {share.error ? <p className="mt-0.5 text-[11px] text-red-600">{share.error}</p> : null}
                         </div>
                         {share.status === "deleted" ? null : (
                           <form action={deleteShareAction}>
@@ -863,12 +1023,12 @@ export default async function ProjectPage({
               <div className="border-b border-navy-100 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Work areas</h2>
                 <p className="text-[12px] text-navy-500">
-                  Where work belongs: each area keeps its own Drops, chat and Accepted Work. Create one only when it earns its place.
+                  Where work belongs: each area keeps its own tasks, chat and Accepted Work. Create one only when it earns its place.
                 </p>
               </div>
               {workAreaList.length === 0 ? (
                 <p className="px-5 py-4 text-[12.5px] text-navy-500">
-                  No work areas yet. Drops stay in the project inbox until you add one.
+                  No work areas yet. Tasks stay in the project inbox until you add one.
                 </p>
               ) : (
                 <ul className="divide-y divide-navy-100">
@@ -879,7 +1039,7 @@ export default async function ProjectPage({
                           {area.name}
                         </Link>
                         <p className="text-[11px] text-navy-500">
-                          {area.openDrops} open {area.openDrops === 1 ? "Drop" : "Drops"} · {area.accepted} accepted
+                          {area.openDrops} open {area.openDrops === 1 ? "task" : "tasks"} · {area.accepted} accepted
                           {area.description ? ` · ${truncate(area.description, 80)}` : ""}
                         </p>
                       </div>

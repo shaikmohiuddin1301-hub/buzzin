@@ -7,6 +7,7 @@ import { bool, file, optional, str } from "@/lib/form";
 import { rateLimit } from "@/lib/rate-limit";
 import { saveUploadedFile } from "@/lib/storage";
 import {
+  conversationScope,
   createDropFromMessage,
   ensureProjectGroup,
   getOrCreateDirectConversation,
@@ -44,7 +45,15 @@ export async function sendMessageAction(formData: FormData) {
     let attachmentId: string | null = null;
     const upload = file(formData, "attachment");
     if (upload) {
-      const stored = await saveUploadedFile(upload, { ownerId: user.id, visibility: "private" });
+      // A file shared in a task or project chat belongs to that work, not just to
+      // the conversation, so it can be found from the task and the accepted record.
+      const scope = conversationScope(conversationId);
+      const stored = await saveUploadedFile(upload, {
+        ownerId: user.id,
+        projectId: scope?.projectId ?? null,
+        taskId: scope?.taskId ?? null,
+        visibility: "private",
+      });
       attachmentId = stored.id;
     }
 
@@ -55,7 +64,7 @@ export async function sendMessageAction(formData: FormData) {
   });
 }
 
-/** File a chat message as a Drop. Permission is checked against the project, not the chat. */
+/** Turn a chat message into a task. Permission is checked against the project, not the chat. */
 export async function createDropFromMessageAction(formData: FormData) {
   const conversationId = str(formData, "conversationId");
   await runServerAction(`/chats/${conversationId}`, async () => {
@@ -63,7 +72,7 @@ export async function createDropFromMessageAction(formData: FormData) {
     rateLimit(`chat:drop:${user.id}`, 30, 600_000);
     const taskId = createDropFromMessage(str(formData, "messageId"), user);
     return {
-      path: `/tasks/${taskId}?notice=Filed+as+a+Drop+from+the+conversation.`,
+      path: `/tasks/${taskId}?notice=Filed+as+a+task+from+the+conversation.`,
       revalidate: [`/chats/${conversationId}`, "/projects"],
     };
   });

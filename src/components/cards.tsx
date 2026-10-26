@@ -1,8 +1,25 @@
 import Link from "next/link";
-import { ArrowUpRight, Clock, Users } from "lucide-react";
-import { Avatar, Badge, Progress, SkillTag, StatusBadge, cn } from "@/components/ui";
+import { ArrowUpRight, Clock, Sparkles, Users } from "lucide-react";
+import { Avatar, Badge, Progress, SkillTag, StatusBadge, TaskStatusBadge, cn } from "@/components/ui";
 import { money, truncate } from "@/lib/format";
 import { label } from "@/lib/types";
+
+function ReasonChips({ reasons }: { reasons?: string[] }) {
+  if (!reasons || reasons.length === 0) return null;
+  return (
+    <div className="mt-2.5 flex flex-wrap gap-1.5">
+      {reasons.map((reason) => (
+        <span
+          key={reason}
+          className="inline-flex items-center gap-1 rounded-full bg-coral-50 px-2 py-0.5 text-[10.5px] font-medium text-coral-800"
+        >
+          <Sparkles size={10} aria-hidden="true" />
+          {reason}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export type ProjectCardData = {
   id: string;
@@ -21,9 +38,17 @@ export type ProjectCardData = {
   skills?: { id: string; name: string; slug: string }[];
 };
 
-export function ProjectCard({ project, compact = false }: { project: ProjectCardData; compact?: boolean }) {
+export function ProjectCard({
+  project,
+  compact = false,
+  reasons,
+}: {
+  project: ProjectCardData;
+  compact?: boolean;
+  reasons?: string[];
+}) {
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-navy-200/80 bg-white shadow-card transition hover:border-navy-300 hover:shadow-raised">
+    <article className="motion-card group flex flex-col overflow-hidden rounded-2xl border border-navy-200/60 bg-surface shadow-card">
       <Link href={`/projects/${project.id}`} className="relative block aspect-[16/9] overflow-hidden bg-navy-900">
         {project.coverImageId ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -34,8 +59,8 @@ export function ProjectCard({ project, compact = false }: { project: ProjectCard
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-navy-900 to-navy-700">
-            <span className="text-3xl font-semibold text-white/70">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-800 via-navy-900 to-navy-950">
+            <span className="text-3xl font-semibold text-white/75">
               {project.name
                 .split(" ")
                 .slice(0, 2)
@@ -60,6 +85,7 @@ export function ProjectCard({ project, compact = false }: { project: ProjectCard
           </Link>
         </h3>
         <p className="mt-1.5 line-clamp-3 text-[13px] leading-6 text-navy-600">{truncate(project.shortDescription, compact ? 120 : 180)}</p>
+        <ReasonChips reasons={reasons} />
 
         {project.skills && project.skills.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -107,10 +133,19 @@ export type ResourceCardData = {
   storyboardId?: string | null;
 };
 
-export function ResourceCard({ resource }: { resource: ResourceCardData }) {
+export function ResourceCard({
+  resource,
+  href,
+  reasons,
+}: {
+  resource: ResourceCardData;
+  href?: string;
+  reasons?: string[];
+}) {
+  const target = href ?? `/learn/${resource.id}`;
   return (
-    <article className="flex gap-4 rounded-xl border border-navy-200/80 bg-white p-4 shadow-card transition hover:border-navy-300">
-      <div className="hidden h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-navy-900 sm:block">
+    <article className="motion-card flex gap-4 rounded-2xl border border-navy-200/60 bg-surface p-4 shadow-card">
+      <div className="hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-navy-900 sm:block">
         {resource.coverImageId ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/files/${resource.coverImageId}`} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -131,11 +166,12 @@ export function ResourceCard({ resource }: { resource: ResourceCardData }) {
           )}
         </div>
         <h3 className="mt-2 text-[14px] font-semibold leading-snug text-navy-950">
-          <Link href={`/learn/${resource.id}`} className="hover:text-brand-700">
+          <Link href={target} className="hover:text-brand-700">
             {resource.title}
           </Link>
         </h3>
         {resource.summary ? <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-navy-600">{resource.summary}</p> : null}
+        <ReasonChips reasons={reasons} />
         <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-navy-500">
           {resource.creatorUsername ? (
             <Link href={`/u/${resource.creatorUsername}`} className="hover:underline">
@@ -152,6 +188,7 @@ export function ResourceCard({ resource }: { resource: ResourceCardData }) {
 export function PersonCard({
   person,
   action,
+  reasons,
 }: {
   person: {
     id: string;
@@ -163,9 +200,10 @@ export function PersonCard({
     skills?: { id: string; name: string }[];
   };
   action?: React.ReactNode;
+  reasons?: string[];
 }) {
   return (
-    <article className="flex items-start gap-3 rounded-xl border border-navy-200/80 bg-white p-4 shadow-card">
+    <article className="motion-card flex items-start gap-3 rounded-2xl border border-navy-200/60 bg-surface p-4 shadow-card">
       <Avatar name={person.displayName} size={44} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
       <div className="min-w-0 flex-1">
         <h3 className="text-[14px] font-semibold text-navy-950">
@@ -178,6 +216,7 @@ export function PersonCard({
           {person.location ? ` · ${person.location}` : ""}
         </p>
         {person.bio ? <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-navy-600">{person.bio}</p> : null}
+        <ReasonChips reasons={reasons} />
         {person.skills && person.skills.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {person.skills.slice(0, 3).map((skill) => (
@@ -199,20 +238,20 @@ export function StoryCard({
   projectName?: string | null;
 }) {
   return (
-    <article className="flex flex-col justify-between rounded-xl border border-navy-800 bg-navy-950 p-5 text-white shadow-card">
+    <article className="ink-card flex flex-col justify-between rounded-2xl border border-white/10 p-5 text-white shadow-card">
       <div>
         <div className="flex items-center justify-between gap-2">
-          <Badge tone="brand" className="bg-brand-500/20 text-brand-200">
+          <Badge tone="brand" className="bg-white/15 text-white">
             Animated story
           </Badge>
           <StatusBadge status={board.status} className="bg-white/10 text-white" />
         </div>
         <h3 className="mt-3 text-[15px] font-semibold leading-snug">{board.title}</h3>
-        {board.summary ? <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-navy-300">{board.summary}</p> : null}
+        {board.summary ? <p className="mt-1.5 line-clamp-2 text-[12px] leading-5 text-white/70">{board.summary}</p> : null}
       </div>
       <Link
         href={board.projectId ? `/projects/${board.projectId}/story?board=${board.id}` : `/learn/${board.id}`}
-        className="mt-4 inline-flex items-center gap-1 text-[12px] font-medium text-brand-300 hover:text-brand-200"
+        className="mt-4 inline-flex items-center gap-1 text-[12px] font-medium text-white/80 hover:text-white"
       >
         {projectName ? `From ${projectName}` : "Open story"}
         <ArrowUpRight size={13} aria-hidden="true" />
@@ -236,8 +275,8 @@ export function MilestoneRow({
           milestone.status === "completed"
             ? "border-emerald-500 bg-emerald-500 text-white"
             : milestone.status === "in_progress"
-              ? "border-brand-500 bg-white text-brand-600"
-              : "border-navy-300 bg-white",
+              ? "border-brand-500 bg-surface text-brand-600"
+              : "border-navy-300 bg-surface",
         )}
         aria-hidden="true"
       >
@@ -293,7 +332,7 @@ export function TaskRow({
           {typeof task.assigneeCount === "number" && task.assigneeCount > 0 ? (
             <Badge tone="brand">{task.assigneeCount} assigned</Badge>
           ) : null}
-          <StatusBadge status={task.status} />
+          <TaskStatusBadge status={task.status} />
         </div>
       </Link>
     </li>

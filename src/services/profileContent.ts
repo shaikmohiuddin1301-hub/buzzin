@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import {
   contributorAttributions,
@@ -32,7 +32,8 @@ export type AcceptedWorkRecord = {
  * uses; deliverables are joined by task, never copied. The UI must keep saying
  * that owner acceptance is not independent verification.
  */
-export function acceptedWorkForUser(userId: string): AcceptedWorkRecord[] {
+export function acceptedWorkForUser(userId: string, options: { publicOnly?: boolean } = {}): AcceptedWorkRecord[] {
+  const publicOnly = !!options.publicOnly;
   const rows = getDb()
     .select({
       attribution: contributorAttributions,
@@ -49,7 +50,12 @@ export function acceptedWorkForUser(userId: string): AcceptedWorkRecord[] {
     .innerJoin(projects, eq(projects.id, contributorAttributions.projectId))
     .leftJoin(tasks, eq(tasks.id, contributorAttributions.taskId))
     .leftJoin(deliverables, and(eq(deliverables.taskId, contributorAttributions.taskId), eq(deliverables.approved, true)))
-    .where(eq(contributorAttributions.userId, userId))
+    .where(
+      publicOnly
+        ? // A record on a project that is still a draft or is private stays private too.
+          and(eq(contributorAttributions.userId, userId), eq(projects.status, "published"), ne(projects.visibility, "private"))
+        : eq(contributorAttributions.userId, userId),
+    )
     .orderBy(desc(contributorAttributions.confirmedAt), desc(contributorAttributions.createdAt))
     .all();
 

@@ -94,9 +94,11 @@ export async function createReflectionAction(formData: FormData) {
 
     if (resourceId && completed) recordProgress(user.id, resourceId, null, true);
 
+    // A reflection is a post: send the author to where it now appears rather than
+    // leaving them on the empty form wondering whether it saved.
     return {
-      path: "/create/learning?notice=" + (publish ? "Reflection+shared." : "Reflection+saved+as+a+draft."),
-      revalidate: ["/create/learning", "/home"],
+      path: `/u/${user.username}?tab=posts&notice=${publish ? "Reflection+shared." : "Reflection+saved+as+a+draft."}`,
+      revalidate: ["/create/learning", "/home", `/u/${user.username}`],
     };
   });
 }
@@ -221,10 +223,16 @@ export async function draftJourneyFromTaskAction(formData: FormData) {
 
 export async function recordProgressAction(formData: FormData) {
   const resourceId = str(formData, "resourceId");
+  const lessonId = optional(formData, "lessonId") ?? null;
   await runServerAction(`/learn/${resourceId}`, async () => {
     const user = await requireUserOrThrow();
-    recordProgress(user.id, resourceId, optional(formData, "lessonId") ?? null, bool(formData, "completed"));
-    return { path: `/learn/${resourceId}?notice=Progress+saved.`, revalidate: [`/learn/${resourceId}`, "/learn"] };
+    recordProgress(user.id, resourceId, lessonId, bool(formData, "completed"));
+    return {
+      path: lessonId
+        ? `/learn/${resourceId}/lessons/${lessonId}?notice=Progress+saved.`
+        : `/learn/${resourceId}?notice=Progress+saved.`,
+      revalidate: [`/learn/${resourceId}`, ...(lessonId ? [`/learn/${resourceId}/lessons/${lessonId}`] : []), "/learn", "/studio"],
+    };
   });
 }
 

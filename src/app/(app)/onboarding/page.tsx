@@ -4,6 +4,7 @@ import { SubmitButton } from "@/components/client/submit-button";
 import { Alert, Card, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
+import { safeNextPath } from "@/lib/redirects";
 import { listSkills, userSkillsFor } from "@/services/users";
 import { PROJECT_CATEGORIES, USER_GOALS, label } from "@/lib/types";
 
@@ -26,6 +27,7 @@ export default async function OnboardingPage({
   const params = await searchParams;
   const { error } = readFlash(params);
   const user = await requireUser();
+  const next = safeNextPath(typeof params.next === "string" ? params.next : null);
   const existingSkills = userSkillsFor(user.id).map((skill) => skill.name);
   const knownSkills = listSkills().slice(0, 40);
 
@@ -47,6 +49,7 @@ export default async function OnboardingPage({
       ) : null}
 
       <form action={onboardingAction} encType="multipart/form-data" className="space-y-6">
+        <input type="hidden" name="next" value={next} />
         <Card className="p-5">
           <h2 className="text-[15px] font-semibold text-navy-950">Your profile</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -171,7 +174,7 @@ export default async function OnboardingPage({
         </Card>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href="/home" className="text-[13px] text-navy-500 hover:text-navy-800 hover:underline">
+          <Link href={next} className="text-[13px] text-navy-500 hover:text-navy-800 hover:underline">
             Skip for now
           </Link>
           <SubmitButton size="lg" pendingLabel="Saving your profile…">

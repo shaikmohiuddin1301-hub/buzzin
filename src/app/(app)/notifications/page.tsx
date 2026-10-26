@@ -13,6 +13,7 @@ import {
   EmptyState,
   Flash,
   PageHeader,
+  Pagination,
   Tabs,
   cn,
 } from "@/components/ui";
@@ -20,12 +21,18 @@ import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { relativeTime } from "@/lib/format";
 import { label } from "@/lib/types";
-import { listNotifications, unreadNotificationCount } from "@/services/notifications";
+import {
+  NOTIFICATIONS_PAGE_SIZE,
+  countNotifications,
+  listNotifications,
+  unreadNotificationCount,
+} from "@/services/notifications";
 
 export const dynamic = "force-dynamic";
 
 const TONES: Record<string, "brand" | "success" | "warning" | "danger" | "info" | "neutral"> = {
   message: "brand",
+  mention: "brand",
   interest_received: "info",
   interest_answered: "info",
   invitation: "warning",
@@ -35,6 +42,8 @@ const TONES: Record<string, "brand" | "success" | "warning" | "danger" | "info" 
   contribution_confirmed: "success",
   comment: "neutral",
   new_follower: "neutral",
+  project_update: "info",
+  teaching_published: "info",
   learning_sale: "success",
   learning_feedback: "info",
   story_approval: "warning",
@@ -51,8 +60,17 @@ export default async function NotificationsPage({
   const { error, notice } = readFlash(query);
   const user = await requireUser();
   const unreadOnly = query.filter === "unread";
-  const notifications = listNotifications(user.id, { unreadOnly, limit: 60 });
   const unread = unreadNotificationCount(user.id);
+  const total = countNotifications(user.id, { unreadOnly });
+  const totalAll = unreadOnly ? countNotifications(user.id) : total;
+  const pages = Math.max(1, Math.ceil(total / NOTIFICATIONS_PAGE_SIZE));
+  const requestedPage = Number.parseInt(typeof query.page === "string" ? query.page : "1", 10);
+  const page = Math.min(Math.max(Number.isFinite(requestedPage) ? requestedPage : 1, 1), pages);
+  const notifications = listNotifications(user.id, {
+    unreadOnly,
+    limit: NOTIFICATIONS_PAGE_SIZE,
+    offset: (page - 1) * NOTIFICATIONS_PAGE_SIZE,
+  });
 
   const invitations = getDb()
     .select({ invitation: projectInvitations, projectName: projects.name, inviterName: users.displayName })
@@ -66,13 +84,18 @@ export default async function NotificationsPage({
     <div>
       <PageHeader
         title="Notifications"
-        description="Project activity, reviews, messages and security alerts. Email delivery is not configured in this build."
+        description="Project activity, reviews, messages and safety notices. Notifications are stored on the server and survive sign-out; email and push delivery are not configured in this build."
         actions={
-          <form action={markAllReadAction}>
-            <SubmitButton size="sm" variant="secondary" pendingLabel="…">
-              Mark all read
-            </SubmitButton>
-          </form>
+          unread > 0 ? (
+            <form action={markAllReadAction}>
+              <input type="hidden" name="returnTo" value={unreadOnly ? "/notifications?filter=unread" : "/notifications"} />
+              <SubmitButton size="sm" variant="secondary" pendingLabel="Marking…" confirmMessage="Mark all notifications as read?">
+                Mark all read
+              </SubmitButton>
+            </form>
+          ) : (
+            <span className="text-[12px] text-navy-500">All caught up</span>
+          )
         }
       />
 
@@ -81,7 +104,7 @@ export default async function NotificationsPage({
       <Tabs
         current={unreadOnly ? "unread" : "all"}
         items={[
-          { id: "all", label: "All", href: "/notifications" },
+          { id: "all", label: "All", href: "/notifications", count: totalAll },
           { id: "unread", label: "Unread", href: "/notifications?filter=unread", count: unread },
         ]}
       />
@@ -91,8 +114,9 @@ export default async function NotificationsPage({
           <ul className="divide-y divide-navy-100">
             {notifications.map((row) => {
               const item = row.notification;
+              const unreadItem = !item.readAt;
               return (
-                <li key={item.id} className={cn("px-5 py-4", !item.readAt && "bg-brand-50/30")}>
+                <li key={item.id} className={cn("px-5 py-4 transition-colors", unreadItem && "bg-brand-50/30")}>
                   <div className="flex items-start gap-3">
                     {row.actorName ? (
                       <Avatar name={row.actorName} size={30} src={row.actorAvatar ? `/api/files/${row.actorAvatar}` : null} />
@@ -103,23 +127,42 @@ export default async function NotificationsPage({
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[13px] font-medium text-navy-900">{item.title}</p>
+                        {item.href ? (
+                          <Link
+                            href={`/api/notifications/${item.id}/open`}
+                            className="text-[13px] font-medium text-navy-900 hover:text-brand-700 hover:underline"
+                            aria-label={`Open: ${item.title}${unreadItem ? " (unread)" : ""}`}
+                          >
+                            {item.title}
+                          </Link>
+                        ) : (
+                          <p className="text-[13px] font-medium text-navy-900">{item.title}</p>
+                        )}
                         <Badge tone={TONES[item.kind] ?? "neutral"}>{label(item.kind)}</Badge>
-                        {!item.readAt ? <span className="h-1.5 w-1.5 rounded-full bg-brand-600" aria-label="unread" /> : null}
+                        {unreadItem ? (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-brand-600" aria-hidden="true" />
+                            <span className="sr-only">Unread</span>
+                          </>
+                        ) : null}
                       </div>
                       {item.body ? <p className="mt-0.5 text-[12px] leading-5 text-navy-600">{item.body}</p> : null}
                       <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
-                        <time className="text-navy-400" dateTime={item.createdAt}>
+                        <time className="text-navy-400" dateTime={item.createdAt} title={new Date(item.createdAt).toISOString()}>
                           {relativeTime(item.createdAt)}
                         </time>
                         {item.href ? (
-                          <Link href={item.href} className="font-medium text-brand-700 hover:underline">
+                          <Link
+                            href={`/api/notifications/${item.id}/open`}
+                            className="font-medium text-brand-700 hover:underline"
+                          >
                             Open
                           </Link>
                         ) : null}
-                        {!item.readAt ? (
+                        {unreadItem ? (
                           <form action={markReadAction}>
                             <input type="hidden" name="notificationId" value={item.id} />
+                            <input type="hidden" name="returnTo" value={unreadOnly ? "/notifications?filter=unread" : "/notifications"} />
                             <SubmitButton size="sm" variant="ghost" className="h-5 px-1 text-[10px]" pendingLabel="…">
                               Mark read
                             </SubmitButton>
@@ -134,12 +177,36 @@ export default async function NotificationsPage({
             {notifications.length === 0 ? (
               <li className="p-6">
                 <EmptyState
-                  title="Nothing here"
-                  description="Notifications appear when someone follows you, invites you, reviews your work or messages you."
+                  title={unreadOnly ? "No unread notifications" : "No notifications yet"}
+                  description={
+                    unreadOnly
+                      ? "Everything has been read. New assignments, reviews, replies and mentions will appear here."
+                      : "When someone assigns you work, reviews a submission, replies to you, mentions you or invites you to a project, it lands here — even after signing out."
+                  }
+                  action={
+                    unreadOnly ? (
+                      <ButtonLink href="/notifications" size="sm" variant="secondary">
+                        View all notifications
+                      </ButtonLink>
+                    ) : (
+                      <ButtonLink href="/home" size="sm" variant="secondary">
+                        Back to home
+                      </ButtonLink>
+                    )
+                  }
                 />
               </li>
             ) : null}
           </ul>
+          {notifications.length > 0 ? (
+            <Pagination
+              page={page}
+              pageSize={NOTIFICATIONS_PAGE_SIZE}
+              total={total}
+              basePath="/notifications"
+              params={{ filter: unreadOnly ? "unread" : undefined }}
+            />
+          ) : null}
         </Card>
 
         <aside className="space-y-4">
@@ -182,16 +249,17 @@ export default async function NotificationsPage({
           <Card className="p-4">
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Preferences</h2>
             <p className="mt-1.5 text-[11px] leading-5 text-navy-600">
-              Turn notification categories on or off, and choose whether email digests would be sent once a provider is
-              configured.
+              Turn optional categories on or off. Safety and moderation notices are always delivered. Email delivery is not
+              configured, so the email switch has no effect yet.
             </p>
             <ButtonLink href="/settings?tab=notifications" size="sm" variant="secondary" className="mt-2">
               Notification settings
             </ButtonLink>
           </Card>
 
-          <div className="rounded-lg border border-navy-200 bg-white p-3 text-[10.5px] leading-4 text-navy-500">
-            Notifications are throttled by category and deduplicated per action. Self-notifications are suppressed.
+          <div className="rounded-lg border border-navy-200 bg-surface p-3 text-[10.5px] leading-4 text-navy-500">
+            In-app only. Notifications are generated after the action succeeds and are deduplicated per event. Opening one marks
+            it read; opening the list does not.
           </div>
         </aside>
       </div>

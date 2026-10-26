@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { and, eq } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { projectMembers, taskAssignments } from "@/db/schema";
 import { startDirectMessageAction } from "@/app/actions/chat";
 import { SubmitButton } from "@/components/client/submit-button";
-import { Avatar, Badge, ButtonLink, Card, EmptyState, Field, Flash, PageHeader, Select } from "@/components/ui";
+import { Avatar, Badge, ButtonLink, Card, EmptyState, Field, Flash, Input, PageHeader, Select } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { relativeTime, truncate } from "@/lib/format";
-import { listConversations } from "@/services/chat";
+import { ensureProjectGroup, ensureTaskChat, listConversations } from "@/services/chat";
 import { searchPeople } from "@/services/users";
 import type { ConversationSummary } from "@/services/chat";
 
@@ -24,14 +27,49 @@ export default async function ChatsPage({
   const query = await searchParams;
   const { error, notice } = readFlash(query);
   const user = await requireUser();
-  const conversations = listConversations(user.id);
+  const q = typeof query.q === "string" ? query.q.trim().toLowerCase() : "";
+
+  // Conversations are derived from the work a person is part of, not invited by
+  // hand. Syncing here means a project chat or task chat that already covers their
+  // membership always appears in the list, whichever route added them to the team.
+  const db = getDb();
+  for (const row of db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.userId, user.id), eq(projectMembers.status, "active")))
+    .all()) {
+    ensureProjectGroup(row.projectId, user.id);
+  }
+  for (const row of db
+    .select({ taskId: taskAssignments.taskId })
+    .from(taskAssignments)
+    .where(and(eq(taskAssignments.userId, user.id), eq(taskAssignments.status, "active")))
+    .all()) {
+    ensureTaskChat(row.taskId, user);
+  }
+
+  const allConversations = listConversations(user.id);
+  const conversations = q
+    ? allConversations.filter((conversation) =>
+        `${conversation.title} ${conversation.participants.map((person) => person.displayName).join(" ")} ${conversation.lastMessage ?? ""}`
+          .toLowerCase()
+          .includes(q),
+      )
+    : allConversations;
+  const taskChats = allConversations.filter((conversation) => conversation.taskId).length;
   const people = searchPeople("", 8).filter((person) => person.id !== user.id);
 
   return (
     <div>
       <PageHeader
         title="Chats"
-        description="Direct messages and private project group chats. This is separate from public project discussion."
+        description="Task chats, project chats and direct messages. Every task has its own conversation, waiting for you."
+        meta={
+          <>
+            <span>{allConversations.length} conversations</span>
+            {taskChats > 0 ? <span>{taskChats} task {taskChats === 1 ? "chat" : "chats"}</span> : null}
+          </>
+        }
         actions={
           <ButtonLink href="/notifications" variant="secondary" size="sm">
             Notifications
@@ -43,11 +81,26 @@ export default async function ChatsPage({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
-          <div className="border-b border-navy-100 px-5 py-4">
-            <h2 className="text-[14px] font-semibold text-navy-950">Conversations</h2>
-            <p className="text-[12px] text-navy-500">
-              Messages refresh by polling while the tab is visible. No realtime transport is configured.
-            </p>
+          <div className="border-b border-navy-100 p-3">
+            <form action="/chats" role="search" className="flex gap-2">
+              <label htmlFor="chat-search" className="sr-only">
+                Search conversations
+              </label>
+              <Input
+                id="chat-search"
+                name="q"
+                type="search"
+                defaultValue={q}
+                placeholder="Search people, projects or a message…"
+                className="h-9 border-transparent bg-navy-50/70 text-[13px]"
+              />
+              <button
+                type="submit"
+                className="h-9 shrink-0 rounded-xl border border-navy-200 bg-surface px-3 text-[12.5px] font-medium text-navy-700 transition hover:bg-navy-50"
+              >
+                Search
+              </button>
+            </form>
           </div>
           <ul className="divide-y divide-navy-100">
             {conversations.map((conversation) => (
@@ -60,14 +113,15 @@ export default async function ChatsPage({
                       src={otherParticipant(conversation, user.id)!.avatarFileId ? `/api/files/${otherParticipant(conversation, user.id)!.avatarFileId}` : null}
                     />
                   ) : (
-                    <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-navy-800 text-[11px] font-semibold text-white">
-                      #
+                    <span className="avatar-surface flex h-[34px] w-[34px] items-center justify-center rounded-full text-[11px] font-semibold text-white">
+                      {conversation.taskId ? "✓" : "#"}
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-[13px] font-semibold text-navy-900">{conversation.title}</p>
-                      {conversation.kind === "group" ? <Badge tone="neutral">project</Badge> : null}
+                      {conversation.taskId ? <Badge tone="brand">task</Badge> : null}
+                      {conversation.kind === "group" && !conversation.taskId ? <Badge tone="neutral">project</Badge> : null}
                       {conversation.muted ? <Badge tone="neutral">muted</Badge> : null}
                       {conversation.unread > 0 ? <Badge tone="brand">{conversation.unread} new</Badge> : null}
                     </div>
@@ -114,15 +168,17 @@ export default async function ChatsPage({
             </form>
           </Card>
 
-          <Card className="p-4">
-            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Access rules</h2>
-            <ul className="mt-1.5 space-y-1 text-[10.5px] leading-4 text-navy-600">
+          <details className="rounded-2xl border border-navy-200/70 bg-surface p-4 shadow-card">
+            <summary className="cursor-pointer list-none text-[12px] font-semibold uppercase tracking-wide text-navy-500 [&::-webkit-details-marker]:hidden">
+              Who can see a chat
+            </summary>
+            <ul className="mt-2 space-y-1 text-[10.5px] leading-4 text-navy-600">
               <li>Project group chats are limited to active members.</li>
+              <li>Task chats include the assignees plus project reviewers.</li>
               <li>Removing someone from a project revokes their chat access immediately.</li>
-              <li>Blocking someone prevents new messages between you.</li>
               <li>Attachments are readable only by conversation members.</li>
             </ul>
-          </Card>
+          </details>
         </aside>
       </div>
     </div>

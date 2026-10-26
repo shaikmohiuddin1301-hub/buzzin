@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { CalendarClock, Compass, Sparkles, Users } from "lucide-react";
+import { BookOpen, Building2, CalendarClock, Compass, LayoutDashboard, Sparkles, Users } from "lucide-react";
 import { getDb } from "@/db/client";
 import { projectInvitations, projects, tasks, users } from "@/db/schema";
 import { createPostAction } from "@/app/actions/social";
 import { respondToInvitationAction } from "@/app/actions/projects";
+import { Reveal } from "@/components/client/reveal";
 import { SubmitButton } from "@/components/client/submit-button";
 import { PostCard } from "@/components/post-card";
 import {
@@ -24,10 +25,12 @@ import {
 import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { feed } from "@/services/social";
-import { listProjects, followedProjects } from "@/services/projects";
+import { listProjects, followedProjects, projectsForBusiness } from "@/services/projects";
+import { accountContext } from "@/services/account";
 import { upcomingDeadlines } from "@/services/tasks";
 import { searchPeople } from "@/services/users";
 import { getPreferences } from "@/services/users";
+import { listResources } from "@/services/learning";
 import { formatDate } from "@/lib/format";
 import { label } from "@/lib/types";
 import type { FeedFilter } from "@/lib/types";
@@ -59,6 +62,14 @@ export default async function HomePage({
   const posts = items.slice(0, pageSize);
 
   const prefs = getPreferences(user.id);
+  const account = accountContext(user);
+  const organisationProjects = account.isBusiness
+    ? account.businesses
+        .flatMap((business) =>
+          projectsForBusiness(business.id).map((project) => ({ ...project, businessName: business.name })),
+        )
+        .slice(0, 4)
+    : [];
   const invitations = getDb()
     .select({
       invitation: projectInvitations,
@@ -75,6 +86,7 @@ export default async function HomePage({
   const suggestedProjects = listProjects({ limit: 3, sort: "active" }, user);
   const suggestedPeople = searchPeople("", 3).filter((person) => person.id !== user.id);
   const following = followedProjects(user.id);
+  const learningPicks = listResources({ limit: 3 });
   const openTasks = getDb()
     .select({
       id: tasks.id,
@@ -93,12 +105,14 @@ export default async function HomePage({
   return (
     <div>
       <PageHeader
-        eyebrow={`${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}`}
+        eyebrow={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
         title={`Welcome back, ${user.displayName.split(" ")[0]}`}
         description={
-          user.goals.length > 0
-            ? `Your feed prioritises ${user.goals.map((goal) => label(goal).toLowerCase()).join(", ")}. Change this any time in settings.`
-            : "Your feed mixes projects, updates and learning from people you follow and topics you care about."
+          account.kind === "business"
+            ? "What your teams, the people you follow and your organisation are working on."
+            : account.kind === "creator"
+              ? "Updates from your community, plus what is happening in your teaching."
+              : "Updates from the people and projects you follow."
         }
         actions={
           <>
@@ -113,6 +127,18 @@ export default async function HomePage({
       />
 
       <Flash error={error} notice={notice} />
+
+      {!user.onboardingCompletedAt ? (
+        <div className="mb-4">
+          <Alert tone="info" title="Finish setting up your profile">
+            Add your goals and skills so your feed and recommendations fit what you actually want to do.{" "}
+            <Link href="/onboarding?next=/home" className="font-medium underline">
+              Finish setup
+            </Link>
+            .
+          </Alert>
+        </div>
+      ) : null}
 
       {!user.emailVerifiedAt ? (
         <div className="mb-4">
@@ -129,6 +155,51 @@ export default async function HomePage({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
+          {following.length > 0 ? (
+            <div className="mb-4" aria-label="Projects you follow">
+              <ul className="flex gap-3 overflow-x-auto pb-1">
+                {following.slice(0, 10).map((project) => (
+                  <li key={project.id} className="w-[68px] shrink-0">
+                    <Link href={`/projects/${project.id}`} className="group flex flex-col items-center gap-1.5">
+                      <span className="rounded-full bg-gradient-to-tr from-brand-500 to-coral-400 p-[2px] transition group-hover:from-brand-600 group-hover:to-coral-500">
+                        <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-surface bg-navy-100">
+                          {project.coverImageId ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`/api/files/${project.coverImageId}`}
+                              alt=""
+                              loading="lazy"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[15px] font-semibold text-navy-600">
+                              {project.name
+                                .split(" ")
+                                .slice(0, 2)
+                                .map((word) => word[0])
+                                .join("")}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="w-full truncate text-center text-[10.5px] leading-4 text-navy-600 group-hover:text-navy-900">
+                        {project.name}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+                <li className="w-[68px] shrink-0">
+                  <Link href="/explore?tab=projects" className="flex flex-col items-center gap-1.5">
+                    <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full border border-dashed border-navy-300 text-navy-500 transition hover:border-brand-400 hover:text-brand-700">
+                      <Users size={18} aria-hidden="true" />
+                    </span>
+                    <span className="w-full truncate text-center text-[10.5px] leading-4 text-navy-500">Discover</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          ) : null}
+
           <Tabs
             current={filter}
             items={FILTERS.map((item) => ({
@@ -197,8 +268,10 @@ export default async function HomePage({
             />
           ) : (
             <div className="space-y-3">
-              {posts.map((post) => (
-                <PostCard key={post.id} post={post} returnTo={filter === "for_you" ? "/home" : `/home?filter=${filter}`} />
+              {posts.map((post, index) => (
+                <Reveal key={post.id} delay={Math.min(index * 40, 160)}>
+                  <PostCard post={post} returnTo={filter === "for_you" ? "/home" : `/home?filter=${filter}`} />
+                </Reveal>
               ))}
             </div>
           )}
@@ -228,6 +301,63 @@ export default async function HomePage({
         </div>
 
         <aside className="space-y-4">
+          {account.kind === "business" ? (
+            <Card>
+              <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
+                <Building2 size={14} aria-hidden="true" className="text-brand-600" />
+                <h2 className="text-[13px] font-semibold text-navy-950">Your organisations</h2>
+              </div>
+              <ul className="divide-y divide-navy-100">
+                {account.businesses.map((business) => (
+                  <li key={business.id} className="px-4 py-3">
+                    <Link href={`/business/${business.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
+                      {business.name}
+                    </Link>
+                    <p className="mt-0.5 text-[11px] text-navy-500">
+                      {business.role.replace(/_/g, " ")} · {business.visibility}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              {organisationProjects.length > 0 ? (
+                <ul className="border-t border-navy-100">
+                  {organisationProjects.map((project) => (
+                    <li key={project.id} className="px-4 py-2.5">
+                      <Link href={`/projects/${project.id}`} className="text-[12px] font-medium text-navy-800 hover:underline">
+                        {project.name}
+                      </Link>
+                      <p className="text-[10.5px] text-navy-500">{project.businessName}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="border-t border-navy-100 px-4 py-2">
+                <ButtonLink href="/business" variant="ghost" size="sm">
+                  Business workspace →
+                </ButtonLink>
+              </div>
+            </Card>
+          ) : account.kind === "creator" ? (
+            <Card>
+              <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
+                <LayoutDashboard size={14} aria-hidden="true" className="text-brand-600" />
+                <h2 className="text-[13px] font-semibold text-navy-950">Creator workspace</h2>
+              </div>
+              <p className="px-4 py-3 text-[12px] leading-5 text-navy-600">
+                {account.publishedTeaching} published teaching{account.publishedTeaching === 1 ? " item" : " items"}
+                {account.draftTeaching > 0 ? ` · ${account.draftTeaching} draft${account.draftTeaching === 1 ? "" : "s"} waiting` : ""}.
+              </p>
+              <div className="flex flex-wrap gap-2 border-t border-navy-100 px-4 py-2">
+                <ButtonLink href="/studio" variant="ghost" size="sm">
+                  Studio →
+                </ButtonLink>
+                <ButtonLink href="/studio/courses/new" variant="ghost" size="sm">
+                  New course →
+                </ButtonLink>
+              </div>
+            </Card>
+          ) : null}
+
           {invitations.length > 0 ? (
             <Card>
               <div className="border-b border-navy-100 px-4 py-3">
@@ -314,7 +444,7 @@ export default async function HomePage({
 
           <Card>
             <div className="border-b border-navy-100 px-4 py-3">
-              <h2 className="text-[13px] font-semibold text-navy-950">Projects to look at</h2>
+              <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-navy-500">Discover</h2>
             </div>
             <ul className="divide-y divide-navy-100">
               {suggestedProjects.map((project) => (
@@ -330,26 +460,29 @@ export default async function HomePage({
                 </li>
               ))}
             </ul>
-          </Card>
-
-          <Card>
-            <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
-              <Users size={14} aria-hidden="true" className="text-brand-600" />
-              <h2 className="text-[13px] font-semibold text-navy-950">People to follow</h2>
-            </div>
-            <ul className="divide-y divide-navy-100">
-              {suggestedPeople.map((person) => (
-                <li key={person.id} className="flex items-center gap-2 px-4 py-2.5">
-                  <Avatar name={person.displayName} size={26} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
-                  <div className="min-w-0 flex-1">
-                    <Link href={`/u/${person.username}`} className="block truncate text-[12px] font-medium text-navy-900 hover:underline">
-                      {person.displayName}
-                    </Link>
-                    <p className="truncate text-[10.5px] text-navy-500">{person.skills.map((skill) => skill.name).join(" · ") || person.username}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {suggestedPeople.length > 0 ? (
+              <div className="border-t border-navy-100">
+                <div className="flex items-center gap-2 px-4 pt-3">
+                  <Users size={13} aria-hidden="true" className="text-brand-600" />
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-navy-500">People to follow</h3>
+                </div>
+                <ul>
+                  {suggestedPeople.map((person) => (
+                    <li key={person.id} className="flex items-center gap-2 px-4 py-2.5">
+                      <Avatar name={person.displayName} size={26} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/u/${person.username}`} className="block truncate text-[12px] font-medium text-navy-900 hover:underline">
+                          {person.displayName}
+                        </Link>
+                        <p className="truncate text-[10.5px] text-navy-500">
+                          {person.skills.map((skill) => skill.name).join(" · ") || person.username}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </Card>
 
           {following.length > 0 ? (
@@ -365,6 +498,32 @@ export default async function HomePage({
                     {project.name}
                   </Link>
                 ))}
+              </div>
+            </Card>
+          ) : null}
+
+          {learningPicks.length > 0 ? (
+            <Card>
+              <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
+                <BookOpen size={14} aria-hidden="true" className="text-brand-600" />
+                <h2 className="text-[13px] font-semibold text-navy-950">Learning picks</h2>
+              </div>
+              <ul className="divide-y divide-navy-100">
+                {learningPicks.map((resource) => (
+                  <li key={resource.id} className="px-4 py-3">
+                    <Link href={`/learn/${resource.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
+                      {resource.title}
+                    </Link>
+                    {resource.summary ? (
+                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-navy-500">{resource.summary}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-navy-100 px-4 py-2">
+                <ButtonLink href="/learn" variant="ghost" size="sm">
+                  Learning centre →
+                </ButtonLink>
               </div>
             </Card>
           ) : null}

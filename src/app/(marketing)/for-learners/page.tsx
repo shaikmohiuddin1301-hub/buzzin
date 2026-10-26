@@ -85,8 +85,8 @@ export default function ForLearnersPage() {
               { title: "Do one exercise", body: "Apply the limitation-writing exercise from the field data course to your own last project." },
               { title: "Document something small", body: "Contribute a tiny, well-scoped task and write one honest work-log entry." },
             ].map((item, index) => (
-              <li key={item.title} className="rounded-xl border border-navy-200 bg-white p-5">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-950 text-[12px] font-semibold text-white">
+              <li key={item.title} className="rounded-xl border border-navy-200 bg-surface p-5">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full ink-surface text-[12px] font-semibold text-white">
                   {index + 1}
                 </span>
                 <h3 className="mt-2.5 text-[14px] font-semibold text-navy-950">{item.title}</h3>

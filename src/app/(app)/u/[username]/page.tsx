@@ -4,6 +4,7 @@ import { CheckCircle2, GraduationCap, MapPin, MessageSquare, Plus, Star } from "
 import { blockUserAction, followUserAction } from "@/app/actions/social";
 import { startDirectMessageAction } from "@/app/actions/chat";
 import { ProjectCard, ResourceCard } from "@/components/cards";
+import { Reveal } from "@/components/client/reveal";
 import { ReportForm } from "@/components/report-form";
 import { SubmitButton } from "@/components/client/submit-button";
 import {
@@ -15,10 +16,10 @@ import {
   EmptyState,
   Flash,
   SkillTag,
-  Stat,
   cn,
 } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
+import { accountKindLabel } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { canViewProfile, isBlockedEitherWay } from "@/lib/authz";
 import { formatDate, relativeTime } from "@/lib/format";
@@ -29,6 +30,7 @@ import { followerCounts, getPreferences, getUserByUsername, getUserRolesList, is
 import { journeysFor, resourcesForCreator } from "@/services/learning";
 import { listAttributions } from "@/services/tasks";
 import { postsByAuthor } from "@/services/social";
+import { accountContext } from "@/services/account";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +56,14 @@ export default async function ProfilePage({
 
   const person = getUserByUsername(username);
   if (!person) notFound();
+  // Presentation only: roles, memberships and published teaching owned by this account.
+  const account = accountContext(person);
 
   const viewer = await getCurrentUser();
   const isSelf = viewer?.id === person.id;
+  // A private organisation is never disclosed on someone else's profile.
+  const profileBusinesses = isSelf ? account.businesses : account.businesses.filter((business) => business.visibility === "public");
+  const profileKind = profileBusinesses.length > 0 ? "business" : account.isCreator ? "creator" : "individual";
   const blocked = viewer ? isBlockedEitherWay(viewer.id, person.id) : false;
 
   const requestedTab = typeof query.tab === "string" ? query.tab : "posts";
@@ -68,10 +75,13 @@ export default async function ProfilePage({
   const followers = followerCounts(person.id);
   const reputation = reputationSummary(person.id);
   const achievements = achievementsFor(person.id);
-  const history = projectHistory(person.id);
+  // A visitor sees published, non-private projects only; the owner sees everything,
+  // including drafts, on their own profile.
+  const publicOnly = !isSelf;
+  const history = projectHistory(person.id, { publicOnly });
   const contributions = contributionCounts(person.id);
-  const verified = verifiedContributions(person.id);
-  const attributions = listAttributions(person.id);
+  const verified = verifiedContributions(person.id, { publicOnly });
+  const attributions = listAttributions(person.id, { publicOnly });
   const prefs = getPreferences(person.id);
   const view = canViewProfile(person.id, viewer, prefs ?? null);
   const sharesLearning = sharesLearningHistory(person.id);
@@ -79,11 +89,12 @@ export default async function ProfilePage({
   const posts = postsByAuthor(person.id, viewer?.id ?? null, 60);
   const publishedPosts = posts.filter((post) => post.status === "published");
   const resources = resourcesForCreator(person.id).filter(
-    (resource) => (resource.status === "published" && view.learning) || isSelf,
+    (resource) =>
+      (resource.status === "published" && resource.courseVisibility === "public" && view.learning) || isSelf,
   );
   const journeys = journeysFor(person.id).filter((journey) => (journey.status === "published" && view.learning) || isSelf);
   const learnings = isSelf || sharesLearning ? learningHistoryFor(person.id) : [];
-  const accepted = view.contributions ? acceptedWorkForUser(person.id) : [];
+  const accepted = view.contributions ? acceptedWorkForUser(person.id, { publicOnly }) : [];
   const following = viewer ? isFollowing(viewer.id, person.id) : false;
 
   const projectList =
@@ -109,13 +120,13 @@ export default async function ProfilePage({
       {/* Header */}
       <Card className="overflow-hidden">
         <div
-          className="h-24 bg-gradient-to-r from-navy-900 via-navy-800 to-brand-800 sm:h-32"
+          className="h-24 ink-hero sm:h-32"
           aria-hidden="true"
         />
         <div className="px-4 pb-5 sm:px-5">
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-3">
             <div className="flex items-end gap-3">
-              <span className="rounded-full ring-4 ring-white">
+              <span className="rounded-full ring-4 ring-surface">
                 <Avatar name={person.displayName} size={80} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
               </span>
               <div className="pb-1">
@@ -124,6 +135,13 @@ export default async function ProfilePage({
                   @{person.username}
                   {userRoles.length > 0 ? ` · ${userRoles.join(", ")}` : ""}
                 </p>
+                {profileKind !== "individual" ? (
+                  <span className="mt-1 inline-flex">
+                    <Badge tone={profileKind === "business" ? "info" : "brand"}>
+                      {accountKindLabel(profileKind)}
+                    </Badge>
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -190,12 +208,28 @@ export default async function ProfilePage({
             </div>
           ) : null}
 
-          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-navy-100 pt-4 sm:grid-cols-4">
-            <Stat label="Posts" value={publishedPosts.length} hint={`${posts.length - publishedPosts.length} draft`} />
-            <Stat label="Followers" value={view.followers ? followers.followers : "—"} hint={`Following ${followers.following}`} />
-            <Stat label="Accepted work" value={view.contributions ? contributions.completed : "—"} hint={`${reputation.totals.contribution} contribution pts`} />
-            <Stat label="Teaching" value={reputation.totals.teaching} hint="Points from learner feedback" />
-          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-navy-100 pt-4 sm:grid-cols-4">
+            {[
+              { label: "Posts", value: publishedPosts.length, hint: `${posts.length - publishedPosts.length} draft` },
+              {
+                label: "Followers",
+                value: view.followers ? followers.followers : "—",
+                hint: `Following ${followers.following}`,
+              },
+              {
+                label: "Accepted work",
+                value: view.contributions ? contributions.completed : "—",
+                hint: `${reputation.totals.contribution} contribution pts`,
+              },
+              { label: "Teaching", value: reputation.totals.teaching, hint: "Points from learner feedback" },
+            ].map((metric) => (
+              <div key={metric.label}>
+                <dt className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy-400">{metric.label}</dt>
+                <dd className="mt-0.5 text-xl font-semibold leading-tight text-navy-950">{metric.value}</dd>
+                <dd className="text-[10.5px] leading-4 text-navy-500">{metric.hint}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </Card>
 
@@ -218,8 +252,8 @@ export default async function ProfilePage({
       ) : null}
 
       {/* Tabs */}
-      <div className="mt-5 border-b border-navy-200">
-        <ul className="-mb-px flex gap-1 overflow-x-auto whitespace-nowrap" role="tablist" aria-label="Profile sections">
+      <div className="mt-5">
+        <ul className="flex gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label="Profile sections">
           {tabs.map((item) => {
             const active = tab === item.id;
             return (
@@ -230,10 +264,10 @@ export default async function ProfilePage({
                   aria-selected={active}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-medium transition-colors",
+                    "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
                     active
-                      ? "border-brand-600 text-navy-950"
-                      : "border-transparent text-navy-500 hover:border-navy-300 hover:text-navy-800",
+                      ? "border-brand-500/60 bg-brand-50 text-brand-800"
+                      : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300 hover:text-navy-900",
                   )}
                 >
                   {item.label}
@@ -262,8 +296,8 @@ export default async function ProfilePage({
             />
           ) : (
             <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {posts.map((post) => (
-                <li key={post.id}>
+              {posts.map((post, index) => (
+                <Reveal key={post.id} as="li" delay={Math.min(index * 40, 160)}>
                   <Link
                     href={`/posts/${post.id}`}
                     className="group relative block aspect-square overflow-hidden rounded-lg border border-navy-200/70 bg-navy-50"
@@ -282,7 +316,7 @@ export default async function ProfilePage({
                       </span>
                     )}
                     {post.status === "draft" ? (
-                      <span className="absolute left-1.5 top-1.5 rounded-full bg-navy-950/80 px-2 py-0.5 text-[10px] font-medium text-white">
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">
                         Draft
                       </span>
                     ) : null}
@@ -292,7 +326,7 @@ export default async function ProfilePage({
                       </span>
                     ) : null}
                   </Link>
-                </li>
+                </Reveal>
               ))}
             </ul>
           )}
@@ -315,7 +349,7 @@ export default async function ProfilePage({
                   "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
                   projectFilter === filter.id
                     ? "border-brand-500 bg-brand-50 text-brand-700"
-                    : "border-navy-200 bg-white text-navy-600 hover:border-navy-300",
+                    : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
                 )}
                 aria-current={projectFilter === filter.id ? "page" : undefined}
               >
@@ -496,8 +530,8 @@ export default async function ProfilePage({
           ) : accepted.length === 0 ? (
             <EmptyState
               title={isSelf ? "No accepted work yet" : "No accepted work yet"}
-              description="Accepted work appears here when a project reviewer approves a Drop this person delivered."
-              action={isSelf ? <ButtonLink href="/projects" size="sm">See your Drops</ButtonLink> : undefined}
+              description="Accepted work appears here when a project reviewer approves a task this person delivered."
+              action={isSelf ? <ButtonLink href="/projects" size="sm">See your tasks</ButtonLink> : undefined}
             />
           ) : (
             <>
@@ -525,7 +559,7 @@ export default async function ProfilePage({
                       <div className="mt-2 flex flex-wrap gap-3 text-[11.5px]">
                         {item.taskId ? (
                           <Link href={`/tasks/${item.taskId}`} className="text-brand-700 underline">
-                            View the Drop
+                            View the task
                           </Link>
                         ) : null}
                         {item.deliverable?.url ? (
@@ -592,6 +626,25 @@ export default async function ProfilePage({
           </Card>
 
           <div className="space-y-4">
+            {profileBusinesses.length > 0 ? (
+              <Card className="p-4">
+                <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Organisations</h2>
+                <ul className="mt-2 space-y-1.5">
+                  {profileBusinesses.map((business) => (
+                    <li key={business.id} className="text-[12.5px] text-navy-700">
+                      <Link href={`/business/${business.id}`} className="font-medium text-navy-900 hover:underline">
+                        {business.name}
+                      </Link>
+                      <span className="ml-1 text-[10.5px] text-navy-500">· {business.role.replace(/_/g, " ")}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[10.5px] leading-4 text-navy-400">
+                  Organisation work stays private to its team unless it is published.
+                </p>
+              </Card>
+            ) : null}
+
             <Card className="p-4">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Achievements</h2>
               <ul className="mt-2 space-y-2">

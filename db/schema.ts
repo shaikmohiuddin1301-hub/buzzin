@@ -33,6 +33,7 @@ import type {
   ResourceFormat,
   ResourceLevel,
   ResourceStatus,
+  EnrollmentStatus,
   StoryStatus,
   SubmissionStatus,
   TaskStatus,
@@ -252,6 +253,7 @@ export const projects = sqliteTable(
     compensationType: text("compensation_type").$type<CompensationType>().notNull().default("unpaid"),
     compensationDetails: text("compensation_details"),
     allowPublicDocs: integer("allow_public_docs", { mode: "boolean" }).notNull().default(false),
+    openToCollaborators: integer("open_to_collaborators", { mode: "boolean" }).notNull().default(true),
     confidentialityNotes: text("confidentiality_notes"),
     ipNotes: text("ip_notes"),
     links: text("links", { mode: "json" }).$type<{ label: string; url: string }[]>().default([]),
@@ -389,7 +391,7 @@ export const socialShares = sqliteTable(
 /**
  * A named work area inside a project (Design, Development, Research…).
  *
- * It gives Drops a canonical home, owns an optional dedicated chat, and is the
+ * It gives tasks a canonical home, owns an optional dedicated chat, and is the
  * grouping used by the Accepted Work collection. Keeping it a project-scoped row
  * (rather than a global role) means two projects can name their areas differently
  * without inventing a second permission system.
@@ -426,6 +428,7 @@ export const tasks = sqliteTable(
     compensationDetails: text("compensation_details"),
     visibility: text("visibility").$type<Visibility>().notNull().default("public"),
     confidentiality: text("confidentiality"),
+    priority: text("priority").$type<"low" | "normal" | "high">().notNull().default("normal"),
     workAreaId: text("work_area_id").references(() => workAreas.id, { onDelete: "set null" }),
     publishedAt: text("published_at"),
     createdAt: createdAt(),
@@ -682,12 +685,14 @@ export const conversations = sqliteTable(
   {
     id: uuid(),
     projectId: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
+    /** A task conversation is the dedicated chat for one piece of work. */
+    taskId: text("task_id"),
     kind: text("kind").$type<"direct" | "group">().notNull(),
     title: text("title"),
     createdBy: text("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
     createdAt: createdAt(),
   },
-  (t) => [index("conversations_project_idx").on(t.projectId)],
+  (t) => [index("conversations_project_idx").on(t.projectId), index("conversations_task_idx").on(t.taskId)],
 );
 
 export const conversationMembers = sqliteTable(
@@ -732,10 +737,21 @@ export const notifications = sqliteTable(
     body: text("body"),
     href: text("href"),
     actorId: text("actor_id"),
+    /** Idempotency key scoped to the recipient; NULL means no deduplication. */
+    dedupeKey: text("dedupe_key"),
+    /** The object this notification is about, for safe destination handling. */
+    entityType: text("entity_type"),
+    entityId: text("entity_id"),
     readAt: text("read_at"),
     createdAt: createdAt(),
   },
-  (t) => [index("notifications_user_idx").on(t.userId, t.readAt, t.createdAt)],
+  (t) => [
+    index("notifications_user_idx").on(t.userId, t.readAt, t.createdAt),
+    // SQLite (and PostgreSQL) treat NULLs as distinct, so unkeyed notifications
+    // are never blocked by this constraint.
+    uniqueIndex("notifications_dedupe_uq").on(t.userId, t.dedupeKey),
+    index("notifications_entity_idx").on(t.entityType, t.entityId),
+  ],
 );
 
 /* -------------------------------- learning -------------------------------- */
@@ -820,9 +836,24 @@ export const courses = sqliteTable(
     resourceId: text("resource_id").notNull().references(() => learningResources.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description"),
+    /** Free-text course category; kept separate from project categories. */
+    category: text("category"),
+    /** Skills taught. Persisted as JSON text through Drizzle's json mode. */
+    skills: text("skills", { mode: "json" }).$type<string[]>().default([]),
+    /** What a learner can do after finishing, one outcome per entry. */
+    outcomes: text("outcomes", { mode: "json" }).$type<string[]>().default([]),
+    audience: text("audience"),
+    /** public = listed, invite_only = link-only, private = editors only. */
+    visibility: text("visibility").$type<Visibility>().notNull().default("public"),
+    /** Optional YouTube/Vimeo/Instagram preview. Never rehosted. */
+    previewVideoUrl: text("preview_video_url"),
+    /** Creator-supplied attribution for third-party material. */
+    attribution: text("attribution"),
+    estimatedMinutes: integer("estimated_minutes"),
     createdAt: createdAt(),
+    updatedAt: text("updated_at"),
   },
-  (t) => [uniqueIndex("courses_resource_uq").on(t.resourceId)],
+  (t) => [uniqueIndex("courses_resource_uq").on(t.resourceId), index("courses_visibility_idx").on(t.visibility)],
 );
 
 export const courseModules = sqliteTable(
@@ -831,6 +862,7 @@ export const courseModules = sqliteTable(
     id: uuid(),
     courseId: text("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
+    description: text("description"),
     orderIndex: integer("order_index").notNull().default(0),
   },
   (t) => [index("modules_course_idx").on(t.courseId, t.orderIndex)],
@@ -847,8 +879,54 @@ export const lessons = sqliteTable(
     isFreePreview: integer("is_free_preview", { mode: "boolean" }).notNull().default(false),
     durationMinutes: integer("duration_minutes"),
     mediaId: text("media_id").references(() => mediaFiles.id, { onDelete: "set null" }),
+    /** External video (YouTube/Vimeo/Instagram) embedded or linked, never copied. */
+    videoUrl: text("video_url"),
+    /** External resource link with explicit attribution and fallback. */
+    externalUrl: text("external_url"),
+    externalLabel: text("external_label"),
+    externalAuthor: text("external_author"),
+    /** Practical project this lesson points learners towards. */
+    projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
   },
-  (t) => [index("lessons_module_idx").on(t.moduleId, t.orderIndex)],
+  (t) => [index("lessons_module_idx").on(t.moduleId, t.orderIndex), index("lessons_project_idx").on(t.projectId)],
+);
+
+/**
+ * Course co-editors. Only the course owner can add or remove them; co-editors can
+ * edit details and structure but cannot publish, unpublish, archive or delete.
+ */
+export const courseCollaborators = sqliteTable(
+  "course_collaborators",
+  {
+    id: uuid(),
+    resourceId: text("resource_id").notNull().references(() => learningResources.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    addedBy: text("added_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("course_collaborators_uq").on(t.resourceId, t.userId),
+    index("course_collaborators_user_idx").on(t.userId),
+  ],
+);
+
+/** Enrolment is explicit and idempotent: one row per learner and course. */
+export const courseEnrollments = sqliteTable(
+  "course_enrollments",
+  {
+    id: uuid(),
+    resourceId: text("resource_id").notNull().references(() => learningResources.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").$type<EnrollmentStatus>().notNull().default("active"),
+    enrolledAt: text("enrolled_at").notNull().$defaultFn(() => new Date().toISOString()),
+    lastAccessedAt: text("last_accessed_at"),
+    completedAt: text("completed_at"),
+  },
+  (t) => [
+    uniqueIndex("course_enrollments_uq").on(t.resourceId, t.userId),
+    index("course_enrollments_user_idx").on(t.userId, t.status),
+    index("course_enrollments_resource_idx").on(t.resourceId, t.status),
+  ],
 );
 
 export const exercises = sqliteTable("exercises", {

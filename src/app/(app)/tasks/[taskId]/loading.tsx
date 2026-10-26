@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui";
 export default function TaskLoading() {
   return (
     <div aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading the Drop</span>
+      <span className="sr-only">Loading the task</span>
       <Skeleton className="h-3 w-64" />
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">

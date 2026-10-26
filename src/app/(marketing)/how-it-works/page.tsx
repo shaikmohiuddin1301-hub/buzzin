@@ -71,7 +71,7 @@ export default function HowItWorksPage() {
                 detail: "Server rule: reputation events are idempotent per source, so double-review or webhook retries cannot inflate a score.",
               },
             ].map((step) => (
-              <div key={step.title} className="grid gap-3 rounded-xl border border-navy-200 bg-white p-5 md:grid-cols-[220px_1fr]">
+              <div key={step.title} className="grid gap-3 rounded-xl border border-navy-200 bg-surface p-5 md:grid-cols-[220px_1fr]">
                 <h3 className="text-[14px] font-semibold text-navy-950">{step.title}</h3>
                 <div>
                   <p className="text-[13px] leading-6 text-navy-600">{step.body}</p>
