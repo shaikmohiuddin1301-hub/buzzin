@@ -31,12 +31,28 @@ type DraftTask = {
 const MAX_TASKS = 25;
 const MAX_AREAS = 10;
 
+/** Only http(s) links are accepted; an empty value is simply an unused field. */
+function isWebUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value.trim());
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const STEPS = [
   { id: 1, label: "Project basics", hint: "What it is and who can see it" },
   { id: 2, label: "Team and contributions", hint: "Skills, work areas, what contributors get" },
   { id: 3, label: "Task breakdown", hint: "The individual pieces of work" },
   { id: 4, label: "Review and publish", hint: "Check everything, then publish or save" },
 ] as const;
+
+/** The four steps are numbered, so navigation is arithmetic rather than a flag. */
+type StepId = (typeof STEPS)[number]["id"];
+
+const FIRST_STEP: StepId = 1;
+const LAST_STEP: StepId = 4;
 
 function emptyTask(): DraftTask {
   return {
@@ -83,7 +99,10 @@ export function ProjectWizard({
   businesses: Business[];
   emailVerified: boolean;
 }) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<StepId>(FIRST_STEP);
+  // Validation is state, not a disabled button: pressing Continue always answers,
+  // naming the field that is missing and why.
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [basics, setBasics] = useState({
     name: "",
     shortDescription: "",
@@ -111,6 +130,9 @@ export function ProjectWizard({
     { title: "", description: "", dueDate: "" },
     { title: "", description: "", dueDate: "" },
   ]);
+  // Additional Details start collapsed. A malformed reference URL opens the
+  // section so its own error can be seen rather than hidden behind the summary.
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [team, setTeam] = useState({
     skills: "",
     compensationType: compensationTypes[0]?.value ?? "unpaid",
@@ -124,10 +146,96 @@ export function ProjectWizard({
   const [editing, setEditing] = useState<DraftTask | null>(null);
   const [taskError, setTaskError] = useState<string | null>(null);
 
+  const clearError = (key: string) =>
+    setErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+
   const updateBasics = (key: keyof typeof basics) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = event.target;
     const value = target instanceof HTMLInputElement && target.type === "checkbox" ? target.checked : target.value;
     setBasics((current) => ({ ...current, [key]: value }));
+    // A correction is acknowledged as it is typed, not only on the next attempt.
+    clearError(key);
+  };
+
+  const updateTeam = (key: keyof typeof team) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setTeam((current) => ({ ...current, [key]: event.target.value }));
+    clearError(key);
+  };
+
+  /** The minimum for this step to be worth moving on from. Nothing else is gated. */
+  const validateStep = (id: StepId): Record<string, string> => {
+    const found: Record<string, string> = {};
+    if (id === 1) {
+      if (basics.name.trim().length < 3) found.name = "Enter a project title of at least 3 characters.";
+      const summaryLength = basics.shortDescription.trim().length;
+      if (summaryLength < 20) {
+        found.shortDescription = `Add a summary of at least 20 characters so people know what they are joining (${summaryLength} so far).`;
+      }
+      // Reference links are optional; one that is supplied must be a real address.
+      links.forEach((link, index) => {
+        if (!link.url.trim()) return;
+        if (!isWebUrl(link.url)) {
+          found[`linkUrl${index}`] = "Enter a full address starting with http:// or https://, or leave this blank.";
+        }
+      });
+    }
+    if (id === 2 && team.compensationType === "unpaid" && !team.compensationDetails.trim()) {
+      found.compensationDetails = "Say what unpaid contributors receive: credit, references, learning or expenses.";
+    }
+    return found;
+  };
+
+  const focusFirstError = (found: Record<string, string>) => {
+    const first = Object.keys(found)[0];
+    if (!first) return;
+    window.requestAnimationFrame(() => document.getElementById(first)?.focus());
+  };
+
+  /**
+   * Move to a step, checking every step between here and there.
+   *
+   * Going back is always allowed. Going forward is the same gate as Continue, so the
+   * step rail can never skip validation and land on Review with an unfinished
+   * project. A blocked jump stays on the step that needs attention.
+   */
+  const goToStep = (target: StepId) => {
+    if (target === step) return;
+    if (target > step) {
+      for (let id = step; id < target; id = (id + 1) as StepId) {
+        const found = validateStep(id);
+        if (Object.keys(found).length > 0) {
+          setErrors(found);
+          setStep(id);
+          focusFirstError(found);
+          return;
+        }
+      }
+    }
+    setErrors({});
+    setStep(target);
+  };
+
+  const goNext = () => {
+    if (step === LAST_STEP) return;
+    const found = validateStep(step);
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      focusFirstError(found);
+      return;
+    }
+    setErrors({});
+    setStep((step + 1) as StepId);
+  };
+
+  const goBack = () => {
+    if (step === FIRST_STEP) return;
+    setErrors({});
+    setStep((step - 1) as StepId);
   };
 
   const onCover = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,25 +300,33 @@ export function ProjectWizard({
     });
   };
 
-  const canLeaveBasics = basics.name.trim().length >= 3 && basics.shortDescription.trim().length >= 20;
-
   // Publishing needs the information a contributor cannot do without. A draft can
-  // be saved at any point, with its tasks, even while this list is not empty.
+  // be saved at any point, with its tasks, even while this list is not empty. Each
+  // entry names the step that owns the missing information, so the review screen
+  // can send the author straight back to it.
   const blockers = useMemo(() => {
-    const list: string[] = [];
-    if (basics.name.trim().length < 3) list.push("Add a project title (at least 3 characters).");
-    if (basics.shortDescription.trim().length < 20) list.push("Add a summary of at least 20 characters.");
-    if (basics.overview.trim().length < 40) list.push("Describe the project in at least 40 characters.");
+    const list: { message: string; step: StepId }[] = [];
+    if (basics.name.trim().length < 3) {
+      list.push({ message: "Add a project title (at least 3 characters).", step: 1 });
+    }
+    if (basics.shortDescription.trim().length < 20) {
+      list.push({ message: "Add a summary of at least 20 characters.", step: 1 });
+    }
+    if (basics.overview.trim().length < 40) {
+      list.push({ message: "Describe the project in at least 40 characters.", step: 1 });
+    }
     if (team.compensationType === "unpaid" && !team.compensationDetails.trim()) {
-      list.push("State what unpaid contributors receive (credit, learning, references).");
+      list.push({ message: "State what unpaid contributors receive (credit, learning, references).", step: 2 });
     }
     for (const task of tasks) {
       if (!task.acceptanceCriteria.trim()) {
-        list.push(`“${task.title}” — add review requirements (acceptance criteria).`);
+        list.push({ message: `“${task.title}” — add review requirements (acceptance criteria).`, step: 3 });
       }
     }
     return list;
   }, [basics, team, tasks]);
+
+  const stepLabel = (id: StepId) => STEPS.find((entry) => entry.id === id)?.label ?? `Step ${id}`;
 
   const tasksPayload = useMemo(
     () =>
@@ -248,7 +364,7 @@ export function ProjectWizard({
               <li key={entry.id}>
                 <button
                   type="button"
-                  onClick={() => setStep(entry.id)}
+                  onClick={() => goToStep(entry.id)}
                   aria-current={active ? "step" : undefined}
                   className={cn(
                     "flex w-full items-start gap-2.5 rounded-xl border p-3 text-left transition",
@@ -288,7 +404,36 @@ export function ProjectWizard({
         </div>
       ) : null}
 
-      <form action={createProjectAction} className="space-y-4">
+      <form
+        action={createProjectAction}
+        className="space-y-4"
+        noValidate
+        // A draft is always allowed, but it still needs the two fields the server
+        // requires for any project. Checking them here avoids a round trip that would
+        // drop everything typed into the rest of the wizard.
+        onSubmit={(event) => {
+          const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+          if (submitter?.value !== "false") return;
+          const found = validateStep(FIRST_STEP);
+          if (Object.keys(found).length === 0) return;
+          event.preventDefault();
+          setErrors(found);
+          setStep(FIRST_STEP);
+          focusFirstError(found);
+        }}
+        // Enter in a single-line field would implicitly submit the whole wizard,
+        // and the first submit button is "Save as draft" — which would save and
+        // leave the flow mid-step. Newlines in a textarea still work.
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+          const target = event.target as HTMLElement;
+          if (target.tagName === "TEXTAREA" || target.tagName === "BUTTON") return;
+          event.preventDefault();
+        }}
+      >
+        <p aria-live="polite" className="sr-only">
+          Step {step} of {STEPS.length}: {stepLabel(step)}
+        </p>
         <input type="hidden" name="tasksJson" value={tasksPayload} />
         <input type="hidden" name="workAreasJson" value={JSON.stringify(workAreas)} />
 
@@ -300,10 +445,30 @@ export function ProjectWizard({
               These four answers are the minimum for a project anyone can understand.
             </p>
             <div className="mt-4 space-y-4">
-              <Field label="Project title" htmlFor="name" required hint="Concrete beats clever. “River Watch” not “Project Phoenix”.">
-                <Input id="name" name="name" maxLength={120} value={basics.name} onChange={updateBasics("name")} placeholder="River Watch" />
+              <Field
+                label="Project title"
+                htmlFor="name"
+                required
+                hint="Concrete beats clever. “River Watch” not “Project Phoenix”."
+                error={errors.name}
+              >
+                <Input
+                  id="name"
+                  name="name"
+                  maxLength={120}
+                  value={basics.name}
+                  onChange={updateBasics("name")}
+                  aria-invalid={errors.name ? true : undefined}
+                  placeholder="River Watch"
+                />
               </Field>
-              <Field label="Summary" htmlFor="shortDescription" required hint="One or two sentences, at least 20 characters. Shown in discovery.">
+              <Field
+                label="Summary"
+                htmlFor="shortDescription"
+                required
+                hint="One or two sentences, at least 20 characters. Shown in discovery."
+                error={errors.shortDescription}
+              >
                 <Textarea
                   id="shortDescription"
                   name="shortDescription"
@@ -311,6 +476,7 @@ export function ProjectWizard({
                   maxLength={240}
                   value={basics.shortDescription}
                   onChange={updateBasics("shortDescription")}
+                  aria-invalid={errors.shortDescription ? true : undefined}
                   placeholder="Volunteers build low-cost river sensors, and everything we learn is published openly."
                 />
               </Field>
@@ -425,10 +591,15 @@ export function ProjectWizard({
               </label>
             </div>
 
-            <details className="mt-4 rounded-xl border border-navy-200 bg-navy-50/40 px-4 py-3">
-              <summary className="cursor-pointer text-[12.5px] font-semibold text-navy-800">Additional metadata</summary>
+            <details
+              open={detailsOpen || [0, 1, 2].some((index) => Boolean(errors[`linkUrl${index}`]))}
+              onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
+              className="mt-4 rounded-xl border border-navy-200 bg-navy-50/40 px-4 py-3"
+            >
+              <summary className="cursor-pointer text-[12.5px] font-semibold text-navy-800">Additional Details</summary>
               <p className="mt-2 text-[11.5px] leading-5 text-navy-500">
-                Genuinely optional: reference links, milestones and organisational publishing.
+                Optional: reference links, milestones and organisational publishing. Nothing here blocks continuing,
+                saving a draft or publishing.
               </p>
               <div className="mt-3 space-y-3">
                 {links.map((link, index) => (
@@ -444,16 +615,23 @@ export function ProjectWizard({
                         }
                       />
                     </Field>
-                    <Field label={`URL ${index + 1}`} htmlFor={`linkUrl${index}`}>
+                    <Field
+                      label={`URL ${index + 1}`}
+                      htmlFor={`linkUrl${index}`}
+                      error={errors[`linkUrl${index}`]}
+                    >
                       <Input
                         id={`linkUrl${index}`}
                         name={`linkUrl${index}`}
                         type="url"
+                        inputMode="url"
                         placeholder="https://…"
                         value={link.url}
-                        onChange={(event) =>
-                          setLinks((current) => current.map((entry, i) => (i === index ? { ...entry, url: event.target.value } : entry)))
-                        }
+                        onChange={(event) => {
+                          setLinks((current) => current.map((entry, i) => (i === index ? { ...entry, url: event.target.value } : entry)));
+                          clearError(`linkUrl${index}`);
+                        }}
+                        aria-invalid={errors[`linkUrl${index}`] ? true : undefined}
                       />
                     </Field>
                   </div>
@@ -600,7 +778,13 @@ export function ProjectWizard({
                     id="compensationType"
                     name="compensationType"
                     value={team.compensationType}
-                    onChange={(event) => setTeam((current) => ({ ...current, compensationType: event.target.value }))}
+                    onChange={(event) => {
+                      const compensationType = event.target.value;
+                      setTeam((current) => ({ ...current, compensationType }));
+                      // A detail only required for unpaid work stops being an error
+                      // the moment the arrangement changes.
+                      if (compensationType !== "unpaid") clearError("compensationDetails");
+                    }}
                   >
                     {compensationTypes.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -614,6 +798,7 @@ export function ProjectWizard({
                   htmlFor="compensationDetails"
                   required={team.compensationType === "unpaid"}
                   hint="Required for unpaid projects: credit, references, learning, expenses, equity — say it plainly."
+                  error={errors.compensationDetails}
                 >
                   <Textarea
                     id="compensationDetails"
@@ -621,7 +806,8 @@ export function ProjectWizard({
                     rows={2}
                     maxLength={2000}
                     value={team.compensationDetails}
-                    onChange={(event) => setTeam((current) => ({ ...current, compensationDetails: event.target.value }))}
+                    onChange={updateTeam("compensationDetails")}
+                    aria-invalid={errors.compensationDetails ? true : undefined}
                   />
                 </Field>
               </div>
@@ -790,9 +976,41 @@ export function ProjectWizard({
                   <Badge tone="neutral">{visibilities.find((entry) => entry.value === basics.visibility)?.label ?? basics.visibility}</Badge>
                   {basics.collaborators ? <Badge tone="success">Looking for contributors</Badge> : null}
                 </div>
-                <h3 className="mt-2 text-[16px] font-semibold text-navy-950">{basics.name || "Your project title"}</h3>
-                <p className="mt-1 text-[12.5px] leading-6 text-navy-600">{basics.shortDescription || "Your summary appears here."}</p>
-                <p className="mt-2 whitespace-pre-line text-[12.5px] leading-6 text-navy-700">{basics.overview}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-navy-200 pt-3 text-[11.5px] sm:grid-cols-4">
+                  <div>
+                    <dt className="font-semibold text-navy-500">Ways of working</dt>
+                    <dd className="text-navy-800">{workModes.find((entry) => entry.value === basics.workMode)?.label ?? basics.workMode}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-navy-500">Estimated effort</dt>
+                    <dd className="text-navy-800">{basics.effort || "Not set"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-navy-500">Target date</dt>
+                    <dd className="text-navy-800">{basics.deadline || "Not set"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-navy-500">Public docs</dt>
+                    <dd className="text-navy-800">{basics.allowPublicDocs ? "Contributors may publish" : "Approval only"}</dd>
+                  </div>
+                </dl>
+                <h3 className="mt-2 text-[16px] font-semibold text-navy-950">{basics.name}</h3>
+                <p className="mt-1 text-[12.5px] leading-6 text-navy-600">{basics.shortDescription}</p>
+                {basics.overview.trim() ? (
+                  <p className="mt-2 whitespace-pre-line text-[12.5px] leading-6 text-navy-700">{basics.overview}</p>
+                ) : null}
+                {basics.audience.trim() ? (
+                  <p className="mt-2 text-[12px] leading-6 text-navy-700">
+                    <span className="font-semibold text-navy-900">Goals and outcome: </span>
+                    {basics.audience}
+                  </p>
+                ) : null}
+                {basics.problem.trim() ? (
+                  <p className="mt-1 text-[12px] leading-6 text-navy-700">
+                    <span className="font-semibold text-navy-900">Problem being solved: </span>
+                    {basics.problem}
+                  </p>
+                ) : null}
                 {team.skills.trim() ? <p className="mt-2 text-[11.5px] text-navy-500">Skills needed: {team.skills}</p> : null}
                 <p className="mt-1 text-[11.5px] text-navy-500">
                   {team.compensationType === "unpaid" ? "Unpaid" : team.compensationType}
@@ -821,6 +1039,9 @@ export function ProjectWizard({
                         {task.workArea || "Project inbox"} ·{" "}
                         {task.assignee ? `@${task.assignee}` : "open for contributors"} ·{" "}
                         {task.acceptanceCriteria ? "review requirements set" : "review requirements missing"}
+                        {task.effort ? ` · ${task.effort}` : ""}
+                        {task.deadline ? ` · due ${task.deadline}` : ""}
+                        {task.priority !== "normal" ? ` · ${task.priority} priority` : ""}
                       </span>
                     </li>
                   ))}
@@ -829,12 +1050,75 @@ export function ProjectWizard({
               </div>
             </div>
 
+            <div className="mt-4 rounded-xl border border-navy-200 p-4">
+              <h3 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Additional Details</h3>
+              {links.some((link) => link.url.trim()) || milestones.some((milestone) => milestone.title.trim()) ? (
+                <div className="mt-2 space-y-2 text-[12px] text-navy-700">
+                  {links.filter((link) => link.url.trim()).length > 0 ? (
+                    <ul className="space-y-1">
+                      {links
+                        .filter((link) => link.url.trim())
+                        .map((link, index) => (
+                          <li key={`${link.url}-${index}`}>
+                            <span className="font-medium">{link.label.trim() || "Reference link"}: </span>
+                            <span className="break-all text-navy-500">{link.url}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  ) : null}
+                  {milestones.filter((milestone) => milestone.title.trim()).length > 0 ? (
+                    <ul className="space-y-1">
+                      {milestones
+                        .filter((milestone) => milestone.title.trim())
+                        .map((milestone, index) => (
+                          <li key={`${milestone.title}-${index}`}>
+                            <span className="font-medium">{milestone.title}</span>
+                            {milestone.description ? ` — ${milestone.description}` : ""}
+                            {milestone.dueDate ? ` · ${milestone.dueDate}` : ""}
+                          </li>
+                        ))}
+                    </ul>
+                  ) : null}
+                  {basics.businessId ? (
+                    <p>
+                      Publishing as {businesses.find((business) => business.id === basics.businessId)?.name ?? "your organisation"}.
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-2 text-[12px] text-navy-400">
+                  None added. These fields are optional and can be filled in later.
+                </p>
+              )}
+              {team.confidentialityNotes.trim() ? (
+                <p className="mt-2 text-[12px] leading-6 text-navy-700">
+                  <span className="font-semibold text-navy-900">Confidentiality: </span>
+                  {team.confidentialityNotes}
+                </p>
+              ) : null}
+              {team.ipNotes.trim() ? (
+                <p className="mt-1 text-[12px] leading-6 text-navy-700">
+                  <span className="font-semibold text-navy-900">Intellectual property: </span>
+                  {team.ipNotes}
+                </p>
+              ) : null}
+            </div>
+
             {blockers.length > 0 ? (
               <div className="mt-4">
                 <Alert tone="warning" title="Complete these before publishing">
-                  <ul className="mt-1 list-disc space-y-1 pl-4">
+                  <ul className="mt-1 space-y-1.5">
                     {blockers.map((blocker) => (
-                      <li key={blocker}>{blocker}</li>
+                      <li key={blocker.message} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <span>{blocker.message}</span>
+                        <button
+                          type="button"
+                          onClick={() => goToStep(blocker.step)}
+                          className="text-[11.5px] font-medium text-brand-600 underline"
+                        >
+                          Go to {stepLabel(blocker.step)}
+                        </button>
+                      </li>
                     ))}
                   </ul>
                 </Alert>
@@ -850,19 +1134,18 @@ export function ProjectWizard({
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => setStep((current) => Math.max(1, current - 1))}
-              disabled={step === 1}
+              onClick={goBack}
+              disabled={step === FIRST_STEP}
               className="inline-flex items-center gap-1.5 rounded-lg border border-navy-200 bg-surface px-3 py-2 text-[12.5px] font-medium text-navy-700 hover:bg-navy-50 disabled:opacity-40"
             >
               <ArrowLeft size={14} aria-hidden="true" /> Back
             </button>
 
-            {step < 4 ? (
+            {step < LAST_STEP ? (
               <button
                 type="button"
-                onClick={() => setStep((current) => Math.min(4, current + 1))}
-                disabled={step === 1 && !canLeaveBasics}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-navy-200 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-navy-800 hover:bg-navy-50 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={goNext}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-navy-200 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-navy-800 hover:bg-navy-50"
               >
                 Continue <ArrowRight size={14} aria-hidden="true" />
               </button>
@@ -882,14 +1165,16 @@ export function ProjectWizard({
             </Link>
           </div>
 
-          {step === 1 && !canLeaveBasics ? (
-            <p className="mt-2 text-[11.5px] text-navy-500">A title and a summary are needed before you can continue.</p>
+          {Object.keys(errors).length > 0 ? (
+            <p role="status" className="mt-2 text-[11.5px] leading-5 text-red-600">
+              Fix the highlighted {Object.keys(errors).length === 1 ? "field" : "fields"} above to continue to the next step.
+            </p>
           ) : null}
           {blockers.length > 0 ? (
             <p className="mt-2 text-[11.5px] leading-5 text-navy-500">
               {blockers.length} thing{blockers.length === 1 ? "" : "s"} still needed before publishing. "Save as draft" works at any
               point and keeps everything you have entered.{" "}
-              <button type="button" onClick={() => setStep(4)} className="font-medium text-brand-600 underline">
+              <button type="button" onClick={() => goToStep(LAST_STEP)} className="font-medium text-brand-600 underline">
                 See what is missing
               </button>
             </p>

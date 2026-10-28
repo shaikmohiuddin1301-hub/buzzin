@@ -56,6 +56,18 @@ test("opens the Create sheet from the centre action and closes it with Escape", 
   await expect(sheet).toBeHidden();
 });
 
+test("the centre Create action still opens the project workflow", async ({ page }) => {
+  await page.goto("/home");
+  await page.getByRole("button", { name: "Create" }).click();
+  await page
+    .getByRole("dialog", { name: "Create" })
+    .getByRole("link", { name: /New project/ })
+    .click();
+
+  await page.waitForURL("**/projects/new");
+  await expect(page.getByRole("navigation", { name: "Project creation steps" })).toBeVisible();
+});
+
 test("uses real routes for Home, Explore, Chats and the signed-in profile", async ({ page }) => {
   await page.goto("/home");
   const nav = page.getByRole("navigation", { name: "Primary" });

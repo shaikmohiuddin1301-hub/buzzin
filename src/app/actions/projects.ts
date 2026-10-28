@@ -151,6 +151,22 @@ function taskDescription(task: WizardTask): string | undefined {
 }
 
 /**
+ * Optional reference links are validated only when they are supplied. The wizard
+ * checks this before leaving its first step; this is the same rule at the boundary,
+ * so a request that skips the client cannot store a broken address.
+ */
+function referenceUrl(value: string, label: string): string {
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return trimmed;
+  } catch {
+    // Fall through to the error below.
+  }
+  throw new AppError(`${label} needs a full web address starting with http:// or https://, or it can be left empty.`);
+}
+
+/**
  * Create a project, its work areas and its whole task breakdown in one transaction.
  *
  * Everything is validated before the first write, and the writes share a single
@@ -230,7 +246,9 @@ export async function createProjectAction(formData: FormData) {
         ipNotes: optional(formData, "ipNotes"),
         links: [0, 1, 2].flatMap((index) => {
           const url = str(formData, `linkUrl${index}`);
-          return url ? [{ label: str(formData, `linkLabel${index}`, "Link"), url }] : [];
+          return url
+            ? [{ label: str(formData, `linkLabel${index}`, "Link"), url: referenceUrl(url, `Reference link ${index + 1}`) }]
+            : [];
         }),
         skills: list(formData, "skills", 12),
         milestones: [0, 1, 2, 3].flatMap((index) => {

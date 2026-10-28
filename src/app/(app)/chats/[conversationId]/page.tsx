@@ -109,7 +109,7 @@ export default async function ConversationPage({
           >
             <MoreHorizontal size={18} aria-hidden="true" />
           </summary>
-          <div className="glass absolute right-0 top-[calc(100%+0.4rem)] z-40 w-60 rounded-2xl p-1.5 shadow-float">
+          <div className="glass-popover absolute right-0 top-[calc(100%+0.4rem)] z-40 w-60 overflow-hidden rounded-2xl p-1.5">
             <p className="flex items-center gap-1.5 px-3 py-1.5 text-[10.5px] text-navy-500">
               <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Live updates

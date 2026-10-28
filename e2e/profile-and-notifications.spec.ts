@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * The chrome around the content: the account menu, the notification bell, and the
- * rule that neither is global. Home owns the bell; only Home and the signed-in
- * account's own Profile own the menu. The bell must navigate, not open a decorative
- * pop-up, and every menu entry must belong to the signed-in account.
+ * The chrome around the content: the notification bell and the account options.
+ * Home owns the bell; account options are part of the signed-in account's own
+ * profile page, not a global hamburger. The bell must navigate, not open a
+ * decorative pop-up, and every account entry must belong to the signed-in account.
  */
 test.use({ viewport: { width: 390, height: 844 } });
 
-test("the profile menu is the single account menu and every entry resolves", async ({ page }) => {
+test("account options live on the profile page, with no hamburger anywhere", async ({ page }) => {
   await page.goto("/u/maya_okafor");
 
   // About is no longer a tab; its content lives in the profile footer section.
@@ -16,40 +16,35 @@ test("the profile menu is the single account menu and every entry resolves", asy
   await expect(tabs.getByRole("link", { name: "About" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "About, achievements and links" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Open menu" }).click();
-  const menu = page.getByRole("menu", { name: "Account menu" });
-  await expect(menu).toBeVisible();
+  // The old top-left hamburger is gone, on this page and every other one.
+  await expect(page.getByRole("button", { name: "Open menu" })).toHaveCount(0);
 
-  const items = menu.getByRole("menuitem");
-  await expect(items).toHaveCount(5);
-  expect(await items.allTextContents()).toEqual([
-    "Your profile",
-    "Liked Posts & Projects",
-    "Your Comments",
-    "Settings & account",
-    "Log Out",
-  ]);
+  const account = page.getByRole("navigation", { name: "Your account" });
+  await expect(account).toBeVisible();
+  for (const label of ["Liked Posts & Projects", "Your Comments", "Settings & account", "Notifications"]) {
+    await expect(account.getByRole("link", { name: label })).toBeVisible();
+  }
+  await expect(account.getByRole("button", { name: "Log out" })).toBeVisible();
 
-  await menu.getByRole("menuitem", { name: "Liked Posts & Projects" }).click();
+  await account.getByRole("link", { name: "Liked Posts & Projects" }).click();
   await page.waitForURL("**/me/liked");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
   await page.goto("/u/maya_okafor");
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page.getByRole("menuitem", { name: "Your Comments" }).click();
+  await page.getByRole("navigation", { name: "Your account" }).getByRole("link", { name: "Your Comments" }).click();
   await page.waitForURL("**/me/comments");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
-test("each page owns its header: the menu and bell are not global", async ({ page }) => {
+test("each page owns its header: no global menu, and the bell is Home-only", async ({ page }) => {
   const header = page.locator("header");
   const menuButton = header.getByRole("button", { name: "Open menu" });
   const bell = header.getByRole("link", { name: /^Notifications/ });
 
-  // Home: account menu and bell.
+  // Home: the wordmark and the bell. No hamburger in the top-left corner.
   await page.goto("/home");
-  await expect(menuButton).toBeVisible();
   await expect(bell).toBeVisible();
+  await expect(menuButton).toHaveCount(0);
 
   // Explore: search instead of chrome. No menu, no bell.
   await page.goto("/explore");
@@ -64,14 +59,17 @@ test("each page owns its header: the menu and bell are not global", async ({ pag
   await expect(menuButton).toHaveCount(0);
   await expect(bell).toHaveCount(0);
 
-  // Profile: menu, and no bell.
+  // Profile: a clean header, no bell, and account options in the page body.
   await page.goto("/u/maya_okafor");
-  await expect(menuButton).toBeVisible();
+  await expect(menuButton).toHaveCount(0);
   await expect(bell).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Your account" })).toBeVisible();
 
-  // Somebody else's profile is not the place for your account menu.
+  // Somebody else's profile shows neither your account options nor a bell.
   await page.goto("/u/jonas_b");
   await expect(menuButton).toHaveCount(0);
+  await expect(bell).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Your account" })).toHaveCount(0);
 });
 
 test("theme choices live in Settings, apply immediately and survive a reload", async ({ page }) => {

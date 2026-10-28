@@ -112,6 +112,9 @@
   --glass-panel-secondary: rgba(231, 231, 235, 0.58);
   --glass-header: rgba(245, 245, 243, 0.74);
   --glass-bar: rgba(255, 255, 255, 0.74);
+  /* Popovers and sheets sit over live content: frosted, but opaque enough that the
+     page underneath can never be read through the labels. */
+  --glass-popover: rgba(255, 255, 255, 0.95);
   --glass-border: rgba(255, 255, 255, 0.85);
   --glass-fallback: #ffffff;
   --border-solid: #e7e7eb;
@@ -237,6 +240,7 @@
   --glass-panel-secondary: rgba(65, 65, 73, 0.62);
   --glass-header: rgba(34, 34, 38, 0.78);
   --glass-bar: rgba(52, 52, 58, 0.82);
+  --glass-popover: rgba(52, 52, 58, 0.96);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-fallback: #34343a;
   --border-solid: #484850;
@@ -280,6 +284,10 @@
   body {
     @apply bg-surface-muted text-navy-900 antialiased;
     font-family: var(--font-sans);
+    /* The swipe gesture translates the page; `clip` (not `hidden`) keeps that from
+       producing a horizontal scrollbar without creating a scroll container, so the
+       sticky header and `position: fixed` navigation keep working. */
+    overflow-x: clip;
   }
 
   h1,
@@ -489,6 +497,25 @@
     backdrop-filter: blur(18px) saturate(1.2);
   }
 
+  /*
+   * Floating menus and sheets.
+   *
+   * These overlap text, so their surface is nearly opaque (95% in light, 96% in
+   * dark) with a strong blur, a visible hairline and a floating shadow. The page
+   * beneath keeps its glassmorphism; only the surface that has to be read is
+   * protected. A solid colour is the floor, so contrast never depends on the blur.
+   */
+  .glass-popover {
+    background-color: var(--glass-popover);
+    border: 1px solid rgb(var(--navy-200) / 0.9);
+    box-shadow: var(--shadow-float);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+    backdrop-filter: blur(24px) saturate(1.3);
+  }
+  .dark .glass-popover {
+    border-color: rgb(255 255 255 / 0.14);
+  }
+
   .glass-bar {
     background-color: var(--glass-bar);
     border: 1px solid var(--glass-border);
@@ -518,6 +545,7 @@
   @supports not ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
     .card-surface,
     .glass,
+    .glass-popover,
     .glass-secondary,
     .glass-bar,
     .bubble-incoming {
@@ -580,8 +608,11 @@
  */
 @layer utilities {
   @media (prefers-reduced-motion: no-preference) {
+    /* One short fade per route change. Opacity only: a translated page entrance
+       reads as the content shifting under the fixed header and can double up with
+       the swipe transition, which already moves the page. */
     .motion-page {
-      animation: bt-page-in 240ms var(--ease-out) both;
+      animation: bt-page-in 180ms var(--ease-out) both;
     }
     .motion-fade {
       animation: bt-fade-in 160ms ease-out both;
@@ -648,11 +679,9 @@
 @keyframes bt-page-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 

@@ -33,8 +33,8 @@ export async function signInAs(
 
   await page.waitForURL("**/home");
   // The Home header exists at every viewport, unlike the desktop-only sidebar, so
-  // this proves the authenticated shell rendered whatever size the spec uses.
-  await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
+  // the bell proves the authenticated shell rendered whatever size the spec uses.
+  await expect(page.getByRole("link", { name: /^Notifications/ })).toBeVisible();
 
   return { context, page };
 }

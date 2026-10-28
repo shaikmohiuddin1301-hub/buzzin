@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, GraduationCap, MapPin, MessageSquare, Plus, Star } from "lucide-react";
 import { blockUserAction, followUserAction } from "@/app/actions/social";
+import { signOutAction } from "@/app/actions/auth";
 import { startDirectMessageAction } from "@/app/actions/chat";
 import { ProjectCard, ResourceCard } from "@/components/cards";
 import { Reveal } from "@/components/client/reveal";
@@ -233,6 +234,35 @@ export default async function ProfilePage({
           </dl>
         </div>
       </Card>
+
+      {/* The signed-in account's options belong to the profile, not to a global
+          hamburger. They are ordinary links on the page, so they stay readable at
+          any scroll position and need no overlay to open. */}
+      {isSelf ? (
+        <Card className="mt-3 px-2 py-1.5" id="account">
+          <nav aria-label="Your account" className="flex flex-wrap items-center gap-x-1 gap-y-1">
+            {[
+              { href: "/me/liked", label: "Liked Posts & Projects" },
+              { href: "/me/comments", label: "Your Comments" },
+              { href: "/settings", label: "Settings & account" },
+              { href: "/notifications", label: "Notifications" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium text-navy-700 transition-colors hover:bg-navy-100 hover:text-navy-950"
+              >
+                {item.label}
+              </Link>
+            ))}
+            <form action={signOutAction} className="ml-auto">
+              <SubmitButton size="sm" variant="ghost" pendingLabel="Logging out…">
+                Log out
+              </SubmitButton>
+            </form>
+          </nav>
+        </Card>
+      ) : null}
 
       {blocked ? (
         <div className="mt-4">

@@ -150,12 +150,17 @@ the requested steel grey; it is never the only cue for a destination.
 
   | Page | Header |
   | --- | --- |
-  | Home | account menu (`AccountMenu`) · wordmark · notification bell (`/notifications`, a link, never a pop-up) |
-  | Explore | discovery search only; no account menu, no bell |
+  | Home | wordmark · notification bell (`/notifications`, a link, never a pop-up) |
+  | Explore | discovery search only; no bell |
   | Chats | the inbox title, its live unread count, inbox search and the new-message action |
   | An open conversation | back link to the inbox, nothing else |
-  | Profile (own account) | account menu only; no bell |
+  | Profile (own account) | clean: the wordmark only; account options are a row in the page body |
   | Everybody else's profile, and every other page | the wordmark, no controls |
+
+  There is no global hamburger. Account options — Liked Posts & Projects, Your
+  Comments, Settings & account, Notifications and Log out — belong to the Profile
+  page and are ordinary links there, so they never open over content and never
+  need an opaque overlay to stay readable.
 
   The search fields are URL parameters rendered by the server, so a search is
   shareable, back/forward work, and no term is invented on the client.
@@ -168,8 +173,11 @@ the requested steel grey; it is never the only cue for a destination.
 
 Motion is transform/opacity only and collapses under `prefers-reduced-motion: reduce`.
 
-- `motion-page` — route change (240 ms).
-- `motion-sheet` — Create sheet and menus (300 ms).
+- `motion-page` — route change (180 ms, opacity only, so the page never shifts under
+  the fixed header and never double-animates with the swipe transition).
+- `motion-sheet` — Create sheet (300 ms). Floating menus and sheets use
+  `glass-popover`: 95% opaque in light, 96% in dark, with a blur, a hairline border and
+  a floating shadow, so live page text can never be read through their labels.
 - `motion-card` — hover lift, press scale (200 ms).
 - `Reveal` (`src/components/client/reveal.tsx`) — IntersectionObserver reveal, once per
   element, with a small stagger. Content is visible without JavaScript because the initial

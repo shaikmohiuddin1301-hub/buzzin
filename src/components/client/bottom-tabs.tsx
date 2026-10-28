@@ -138,7 +138,7 @@ export function BottomTabs({
           />
           <div
             ref={panelRef}
-            className="motion-sheet glass absolute inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] rounded-3xl p-4 shadow-float"
+            className="motion-sheet glass-popover absolute inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] overflow-y-auto rounded-3xl p-4"
           >
             <div className="mb-1 flex items-center justify-between">
               <div>

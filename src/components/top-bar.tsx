@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { ArrowLeft, PenSquare } from "lucide-react";
-import { AccountMenu } from "@/components/client/account-menu";
 import { ExploreSearchField, InboxSearchField } from "@/components/client/header-search";
 import { NotificationSync } from "@/components/client/notification-sync";
 import { NotificationBell } from "@/components/notification-bell";
@@ -14,10 +13,10 @@ import { Logo } from "@/components/logo";
  * The page-specific application header.
  *
  * The chrome is one shared bar, but its contents belong to the page underneath it:
- * Home owns the account menu and the notification bell, Explore and Chats own a
- * search field, Profile owns the account menu alone, a conversation owns a back
- * link. Nothing is shown everywhere just because it exists — no page repeats a
- * control it does not use, and every page keeps exactly one header.
+ * Home owns the wordmark and the notification bell, Explore and Chats own a search
+ * field, a conversation owns a back link. There is no global hamburger: account
+ * options live on the Profile page itself, so no page shows a control it does not
+ * use and every page keeps exactly one header.
  */
 function TopBar({ children }: { children: React.ReactNode }) {
   return (
@@ -27,18 +26,17 @@ function TopBar({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Home: account menu, wordmark, notification bell. The only page with a bell. */
-export function HomeTopBar({ notifications, profileHref }: { notifications: number; profileHref: string }) {
+/** Home: the wordmark and the notification bell — the only page with a bell. */
+export function HomeTopBar({ notifications }: { notifications: number }) {
   return (
     <TopBar>
-      <AccountMenu profileHref={profileHref} />
-      <div className="flex min-w-0 flex-1 items-center justify-center">
+      <div className="flex min-w-0 flex-1 items-center">
         <span className="lg:hidden">
           <Logo href="/home" compact />
         </span>
         <span className="hidden text-[15px] font-semibold tracking-tight text-navy-950 lg:block">Home</span>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <NotificationBell unread={notifications} />
         <NotificationSync />
       </div>
@@ -109,13 +107,16 @@ export function ThreadTopBar() {
   );
 }
 
-/** Profile: the account menu, and no notification bell. */
-export function ProfileTopBar({ profileHref }: { profileHref: string }) {
+/** Any page without its own controls keeps the mark, with nothing borrowed. */
+export function NeutralTopBar() {
   return (
     <TopBar>
-      <AccountMenu profileHref={profileHref} />
-      <p className="flex-1 text-center text-[15px] font-semibold tracking-tight text-navy-950">Profile</p>
-      <span aria-hidden="true" className="h-9 w-9" />
+      <span className="lg:hidden">
+        <Logo href="/home" compact />
+      </span>
+      <span className="ml-auto text-[11px] font-medium uppercase tracking-[0.14em] text-navy-400">
+        BuildTogether
+      </span>
     </TopBar>
   );
 }
@@ -125,8 +126,8 @@ export function ProfileTopBar({ profileHref }: { profileHref: string }) {
  *
  * This has to run on the client: a layout is not re-rendered for every navigation,
  * so a header chosen from the server pathname keeps the previous page's controls
- * after a link click. `usePathname` updates with the URL, which is what makes the
- * Home bell stay on Home when a conversation opens.
+ * after a link click. `usePathname` updates with the URL, which is what keeps the
+ * bell on Home when a conversation opens.
  */
 export function AppHeader({
   notifications,
@@ -139,24 +140,11 @@ export function AppHeader({
 }) {
   const pathname = usePathname();
 
-  if (pathname === "/home") return <HomeTopBar notifications={notifications} profileHref={ownProfileHref} />;
+  if (pathname === "/home") return <HomeTopBar notifications={notifications} />;
   if (pathname === "/explore") return <ExploreTopBar />;
   if (pathname === "/chats") return <ChatsTopBar unread={messages} />;
   if (pathname.startsWith("/chats/")) return <ThreadTopBar />;
-  if (pathname === ownProfileHref) return <ProfileTopBar profileHref={ownProfileHref} />;
+  // Your own profile is clean: its account options are part of the page body.
+  if (pathname === ownProfileHref) return <NeutralTopBar />;
   return <NeutralTopBar />;
-}
-
-/** Any other page keeps the mark, with no controls borrowed from Home. */
-export function NeutralTopBar() {
-  return (
-    <TopBar>
-      <span className="lg:hidden">
-        <Logo href="/home" compact />
-      </span>
-      <span className="ml-auto text-[11px] font-medium uppercase tracking-[0.14em] text-navy-400">
-        BuildTogether
-      </span>
-    </TopBar>
-  );
 }

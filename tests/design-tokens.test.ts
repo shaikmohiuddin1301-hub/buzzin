@@ -99,6 +99,37 @@ describe("graphite glass palette", () => {
   });
 });
 
+describe("floating surfaces and page motion", () => {
+  function alpha(source: string, name: string): number {
+    const match = source.match(new RegExp(`--${name}:\\s*rgba\\([^)]*,\\s*([\\d.]+)\\s*\\)`));
+    if (!match) throw new Error(`Missing ${name}`);
+    return Number(match[1]);
+  }
+
+  it("keeps menus and sheets nearly opaque in both themes", () => {
+    // A popover sits over text. Controlled transparency is the point: the surface
+    // must be frosted enough to blur the page and opaque enough that nothing under
+    // it can be read through the labels.
+    expect(alpha(block(":root"), "glass-popover")).toBeGreaterThanOrEqual(0.9);
+    expect(alpha(block(".dark"), "glass-popover")).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it("gives a popover a hairline border, a floating shadow and a backdrop blur", () => {
+    const rule = css.match(/\.glass-popover \{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toContain("border:");
+    expect(rule).toContain("box-shadow:");
+    expect(rule).toContain("backdrop-filter: blur");
+  });
+
+  it("fades pages in without moving them", () => {
+    const keyframes = css.match(/@keyframes bt-page-in \{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(keyframes).toContain("opacity");
+    // A translated page entrance reads as the content sliding under the fixed
+    // header and doubles up with the swipe transition.
+    expect(keyframes).not.toContain("transform");
+  });
+});
+
 describe("colour contrast", () => {
   const pairs: [string, [number, number, number], [number, number, number], number][] = [
     ["light body on card", light["navy-900"]!, light["surface"]!, 4.5],
