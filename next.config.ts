@@ -34,7 +34,9 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // The post composer captures photos through getUserMedia, so the app's own
+  // origin may use the camera. Microphone and location stay disabled.
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
   // Only meaningful over HTTPS. Sent in production only, so a local http:// dev server is

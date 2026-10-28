@@ -161,13 +161,15 @@ export function BottomTabs({
               <ul className="mt-2 grid grid-cols-2 gap-2">
                 {orderedCreateOptions.map((option) => {
                   const Icon = option.icon;
-                  const disabled = option.label === "New task" && projects.length === 0;
+                  // With no project the task option still leads somewhere useful: the
+                  // task page explains why and offers a real project to join.
+                  const needsProject = option.label === "New task" && projects.length === 0;
                   const content = (
                     <>
                       <span
                         className={cn(
                           "inline-flex h-9 w-9 items-center justify-center rounded-xl",
-                          disabled ? "bg-navy-100 text-navy-400" : "bg-brand-50 text-brand-600",
+                          "bg-brand-50 text-brand-600",
                         )}
                         aria-hidden="true"
                       >
@@ -175,17 +177,13 @@ export function BottomTabs({
                       </span>
                       <span className="mt-2 block text-[13px] font-semibold text-navy-900">{option.label}</span>
                       <span className="mt-0.5 block text-[11px] leading-4 text-navy-500">
-                        {disabled ? "Join a project first." : option.description}
+                        {needsProject ? "Find or start a project first." : option.description}
                       </span>
                     </>
                   );
                   return (
                     <li key={option.href}>
-                      {disabled ? (
-                        <span className="block h-full rounded-2xl border border-navy-200/60 bg-navy-50/60 p-3 opacity-70">
-                          {content}
-                        </span>
-                      ) : option.label === "New task" ? (
+                      {option.label === "New task" && projects.length > 0 ? (
                         <button
                           type="button"
                           onClick={() => setPending("task")}
@@ -249,6 +247,7 @@ export function BottomTabs({
                     aria-haspopup="dialog"
                     aria-expanded={open}
                     aria-label="Create"
+                    data-tour="create"
                     className="-mt-4 inline-flex h-12 w-12 items-center justify-center rounded-full create-glow text-white shadow-glow transition duration-200 active:scale-95"
                   >
                     <Plus size={22} aria-hidden="true" />
@@ -265,6 +264,7 @@ export function BottomTabs({
                 icon={TAB_ICONS[entry.id]}
                 active={entry.id === "profile" ? pathname.startsWith("/u/") : isActive(entry.href)}
                 badge={entry.id === "chats" ? unread : 0}
+                tourId={entry.id}
               />
             );
           })}
@@ -280,17 +280,20 @@ function TabCell({
   icon: Icon,
   active,
   badge = 0,
+  tourId,
 }: {
   href: string;
   label: string;
   icon: typeof Home;
   active: boolean;
   badge?: number;
+  tourId?: string;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      data-tour={tourId}
       aria-label={badge > 0 ? `${label}, ${badge} unread` : label}
       className={cn(
         "flex h-12 w-full flex-col items-center justify-center gap-0.5 rounded-2xl transition-colors duration-200",

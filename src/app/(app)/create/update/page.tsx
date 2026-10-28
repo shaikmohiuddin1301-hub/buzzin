@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createUpdateAction } from "@/app/actions/projects";
 import { SubmitButton } from "@/components/client/submit-button";
 import { Alert, Card, Field, Flash, Input, PageHeader, Select, Textarea } from "@/components/ui";
@@ -30,7 +31,7 @@ export default async function NewUpdatePage({
       {!user.emailVerifiedAt ? (
         <div className="mb-4">
           <Alert tone="warning" title="Verify your email to publish">
-            Updates go through the same verification as other published content.
+            You can save a draft now. Publishing an update needs a verified email address.
           </Alert>
         </div>
       ) : null}
@@ -48,26 +49,49 @@ export default async function NewUpdatePage({
             </Select>
           </Field>
 
-          <Field label="Title" htmlFor="title" hint="Required for a project update; used as the update heading.">
-            <Input id="title" name="title" maxLength={140} placeholder="First prototype assembled" />
+          <Field label="Update title" htmlFor="title" required hint="A short heading: “The first enclosure is waterproof”.">
+            <Input id="title" name="title" required minLength={3} maxLength={140} placeholder="First prototype assembled" />
           </Field>
 
-          <Field label="Update" htmlFor="body" required>
-            <Textarea id="body" name="body" rows={6} required maxLength={5000} placeholder="What changed, what you learned, what is next." />
+          <Field label="Update" htmlFor="body" required hint="What changed, what you learned, what is next.">
+            <Textarea id="body" name="body" rows={6} required minLength={10} maxLength={5000} placeholder="We assembled the first prototype and recorded a week of readings." />
           </Field>
 
-          <Field label="Who can see it" htmlFor="visibility" hint="Private updates stay inside the project team.">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Progress" htmlFor="progressPercent" hint="Optional. 0–100.">
+              <Input id="progressPercent" name="progressPercent" type="number" min={0} max={100} step={1} placeholder="40" />
+            </Field>
+            <Field label="Milestone" htmlFor="milestone" hint="Optional. Which milestone this reports on.">
+              <Input id="milestone" name="milestone" maxLength={140} placeholder="Working prototype" />
+            </Field>
+            <Field label="Supporting link" htmlFor="linkUrl" hint="Optional. Sources, photos or notes.">
+              <Input id="linkUrl" name="linkUrl" type="url" placeholder="https://…" />
+            </Field>
+          </div>
+
+          <Field label="Who can see it" htmlFor="visibility" hint="Private updates stay inside the project team, or with you on a profile update.">
             <Select id="visibility" name="visibility" defaultValue="public">
               <option value="public">Public</option>
               <option value="private">Project team / only me</option>
             </Select>
           </Field>
 
-          <div className="border-t border-navy-200 pt-4">
+          <div className="flex flex-wrap items-center gap-3 border-t border-navy-200 pt-4">
             <SubmitButton name="publish" value="on" pendingLabel="Sharing…">
-              Share update
+              Publish update
             </SubmitButton>
+            <SubmitButton variant="secondary" pendingLabel="Saving…">
+              Save draft
+            </SubmitButton>
+            <Link href="/home" className="text-[12px] text-navy-500 underline">
+              Cancel
+            </Link>
           </div>
+
+          <p className="text-[10.5px] leading-4 text-navy-400">
+            A project update is filed in the project&apos;s Updates tab. A profile update appears on your profile and, when
+            public, in the feed. Drafts are visible only to you and the project team.
+          </p>
         </form>
       </Card>
     </div>

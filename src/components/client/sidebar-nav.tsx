@@ -9,6 +9,8 @@ export type SidebarItem = {
   label: string;
   icon: React.ReactNode;
   badge?: number;
+  /** Matches a step in the first-run app tour. */
+  tour?: string;
 };
 
 /** Same rule as the bottom bar: a section stays current on its own sub-pages. */
@@ -22,6 +24,7 @@ function SidebarLink({ item, active }: { item: SidebarItem; active: boolean }) {
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
+      data-tour={item.tour}
       className={cn(
         "group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200",
         active ? "bg-brand-50 text-brand-600" : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",

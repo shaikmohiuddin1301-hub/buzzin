@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { saveUploadedFile } from "@/lib/storage";
 import {
   addMilestone,
+  addProjectMilestones,
   archiveProject,
   createQuickProject,
   deleteProject,
@@ -15,6 +16,7 @@ import {
   postProjectUpdate,
   publishProject,
   removeMember,
+  replaceProjectSkills,
   respondToInvitation,
   setMilestoneStatus,
   toggleProjectFollow,
@@ -38,6 +40,8 @@ import {
 } from "@/services/tasks";
 import { addDependency, removeDependency } from "@/services/dependencies";
 import { ensureProjectGroup } from "@/services/chat";
+import { createWorkArea, listWorkAreas } from "@/services/workAreas";
+import { getProjectAccess } from "@/lib/authz";
 import { createPost } from "@/services/social";
 import { addWorkLogEntry, approveWorkLogEntry, updateWorkLogEntry, withdrawConsent } from "@/services/worklog";
 import { VISIBILITIES } from "@/lib/types";
@@ -58,6 +62,8 @@ import type {
 
 /** A task as it arrives from the creation wizard. Everything is re-validated here. */
 type WizardTask = {
+  /** Present only for a task that already exists on the project. */
+  id?: string;
   title: string;
   description?: string;
   objective?: string;
@@ -121,6 +127,7 @@ function parseTasks(raw: string): WizardTask[] {
     const priority = text("priority");
     const visibility = text("visibility");
     return {
+      id: text("id") || undefined,
       title: text("title"),
       description: text("description") || undefined,
       objective: text("objective") || undefined,
@@ -302,28 +309,39 @@ export async function createUpdateAction(formData: FormData) {
     const projectId = optional(formData, "projectId") ?? null;
     const visibility = str(formData, "visibility", "public") as Visibility;
     const text = str(formData, "body");
+    const title = optional(formData, "title");
+    const publish = bool(formData, "publish");
+    const linkUrl = optional(formData, "linkUrl");
+    const milestone = optional(formData, "milestone");
+    const progressRaw = optional(formData, "progressPercent");
+    const progressPercent = progressRaw ? Number(progressRaw) : null;
 
     if (projectId) {
       postProjectUpdate(projectId, user, {
-        title: str(formData, "title", "Project update"),
+        title: title ?? "Project update",
         body: text,
         visibility,
+        publish,
+        progressPercent: Number.isFinite(progressPercent) ? progressPercent : null,
+        milestone,
+        linkUrl,
       });
       return {
-        path: `/projects/${projectId}?tab=progress&notice=Update+shared.`,
+        path: `/projects/${projectId}?tab=progress&notice=${publish ? "Update+shared." : "Update+saved+as+a+draft."}`,
         revalidate: [`/projects/${projectId}`, "/home"],
       };
     }
 
-    const title = optional(formData, "title");
     createPost(user.id, {
-      body: title ? `${title}\n\n${text}` : text,
+      body: text,
+      title,
+      linkUrl,
       kind: "general",
       visibility: visibility === "private" ? "private" : "public",
-      publish: true,
+      publish,
     });
     return {
-      path: `/u/${user.username}?tab=posts&notice=Update+shared.`,
+      path: `/u/${user.username}?tab=posts&notice=${publish ? "Update+shared." : "Update+saved+as+a+draft."}`,
       revalidate: ["/home", `/u/${user.username}`],
     };
   });
@@ -366,6 +384,158 @@ export async function quickCreateProjectAction(formData: FormData) {
     return {
       path: `/projects/${id}?notice=${publish ? "Project+published.+Your+workspace+is+ready." : "Draft+saved.+Publish+when+you+are+ready."}`,
       revalidate: ["/explore", "/home", "/projects", "/projects/new", "/chats", `/chats/${conversationId}`],
+    };
+  });
+}
+
+/**
+ * Save the four-step wizard over an existing project.
+ *
+ * The edit route reopens a saved draft, so the fields a creator already filled in
+ * are edited in place rather than re-entered. Work areas and tasks that already
+ * exist are never deleted from here: the task board owns that history. New areas
+ * are created, new tasks are added, and the project record, skills, links and any
+ * new milestones are updated in the same request.
+ */
+export async function updateProjectSetupAction(formData: FormData) {
+  const projectId = str(formData, "projectId");
+  await runServerAction(`/projects/${projectId}/edit`, async () => {
+    const user = await requireUserOrThrow();
+    rateLimit(`project:edit:${user.id}`, 20, 3_600_000);
+
+    const name = str(formData, "name");
+    const shortDescription = str(formData, "shortDescription");
+    if (name.trim().length < 3) throw new AppError("A project needs a title of at least 3 characters.");
+    if (shortDescription.trim().length < 20) {
+      throw new AppError("A project needs a summary of at least 20 characters so people know what they are joining.");
+    }
+
+    let coverImageId: string | undefined;
+    const cover = file(formData, "cover");
+    if (cover) {
+      const stored = await saveUploadedFile(cover, { ownerId: user.id, visibility: "public" });
+      coverImageId = stored.id;
+    }
+
+    const compensationType = str(formData, "compensationType", "unpaid") as CompensationType;
+    const compensationDetails = optional(formData, "compensationDetails");
+
+    updateProject(projectId, user, {
+      name,
+      shortDescription,
+      overview: optional(formData, "overview"),
+      problem: optional(formData, "problem"),
+      audience: optional(formData, "audience"),
+      category: str(formData, "category", "other") as ProjectCategory,
+      stage: str(formData, "stage", "idea") as ProjectStage,
+      visibility: str(formData, "visibility", "public") as Visibility,
+      workMode: str(formData, "workMode", "remote") as WorkMode,
+      effort: optional(formData, "effort"),
+      deadline: optional(formData, "deadline"),
+      compensationType,
+      compensationDetails,
+      allowPublicDocs: bool(formData, "allowPublicDocs"),
+      openToCollaborators: bool(formData, "collaborators"),
+      confidentialityNotes: optional(formData, "confidentialityNotes"),
+      ipNotes: optional(formData, "ipNotes"),
+      links: [0, 1, 2].flatMap((index) => {
+        const url = str(formData, `linkUrl${index}`);
+        return url
+          ? [{ label: str(formData, `linkLabel${index}`, "Link"), url: referenceUrl(url, `Reference link ${index + 1}`) }]
+          : [];
+      }),
+      ...(coverImageId ? { coverImageId } : {}),
+    });
+
+    replaceProjectSkills(projectId, user, list(formData, "skills", 12));
+
+    // Existing areas stay; new names get their own area and chat.
+    const areaNames = parseWorkAreas(str(formData, "workAreasJson"));
+    const existingAreas = new Map(listWorkAreas(projectId, user).map((area) => [area.name.toLowerCase(), area.id]));
+    for (const areaName of areaNames) {
+      if (!existingAreas.has(areaName.toLowerCase())) {
+        existingAreas.set(areaName.toLowerCase(), createWorkArea(projectId, user, { name: areaName }));
+      }
+    }
+
+    const access = getProjectAccess(projectId, user);
+    if (!access?.canEdit) throw new AppError("You cannot edit this project.");
+
+    const tasks = parseTasks(str(formData, "tasksJson"));
+    const taskIds = new Map<number, string>();
+    tasks.forEach((task, index) => {
+      if (task.id) {
+        taskIds.set(index, task.id);
+        return;
+      }
+      if (task.title.trim().length < 4) {
+        throw new AppError(`“${task.title || `Task ${index + 1}`}” needs a title of at least 4 characters.`);
+      }
+      let assigneeId: string | undefined;
+      if (task.assignee) {
+        const person = getUserByUsername(task.assignee);
+        if (!person) throw new AppError(`No account found for @${task.assignee}. Remove the assignee or correct the username.`);
+        assigneeId = person.id;
+      }
+      const creatingPublished = access.project.status === "published";
+      if (creatingPublished && !task.acceptanceCriteria?.trim()) {
+        throw new AppError(
+          `“${task.title}” needs review requirements before it can be added to a published project. Add them, or save the project as a draft first.`,
+        );
+      }
+      const taskId = createTask(projectId, user, {
+        title: task.title,
+        description: task.description,
+        objective: task.objective,
+        deliverablesSpec: task.deliverablesSpec,
+        acceptanceCriteria: task.acceptanceCriteria,
+        effort: task.effort,
+        deadline: task.deadline,
+        compensationType,
+        compensationDetails,
+        visibility: task.visibility,
+        skills: task.skills,
+        publish: creatingPublished && Boolean(task.acceptanceCriteria?.trim()),
+        workAreaId: task.workArea ? (existingAreas.get(task.workArea.toLowerCase()) ?? null) : null,
+        priority: task.priority,
+      });
+      taskIds.set(index, taskId);
+      if (assigneeId) assignContributor(taskId, user, assigneeId, task.deliverablesSpec);
+    });
+
+    // Dependencies can point at an existing task or at one created above.
+    tasks.forEach((task, index) => {
+      const taskId = taskIds.get(index);
+      if (!taskId) return;
+      for (const dependency of task.dependsOn) {
+        const prerequisite = taskIds.get(dependency);
+        if (prerequisite && prerequisite !== taskId) {
+          addDependency(taskId, user, { dependsOnTaskId: prerequisite });
+        }
+      }
+    });
+
+    addProjectMilestones(
+      projectId,
+      user,
+      [0, 1, 2, 3].flatMap((index) => {
+        const title = str(formData, `milestoneTitle${index}`);
+        return title
+          ? [{ title, description: optional(formData, `milestoneDescription${index}`), dueDate: optional(formData, `milestoneDue${index}`) }]
+          : [];
+      }),
+    );
+
+    return {
+      path: `/projects/${projectId}?notice=Project+changes+saved.`,
+      revalidate: [
+        `/projects/${projectId}`,
+        `/projects/${projectId}/tasks`,
+        "/explore",
+        "/home",
+        "/projects",
+        "/chats",
+      ],
     };
   });
 }

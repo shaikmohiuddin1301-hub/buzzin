@@ -30,6 +30,14 @@ test("a new account is created, signed in and reachable at its profile", async (
   // than being bounced back to the sign-in form.
   await page.waitForURL((url) => url.pathname === "/home");
   await expect(page.getByText("Your account is ready.")).toBeVisible();
+
+  // A genuinely new account meets the optional first-run welcome. It must not
+  // block the app once dismissed, and the tour is not part of this test.
+  const welcome = page.getByRole("dialog", { name: "Welcome to BuildTogether" });
+  await expect(welcome).toBeVisible();
+  await page.getByRole("button", { name: "Skip guidance" }).click();
+  await expect(welcome).toHaveCount(0);
+
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
 
   await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Profile" }).click();

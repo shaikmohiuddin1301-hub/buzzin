@@ -33,6 +33,9 @@ export async function createPostAction(formData: FormData) {
 
     createPost(user.id, {
       body: str(formData, "body"),
+      title: optional(formData, "title"),
+      topic: optional(formData, "topic"),
+      linkUrl: optional(formData, "linkUrl"),
       kind: str(formData, "kind", "general") as FeedKind,
       projectId: optional(formData, "projectId") ?? null,
       resourceId: optional(formData, "resourceId") ?? null,

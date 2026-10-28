@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createTeachingAction } from "@/app/actions/learning";
 import { SubmitButton } from "@/components/client/submit-button";
 import { Alert, Card, Field, Flash, Input, PageHeader, Select, Textarea } from "@/components/ui";
@@ -53,7 +54,24 @@ export default async function NewTeachingPage({
             <Textarea id="body" name="body" rows={12} maxLength={20000} />
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <Field
+            label="Learning objectives and key takeaways"
+            htmlFor="outcomes"
+            hint="Optional. One per line, each starting with a verb: Explain…, Build…, Choose…. They appear at the top of the published teaching."
+          >
+            <Textarea
+              id="outcomes"
+              name="outcomes"
+              rows={4}
+              maxLength={1200}
+              placeholder={"Explain how a river gauge measures flow\nChoose the right sensor for a field site"}
+            />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-4">
+            <Field label="Topic" htmlFor="topic" hint="Optional. Free text.">
+              <Input id="topic" name="topic" maxLength={60} placeholder="Hydrology" />
+            </Field>
             <Field label="Format" htmlFor="format">
               <Select id="format" name="format" defaultValue="article">
                 {RESOURCE_FORMATS.map((format) => (
@@ -100,6 +118,9 @@ export default async function NewTeachingPage({
             <SubmitButton variant="secondary" pendingLabel="Saving…">
               Save draft
             </SubmitButton>
+            <Link href="/create" className="text-[12px] text-navy-500 underline">
+              Cancel
+            </Link>
           </div>
           <p className="text-[10.5px] leading-4 text-navy-400">
             Teachings are free to read. Paid products remain in the creator studio and are not part of this flow.

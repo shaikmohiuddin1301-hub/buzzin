@@ -296,6 +296,8 @@ export type ResourceInput = {
   body?: string;
   previewBody?: string;
   topic?: string;
+  /** Learning objectives / key takeaways, one per entry. */
+  outcomes?: string[];
   level: ResourceLevel;
   format: ResourceFormat;
   durationMinutes?: number;
@@ -343,6 +345,7 @@ export function createResource(creatorId: string, input: ResourceInput): { id: s
         body: input.body?.slice(0, 20000) ?? null,
         previewBody: input.previewBody?.slice(0, 4000) ?? null,
         topic: input.topic?.slice(0, 60) ?? null,
+        outcomes: (input.outcomes ?? []).map((entry) => entry.trim().slice(0, 200)).filter(Boolean).slice(0, 10),
         level: input.level,
         format: input.format,
         durationMinutes: input.durationMinutes ?? null,

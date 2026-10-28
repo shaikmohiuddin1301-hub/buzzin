@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { createPostAction } from "@/app/actions/social";
+import { ImagePicker } from "@/components/client/image-picker";
 import { SubmitButton } from "@/components/client/submit-button";
 import { Alert, Card, Field, Flash, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
+import { env } from "@/lib/env";
 import { projectsForUser } from "@/services/projects";
 
 export const metadata = { title: "New post" };
@@ -46,11 +48,15 @@ export default async function NewPostPage({
             <Textarea id="body" name="body" rows={5} required maxLength={5000} placeholder="The first working prototype of the sensor housing." />
           </Field>
 
-          <Field label="Photo" htmlFor="image" hint="PNG, JPEG or WebP. One image per post for now; carousels are not supported yet.">
-            <Input id="image" name="image" type="file" accept="image/png,image/jpeg,image/webp" />
-          </Field>
+          <ImagePicker
+            id="image"
+            name="image"
+            label="Photo"
+            maxMb={env.maxUploadMb}
+            hint={`Take a photo now or choose one from your gallery. PNG, JPEG or WebP up to ${env.maxUploadMb}MB; one image per post.`}
+          />
 
-          <Field label="Alt text" htmlFor="altText" hint="Describe the image for people who cannot see it.">
+          <Field label="Alt text" htmlFor="altText" hint="Describe the photo for people who cannot see it.">
             <Input id="altText" name="altText" maxLength={400} placeholder="A grey sensor housing on a workbench next to a laptop." />
           </Field>
 

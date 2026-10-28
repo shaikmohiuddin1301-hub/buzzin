@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, KeyRound, ShieldCheck } from "lucide-react";
+import { Compass, Download, KeyRound, ShieldCheck } from "lucide-react";
 import {
   changePasswordAction,
   deleteAccountAction,
@@ -479,6 +479,19 @@ export default async function SettingsPage({
 
           {tab === "account" ? (
             <div className="space-y-4">
+              <Card className="p-5">
+                <h2 className="flex items-center gap-1.5 text-[14px] font-semibold text-navy-950">
+                  <Compass size={14} aria-hidden="true" /> Help &amp; getting started
+                </h2>
+                <p className="mt-1 text-[12px] leading-5 text-navy-600">
+                  Take a short tour of Home, Explore, Create, Chats and Profile. It is optional, and reopening it changes
+                  nothing in your profile, projects or settings.
+                </p>
+                <ButtonLink href="/home?tour=1" variant="secondary" size="sm" className="mt-3">
+                  Take the app tour
+                </ButtonLink>
+              </Card>
+
               <Card className="p-5">
                 <h2 className="flex items-center gap-1.5 text-[14px] font-semibold text-navy-950">
                   <Download size={14} aria-hidden="true" /> Export your data

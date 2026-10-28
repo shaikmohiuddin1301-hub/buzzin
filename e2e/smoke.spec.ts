@@ -22,6 +22,9 @@ const ROUTES = [
 ];
 
 test("the redesigned pages render without runtime errors", async ({ page }) => {
+  // Eleven routes on a cold Next dev server: compilation, not the app, is the slow
+  // part, so give the walking pass room without weakening any assertion.
+  test.setTimeout(120_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 

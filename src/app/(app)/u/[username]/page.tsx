@@ -348,7 +348,7 @@ export default async function ProfilePage({
                       />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-navy-50 to-brand-50 p-3 text-center text-[12px] leading-5 text-navy-700">
-                        <span className="line-clamp-6">{post.body}</span>
+                        <span className="line-clamp-6">{post.title ?? post.body}</span>
                       </span>
                     )}
                     {post.status === "draft" ? (

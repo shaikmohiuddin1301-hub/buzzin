@@ -74,7 +74,24 @@ export default async function PostPage({
         ) : null}
 
         <div className="p-4">
-          <div className="whitespace-pre-line text-[14px] leading-7 text-navy-800">{post.body}</div>
+          {post.topic ? (
+            <span className="mb-1 inline-block rounded-full bg-navy-100 px-2 py-0.5 text-[10px] font-medium text-navy-600">
+              {post.topic}
+            </span>
+          ) : null}
+          {post.title ? <h1 className="text-[18px] font-semibold leading-7 text-navy-950">{post.title}</h1> : null}
+          <div className="mt-1 whitespace-pre-line text-[14px] leading-7 text-navy-800">{post.body}</div>
+
+          {post.linkUrl ? (
+            <a
+              href={post.linkUrl}
+              target="_blank"
+              rel="nofollow noopener noreferrer"
+              className="mt-3 inline-flex max-w-full items-center gap-1 truncate text-[12px] font-medium text-brand-600 underline"
+            >
+              {post.linkUrl.replace(/^https?:\/\//, "")}
+            </a>
+          ) : null}
 
           {post.projectId ? (
             <Link

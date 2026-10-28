@@ -185,6 +185,9 @@ export function listTasks(projectId: string, viewer: Viewer) {
       task: tasks,
       assigneeCount: sql<number>`(select count(*) from task_assignments ta where ta.task_id = ${tasks.id} and ta.status = 'active')`,
       interestCount: sql<number>`(select count(*) from expressions_of_interest eoi where eoi.task_id = ${tasks.id} and eoi.status = 'new')`,
+      // Used to reopen a task in the project wizard with its real owner. The task
+      // column is qualified: the joined users table also has an `id`.
+      assigneeUsername: sql<string | null>`(select u.username from task_assignments ta inner join users u on u.id = ta.user_id where ta.task_id = tasks.id and ta.status = 'active' limit 1)`,
     })
     .from(tasks)
     .where(eq(tasks.projectId, projectId))
@@ -193,7 +196,12 @@ export function listTasks(projectId: string, viewer: Viewer) {
 
   return rows
     .filter((row) => access.canViewWorkspace || (row.task.visibility === "public" && row.task.status !== "draft"))
-    .map((row) => ({ ...row.task, assigneeCount: Number(row.assigneeCount), interestCount: Number(row.interestCount) }));
+    .map((row) => ({
+      ...row.task,
+      assigneeCount: Number(row.assigneeCount),
+      interestCount: Number(row.interestCount),
+      assigneeUsername: row.assigneeUsername ?? null,
+    }));
 }
 
 export function taskDetail(taskId: string, viewer: Viewer) {

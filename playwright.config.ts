@@ -39,6 +39,13 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         storageState: path.join(dataDir, "maya.json"),
+        // A deterministic camera for the Take photo flow: Chromium supplies a fake
+        // video device and auto-accepts the permission prompt. The component still
+        // follows the real getUserMedia path, so a regression there fails the test.
+        launchOptions: {
+          args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+        },
+        permissions: ["camera"],
       },
       dependencies: ["setup"],
     },

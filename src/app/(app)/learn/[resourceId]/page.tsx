@@ -326,6 +326,20 @@ export default async function ResourcePage({
             </Card>
           ) : null}
 
+          {resource.outcomes && resource.outcomes.length > 0 ? (
+            <Card className="p-5">
+              <h2 className="text-[14px] font-semibold text-navy-950">What you will learn</h2>
+              <ul className="mt-2 space-y-1.5">
+                {resource.outcomes.map((outcome) => (
+                  <li key={outcome} className="flex gap-2 text-[12.5px] leading-5 text-navy-700">
+                    <CheckCircle2 size={13} aria-hidden="true" className="mt-0.5 shrink-0 text-emerald-600" />
+                    {outcome}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
           {body ? (
             <Card className="p-5">
               <h2 className="text-[14px] font-semibold text-navy-950">The material</h2>

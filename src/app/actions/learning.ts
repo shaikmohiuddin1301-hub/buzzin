@@ -2,7 +2,8 @@
 
 import { runServerAction } from "@/lib/actions";
 import { assertEmailVerified, requireUserOrThrow } from "@/lib/auth";
-import { bool, file, int, optional, str } from "@/lib/form";
+import { AppError } from "@/lib/errors";
+import { bool, file, int, list, optional, str } from "@/lib/form";
 import { saveUploadedFile } from "@/lib/storage";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -53,6 +54,7 @@ export async function createTeachingAction(formData: FormData) {
       body: optional(formData, "body"),
       previewBody: optional(formData, "previewBody"),
       topic: optional(formData, "topic"),
+      outcomes: list(formData, "outcomes", 10),
       level: str(formData, "level", "beginner") as ResourceLevel,
       format: str(formData, "format", "article") as ResourceFormat,
       durationMinutes: int(formData, "durationMinutes", 0) || undefined,
@@ -83,22 +85,42 @@ export async function createReflectionAction(formData: FormData) {
     const resourceId = optional(formData, "resourceId") ?? null;
     const completed = bool(formData, "markCompleted");
     const publish = bool(formData, "publish");
+    const learned = str(formData, "body");
+    const takeaways = optional(formData, "takeaways");
+    const title = str(formData, "title");
+    if (title.trim().length < 3) throw new AppError("Give the learning a title of at least 3 characters.");
 
-    createPost(user.id, {
-      body: str(formData, "body"),
+    let imageId: string | null = null;
+    const upload = file(formData, "image");
+    if (upload) {
+      const stored = await saveUploadedFile(upload, { ownerId: user.id, visibility: "public" });
+      imageId = stored.id;
+    }
+
+    const postId = createPost(user.id, {
+      title,
+      topic: optional(formData, "topic"),
+      linkUrl: optional(formData, "linkUrl"),
+      // The lesson itself and what it changed stay separate in the entry rather
+      // than being flattened into one undifferentiated block of text.
+      body: takeaways ? `${learned}\n\nKey takeaways:\n${takeaways}` : learned,
       kind: "lesson",
       resourceId,
+      imageId,
+      altText: optional(formData, "altText"),
       visibility: str(formData, "visibility", "public") as Visibility,
       publish,
     });
 
     if (resourceId && completed) recordProgress(user.id, resourceId, null, true);
 
-    // A reflection is a post: send the author to where it now appears rather than
-    // leaving them on the empty form wondering whether it saved.
+    // A published reflection opens where it now lives; a draft goes to the
+    // author's profile, which is the only place it is visible.
     return {
-      path: `/u/${user.username}?tab=posts&notice=${publish ? "Reflection+shared." : "Reflection+saved+as+a+draft."}`,
-      revalidate: ["/create/learning", "/home", `/u/${user.username}`],
+      path: publish
+        ? `/posts/${postId}?notice=Learning+shared.`
+        : `/u/${user.username}?tab=posts&notice=Learning+saved+as+a+draft.`,
+      revalidate: ["/create/learning", "/home", `/u/${user.username}`, "/learn"],
     };
   });
 }

@@ -47,8 +47,19 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
         </div>
       </div>
 
+      {post.title ? (
+        <div className="px-4 pt-1">
+          {post.topic ? (
+            <span className="mb-1 inline-block rounded-full bg-navy-100 px-2 py-0.5 text-[10px] font-medium text-navy-600">
+              {post.topic}
+            </span>
+          ) : null}
+          <h3 className="text-[14px] font-semibold leading-5 text-navy-950">{post.title}</h3>
+        </div>
+      ) : null}
+
       {post.imageId ? (
-        <Link href={`/posts/${post.id}`} className="block bg-navy-50">
+        <Link href={`/posts/${post.id}`} className="mt-2 block bg-navy-50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/files/${post.imageId}`}
@@ -65,6 +76,17 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
           <Link href={`/posts/${post.id}`} className="mt-1 inline-block text-[11.5px] font-medium text-navy-500 hover:text-brand-700 hover:underline">
             View post
           </Link>
+
+          {post.linkUrl ? (
+            <a
+              href={post.linkUrl}
+              target="_blank"
+              rel="nofollow noopener noreferrer"
+              className="mt-2 inline-flex max-w-full items-center gap-1 truncate text-[11.5px] font-medium text-brand-600 underline"
+            >
+              {post.linkUrl.replace(/^https?:\/\//, "")}
+            </a>
+          ) : null}
 
           {post.projectId ? (
             <Link

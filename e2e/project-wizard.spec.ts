@@ -9,6 +9,14 @@ test.use({ viewport: { width: 1280, height: 1000 } });
 
 const PASSWORD_SUMMARY = "Volunteers build low-cost river sensors and publish what they learn.";
 
+/** `/projects/new` also matches a naive `/projects/:id` pattern, so exclude it. */
+async function waitForSavedProject(page: Page) {
+  await page.waitForURL(
+    (url) => url.pathname.startsWith("/projects/") && url.pathname !== "/projects/new" && !url.pathname.endsWith("/edit"),
+    { timeout: 30_000 },
+  );
+}
+
 async function fillBasics(page: Page, title: string, options: { overview?: boolean } = {}) {
   await page.getByLabel("Project title").fill(title);
   await page.getByLabel("Summary").fill(PASSWORD_SUMMARY);
@@ -64,7 +72,7 @@ test("publishes a project with a work area and a task in one flow", async ({ pag
   await expect(page.getByText("Complete these before publishing")).toHaveCount(0);
   await page.getByRole("button", { name: "Publish project" }).click();
 
-  await page.waitForURL(/\/projects\/[^/?]+/);
+  await waitForSavedProject(page);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 
   // The task and its work area are reachable from the project they were created
@@ -101,7 +109,7 @@ test("blocks publishing until the description and task acceptance are present, b
   await expect(page.locator('[aria-current="step"]')).toContainText("Review and publish");
 
   await page.getByRole("button", { name: "Save as draft" }).click();
-  await page.waitForURL(/\/projects\/[^/?]+/);
+  await waitForSavedProject(page);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   await expect(page.getByText("Draft").first()).toBeVisible();
 });

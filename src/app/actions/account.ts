@@ -2,6 +2,7 @@
 
 import { runServerAction } from "@/lib/actions";
 import { requireUserOrThrow } from "@/lib/auth";
+import { AppError } from "@/lib/errors";
 import { bool, file, list, optional, str } from "@/lib/form";
 import { saveUploadedFile } from "@/lib/storage";
 import { changePassword, updatePreferences, updateProfile, updateSkills } from "@/services/users";
@@ -54,6 +55,22 @@ export async function updateNotificationsAction(formData: FormData) {
     updatePreferences(user.id, { notifyMatrix: matrix, notifyEmail: bool(formData, "notifyEmail") });
     return { path: "/settings?tab=notifications&notice=Notification+preferences+saved.", revalidate: ["/settings"] };
   });
+}
+
+/**
+ * Record that the welcome guidance was finished or skipped.
+ *
+ * This is called from the client after the overlay has already closed, so a slow
+ * database write never traps someone behind a dialog. The browser also keeps a
+ * local marker: if this request fails, the same device still does not show the
+ * welcome screen again, and the preference is corrected on a later successful run.
+ */
+export async function saveAppTourStatusAction(status: string): Promise<void> {
+  if (status !== "completed" && status !== "skipped") {
+    throw new AppError("Unknown tour status.");
+  }
+  const user = await requireUserOrThrow();
+  updatePreferences(user.id, { appTourStatus: status });
 }
 
 export async function changePasswordAction(formData: FormData) {

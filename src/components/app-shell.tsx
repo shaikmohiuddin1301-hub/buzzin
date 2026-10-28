@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { and, eq, isNull } from "drizzle-orm";
 import {
   Bell,
@@ -20,6 +21,7 @@ import { projectInvitations } from "@/db/schema";
 import { signOutAction } from "@/app/actions/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { AppSurface } from "@/components/client/app-surface";
+import { AppTour } from "@/components/client/app-tour";
 import { BottomTabs } from "@/components/client/bottom-tabs";
 import { SidebarNav } from "@/components/client/sidebar-nav";
 import { SwipeNavigation } from "@/components/client/swipe-navigation";
@@ -30,10 +32,12 @@ import { accountContext } from "@/services/account";
 import { unreadMessageCount } from "@/services/chat";
 import { projectsForUser } from "@/services/projects";
 import { unreadNotificationCount } from "@/services/notifications";
+import { getPreferences } from "@/services/users";
 import type { SessionUser } from "@/lib/session";
 
 export async function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const account = accountContext(user);
+  const preferences = getPreferences(user.id);
   const notifications = unreadNotificationCount(user.id);
   const messages = unreadMessageCount(user.id);
   const invitations = getDb()
@@ -53,12 +57,12 @@ export async function AppShell({ user, children }: { user: SessionUser; children
   // The sidebar keeps the five mobile destinations and adds Learning and
   // Projects, which left the bottom bar. Create is the button above them.
   const primary = [
-    { href: "/home", label: "Home", icon: <Home size={17} aria-hidden="true" /> },
-    { href: "/explore", label: "Explore", icon: <Compass size={17} aria-hidden="true" /> },
-    { href: "/chats", label: "Chats", icon: <MessageSquare size={17} aria-hidden="true" />, badge: messages },
+    { href: "/home", label: "Home", icon: <Home size={17} aria-hidden="true" />, tour: "home" },
+    { href: "/explore", label: "Explore", icon: <Compass size={17} aria-hidden="true" />, tour: "explore" },
+    { href: "/chats", label: "Chats", icon: <MessageSquare size={17} aria-hidden="true" />, badge: messages, tour: "chats" },
     { href: "/learn", label: "Learning", icon: <BookOpen size={17} aria-hidden="true" /> },
     { href: "/projects", label: "Projects", icon: <FolderKanban size={17} aria-hidden="true" /> },
-    { href: `/u/${user.username}`, label: "Profile", icon: <UserRound size={17} aria-hidden="true" /> },
+    { href: `/u/${user.username}`, label: "Profile", icon: <UserRound size={17} aria-hidden="true" />, tour: "profile" },
   ];
 
   const editableProjects = projectsForUser(user.id).owned.slice(0, 12).map((project) => ({
@@ -94,6 +98,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
           <div className="px-3">
             <Link
               href="/create"
+              data-tour="create"
               className="create-glow flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-glow transition-colors"
             >
               <Plus size={17} aria-hidden="true" />
@@ -166,6 +171,9 @@ export async function AppShell({ user, children }: { user: SessionUser; children
             accountKind={account.kind}
           />
           <SwipeNavigation ownProfileHref={`/u/${user.username}`} />
+          <Suspense fallback={null}>
+            <AppTour autoStart={!preferences?.appTourStatus} userId={user.id} />
+          </Suspense>
         </div>
       </div>
     </AppSurface>

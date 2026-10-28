@@ -124,6 +124,12 @@ export const userPreferences = sqliteTable("user_preferences", {
   /** Completed learning history is private unless the learner opts in. */
   shareLearningHistory: integer("share_learning_history", { mode: "boolean" }).notNull().default(false),
   theme: text("theme").$type<"light" | "dark" | "system">().notNull().default("system"),
+  /**
+   * The app tour is separate from profile onboarding. Existing and seeded accounts
+   * default to completed so nobody is interrupted by a guide they never asked for;
+   * registration explicitly inserts NULL for a genuinely new account.
+   */
+  appTourStatus: text("app_tour_status").$type<"completed" | "skipped">().default("completed"),
   updatedAt: updatedAt(),
 });
 
@@ -355,9 +361,20 @@ export const projectUpdates = sqliteTable(
     title: text("title").notNull(),
     body: text("body").notNull(),
     visibility: text("visibility").$type<Visibility>().notNull().default("public"),
+    /** A draft is kept for its author and never mirrored into the feed. */
+    status: text("status").$type<"draft" | "published">().notNull().default("published"),
+    /** Optional reported progress, 0–100. */
+    progressPercent: integer("progress_percent"),
+    /** Optional milestone this update reports on. */
+    milestone: text("milestone"),
+    /** Optional supporting link. */
+    linkUrl: text("link_url"),
     createdAt: createdAt(),
   },
-  (t) => [index("project_updates_project_idx").on(t.projectId, t.createdAt)],
+  (t) => [
+    index("project_updates_project_idx").on(t.projectId, t.createdAt),
+    index("project_updates_status_idx").on(t.projectId, t.status),
+  ],
 );
 
 /* ---------------------------------- tasks --------------------------------- */
@@ -587,6 +604,12 @@ export const posts = sqliteTable(
     taskId: text("task_id").references(() => tasks.id, { onDelete: "cascade" }),
     resourceId: text("resource_id"),
     kind: text("kind").$type<FeedKind>().notNull().default("general"),
+    /** Optional heading for a learning entry or a general update. */
+    title: text("title"),
+    /** Optional topic a learning entry belongs to (free text, like a resource). */
+    topic: text("topic"),
+    /** Optional supporting link; validated as http(s) by the service. */
+    linkUrl: text("link_url"),
     body: text("body").notNull(),
     imageId: text("image_id").references(() => mediaFiles.id, { onDelete: "set null" }),
     visibility: text("visibility").$type<Visibility>().notNull().default("public"),
@@ -816,6 +839,8 @@ export const learningResources = sqliteTable(
     body: text("body"),
     previewBody: text("preview_body"),
     topic: text("topic"),
+    /** What a learner should be able to do afterwards. JSON array of strings. */
+    outcomes: text("outcomes", { mode: "json" }).$type<string[]>().default([]),
     level: text("level").$type<ResourceLevel>().notNull().default("beginner"),
     format: text("format").$type<ResourceFormat>().notNull().default("article"),
     durationMinutes: integer("duration_minutes"),

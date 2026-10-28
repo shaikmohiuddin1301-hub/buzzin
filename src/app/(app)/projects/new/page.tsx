@@ -47,6 +47,7 @@ export default async function NewProjectPage({
         compensationTypes={COMPENSATION_TYPES.map((type) => ({ value: type, label: label(type) }))}
         businesses={businesses}
         emailVerified={Boolean(user.emailVerifiedAt)}
+        saved={Boolean(notice)}
       />
     </div>
   );

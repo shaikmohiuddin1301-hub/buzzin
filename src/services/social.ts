@@ -28,6 +28,9 @@ import type { FeedFilter, FeedKind, Visibility } from "@/lib/types";
 
 export type FeedItem = {
   id: string;
+  title: string | null;
+  topic: string | null;
+  linkUrl: string | null;
   body: string;
   kind: FeedKind;
   createdAt: string;
@@ -216,6 +219,9 @@ export function feed(
     }
     return {
       id: row.post.id,
+      title: row.post.title,
+      topic: row.post.topic,
+      linkUrl: row.post.linkUrl,
       body: row.post.body,
       kind: row.post.kind,
       createdAt: row.post.createdAt,
@@ -265,6 +271,12 @@ export function postsByAuthor(authorId: string, viewerId: string | null, limit =
 
 export type CreatePostInput = {
   body: string;
+  /** Optional heading for a learning entry or an update. */
+  title?: string | null;
+  /** Optional topic for a learning entry. */
+  topic?: string | null;
+  /** Optional supporting link (http/https only). */
+  linkUrl?: string | null;
   kind?: FeedKind;
   projectId?: string | null;
   taskId?: string | null;
@@ -278,6 +290,11 @@ export type CreatePostInput = {
 export function createPost(authorId: string, input: CreatePostInput): string {
   if (input.body.trim().length < 2) throw new AppError("Write something first.");
   if (input.body.length > 5000) throw new AppError("Posts are limited to 5,000 characters.");
+  if (input.title && input.title.trim().length > 140) throw new AppError("Keep the heading under 140 characters.");
+  if (input.topic && input.topic.trim().length > 80) throw new AppError("Keep the topic under 80 characters.");
+  if (input.linkUrl && !/^https?:\/\/\S+$/i.test(input.linkUrl.trim())) {
+    throw new AppError("The supporting link needs a full address starting with http:// or https://.");
+  }
   if (input.imageId) {
     const image = getMedia(input.imageId);
     if (!image || image.ownerId !== authorId) throw new AppError("That image is not yours to attach.");
@@ -314,6 +331,9 @@ export function createPost(authorId: string, input: CreatePostInput): string {
       taskId: input.taskId ?? null,
       resourceId: input.resourceId ?? null,
       kind: input.kind ?? "general",
+      title: input.title?.trim().slice(0, 140) || null,
+      topic: input.topic?.trim().slice(0, 80) || null,
+      linkUrl: input.linkUrl?.trim() || null,
       body: input.body.trim(),
       imageId: input.imageId ?? null,
       altText: input.altText?.trim().slice(0, 400) || null,

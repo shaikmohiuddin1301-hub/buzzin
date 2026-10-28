@@ -97,7 +97,8 @@ export async function registerUser(input: RegisterInput) {
       })
       .run();
     for (const role of new Set(roles)) tx.insert(userRoles).values({ userId, role }).run();
-    tx.insert(userPreferences).values({ userId }).run();
+    // A brand-new account is the one case that should meet the welcome tour.
+    tx.insert(userPreferences).values({ userId, appTourStatus: null }).run();
   });
 
   const token = randomToken(24);
@@ -386,6 +387,7 @@ export function updatePreferences(
     shareLearningHistory?: boolean;
     reduceMotion?: boolean;
     theme?: "light" | "dark" | "system";
+    appTourStatus?: "completed" | "skipped" | null;
   },
 ): void {
   getDb()

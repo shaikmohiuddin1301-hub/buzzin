@@ -332,7 +332,30 @@ export function createQuickProject(ownerId: string, input: QuickProjectInput) {
 export function updateProject(
   projectId: string,
   viewer: Viewer,
-  input: Partial<Pick<Project, "name" | "shortDescription" | "overview" | "problem" | "audience" | "stage" | "visibility" | "workMode" | "effort" | "deadline" | "compensationType" | "compensationDetails" | "allowPublicDocs" | "confidentialityNotes" | "ipNotes" | "category" | "coverImageId">>,
+  input: Partial<
+    Pick<
+      Project,
+      | "name"
+      | "shortDescription"
+      | "overview"
+      | "problem"
+      | "audience"
+      | "stage"
+      | "visibility"
+      | "workMode"
+      | "effort"
+      | "deadline"
+      | "compensationType"
+      | "compensationDetails"
+      | "allowPublicDocs"
+      | "openToCollaborators"
+      | "confidentialityNotes"
+      | "ipNotes"
+      | "category"
+      | "links"
+      | "coverImageId"
+    >
+  >,
 ): void {
   const access = requireProjectAccess(projectId, viewer, "edit");
   const { coverImageId, ...fields } = input;
@@ -425,13 +448,25 @@ export function projectDetail(projectId: string, viewer: Viewer) {
       title: projectUpdates.title,
       body: projectUpdates.body,
       visibility: projectUpdates.visibility,
+      status: projectUpdates.status,
+      progressPercent: projectUpdates.progressPercent,
+      milestone: projectUpdates.milestone,
+      linkUrl: projectUpdates.linkUrl,
       createdAt: projectUpdates.createdAt,
       authorName: users.displayName,
       authorUsername: users.username,
     })
     .from(projectUpdates)
     .innerJoin(users, eq(users.id, projectUpdates.authorId))
-    .where(and(eq(projectUpdates.projectId, projectId), access.isMember ? undefined : eq(projectUpdates.visibility, "public")))
+    .where(
+      and(
+        eq(projectUpdates.projectId, projectId),
+        // Drafts are visible to the team that can edit; everybody else only ever
+        // sees published, public updates.
+        access.isMember ? undefined : eq(projectUpdates.visibility, "public"),
+        access.canEdit ? undefined : eq(projectUpdates.status, "published"),
+      ),
+    )
     .orderBy(desc(projectUpdates.createdAt))
     .all();
 
@@ -475,6 +510,46 @@ export function recordProjectView(projectId: string, viewerId?: string | null): 
   db.insert(analyticsEvents)
     .values({ kind: "project_view", targetType: "project", targetId: projectId, userId: viewerId ?? null })
     .run();
+}
+
+/**
+ * Replace the skills a project asks for.
+ *
+ * Skills power discovery, so a removed skill must stop matching the project; the
+ * replacement is a transaction rather than a merge. Names that already exist are
+ * reused through `upsertSkill`, never duplicated.
+ */
+export function replaceProjectSkills(projectId: string, viewer: Viewer, names: string[]): void {
+  requireProjectAccess(projectId, viewer, "edit");
+  const cleaned = [...new Set(names.map((name) => name.trim()).filter(Boolean))].slice(0, 12);
+  transaction((tx) => {
+    tx.delete(projectSkills).where(eq(projectSkills.projectId, projectId)).run();
+    for (const name of cleaned) {
+      const skill = upsertSkill(name);
+      if (skill) tx.insert(projectSkills).values({ projectId, skillId: skill.id }).onConflictDoNothing().run();
+    }
+  });
+}
+
+/** Add milestones the project does not already have, keeping existing ones. */
+export function addProjectMilestones(
+  projectId: string,
+  viewer: Viewer,
+  milestones: { title: string; description?: string; dueDate?: string }[],
+): void {
+  requireProjectAccess(projectId, viewer, "edit");
+  const existing = new Set(
+    getDb()
+      .select({ title: projectMilestones.title })
+      .from(projectMilestones)
+      .where(eq(projectMilestones.projectId, projectId))
+      .all()
+      .map((row) => row.title.trim().toLowerCase()),
+  );
+  for (const milestone of milestones.slice(0, 12)) {
+    if (!milestone.title.trim() || existing.has(milestone.title.trim().toLowerCase())) continue;
+    addMilestone(projectId, viewer, milestone);
+  }
 }
 
 export function addMilestone(
@@ -529,11 +604,29 @@ export function setMilestoneStatus(
 export function postProjectUpdate(
   projectId: string,
   viewer: Viewer,
-  input: { title: string; body: string; visibility: Visibility },
+  input: {
+    title: string;
+    body: string;
+    visibility: Visibility;
+    /** A draft is kept for the team and never mirrored into the feed. */
+    publish?: boolean;
+    progressPercent?: number | null;
+    milestone?: string | null;
+    linkUrl?: string | null;
+  },
 ): string {
   requireProjectAccess(projectId, viewer, "edit");
   if (input.title.trim().length < 3) throw new AppError("Give the update a short title.");
   if (input.body.trim().length < 10) throw new AppError("Write a little more detail in the update.");
+  if (input.progressPercent !== null && input.progressPercent !== undefined) {
+    if (!Number.isInteger(input.progressPercent) || input.progressPercent < 0 || input.progressPercent > 100) {
+      throw new AppError("Progress must be a whole number between 0 and 100.");
+    }
+  }
+  if (input.linkUrl && !/^https?:\/\/\S+$/i.test(input.linkUrl.trim())) {
+    throw new AppError("The supporting link needs a full address starting with http:// or https://.");
+  }
+  const publish = input.publish ?? true;
 
   const db = getDb();
   const id = randomUUID();
@@ -547,25 +640,30 @@ export function postProjectUpdate(
         title: input.title.trim().slice(0, 140),
         body: input.body.slice(0, 6000),
         visibility: input.visibility,
+        status: publish ? "published" : "draft",
+        progressPercent: input.progressPercent ?? null,
+        milestone: input.milestone?.trim().slice(0, 140) || null,
+        linkUrl: input.linkUrl?.trim() || null,
       })
       .run();
-    if (input.visibility === "public") {
+    if (publish && input.visibility === "public") {
       tx.insert(posts)
         .values({
           authorId: viewer!.id,
           projectId,
           kind: "project_update",
-          body: `${input.title}\n\n${input.body}`.slice(0, 4000),
+          title: input.title.trim().slice(0, 140),
+          linkUrl: input.linkUrl?.trim() || null,
+          body: input.body.slice(0, 4000),
         })
         .run();
     }
   });
 
   // Notifications are written after the update exists, so a failed insert cannot
-  // announce an update that was rolled back. Only a public update on a public
-  // project is announced to followers: a private or invite-only project has no
-  // public destination for them to open.
-  if (input.visibility === "public" && project?.visibility === "public") {
+  // announce an update that was rolled back. Only a published, public update on a
+  // public project is announced to followers: a draft announces nothing.
+  if (publish && input.visibility === "public" && project?.visibility === "public") {
     const followerIds = db
       .select({ userId: projectFollows.userId })
       .from(projectFollows)

@@ -553,7 +553,9 @@ export default async function ProjectPage({
             <Card className="p-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-[14px] font-semibold text-navy-950">Updates</h2>
-                <span className="text-[11px] text-navy-500">{updates.length} published</span>
+                <span className="text-[11px] text-navy-500">
+                  {updates.length} update{updates.length === 1 ? "" : "s"}
+                </span>
               </div>
               <div className="mt-3 space-y-4">
                 {updates.slice(0, 3).map((update) => (
@@ -561,11 +563,32 @@ export default async function ProjectPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-[13px] font-semibold text-navy-900">{update.title}</h3>
                       <Badge tone={update.visibility === "public" ? "success" : "neutral"}>{label(update.visibility)}</Badge>
+                      {update.status === "draft" ? <Badge tone="warning">Draft</Badge> : null}
                       <time className="text-[11px] text-navy-400" dateTime={update.createdAt}>
                         {relativeTime(update.createdAt)}
                       </time>
                     </div>
                     <p className="mt-1.5 whitespace-pre-line text-[12.5px] leading-6 text-navy-700">{truncate(update.body, 400)}</p>
+                    {update.progressPercent !== null || update.milestone ? (
+                      <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-navy-500">
+                        {update.progressPercent !== null ? (
+                          <span className="rounded-full bg-navy-100 px-2 py-0.5 font-medium text-navy-700">
+                            {update.progressPercent}% complete
+                          </span>
+                        ) : null}
+                        {update.milestone ? <span>Milestone: {update.milestone}</span> : null}
+                      </p>
+                    ) : null}
+                    {update.linkUrl ? (
+                      <a
+                        href={update.linkUrl}
+                        target="_blank"
+                        rel="nofollow noopener noreferrer"
+                        className="mt-1 inline-block max-w-full truncate text-[11.5px] font-medium text-brand-600 underline"
+                      >
+                        {update.linkUrl.replace(/^https?:\/\//, "")}
+                      </a>
+                    ) : null}
                     <p className="mt-2 text-[11px] text-navy-500">by {update.authorName}</p>
                   </article>
                 ))}
@@ -670,6 +693,9 @@ export default async function ProjectPage({
               <Card className="p-4">
                 <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Owner tools</h2>
                 <div className="mt-2 space-y-2">
+                  <ButtonLink href={`/projects/${projectId}/edit`} variant="secondary" size="sm" className="w-full">
+                    <Pencil size={13} aria-hidden="true" /> {project.status === "draft" ? "Continue draft" : "Edit project"}
+                  </ButtonLink>
                   <ButtonLink href={`/projects/${projectId}/tasks`} variant="secondary" size="sm" className="w-full">
                     <FolderKanban size={13} aria-hidden="true" /> Manage tasks
                   </ButtonLink>
@@ -815,11 +841,27 @@ export default async function ProjectPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-[13px] font-semibold text-navy-900">{update.title}</h3>
                       <Badge tone={update.visibility === "public" ? "success" : "neutral"}>{label(update.visibility)}</Badge>
+                      {update.status === "draft" ? <Badge tone="warning">Draft</Badge> : null}
                       <time className="text-[11px] text-navy-400" dateTime={update.createdAt}>
                         {formatDate(update.createdAt)}
                       </time>
                     </div>
                     <div className="prose-bt mt-1.5 whitespace-pre-line text-[13px]">{update.body}</div>
+                    {update.progressPercent !== null || update.milestone ? (
+                      <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-navy-500">
+                        {update.progressPercent !== null ? (
+                          <span className="rounded-full bg-navy-100 px-2 py-0.5 font-medium text-navy-700">
+                            {update.progressPercent}% complete
+                          </span>
+                        ) : null}
+                        {update.milestone ? <span>Milestone: {update.milestone}</span> : null}
+                        {update.linkUrl ? (
+                          <a href={update.linkUrl} target="_blank" rel="nofollow noopener noreferrer" className="font-medium text-brand-600 underline">
+                            Supporting link
+                          </a>
+                        ) : null}
+                      </p>
+                    ) : null}
                     <p className="mt-2 text-[11px] text-navy-500">by {update.authorName}</p>
                   </article>
                 ))}

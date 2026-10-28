@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
-import { createProjectAction } from "@/app/actions/projects";
+import { createProjectAction, updateProjectSetupAction } from "@/app/actions/projects";
 import { SubmitButton } from "@/components/client/submit-button";
 import { Alert, Badge, Card, Field, Input, Select, Textarea, cn } from "@/components/ui";
 
@@ -30,6 +30,50 @@ type DraftTask = {
 
 const MAX_TASKS = 25;
 const MAX_AREAS = 10;
+
+/** Unfinished creation is kept in the tab until it is saved or discarded. */
+const STORAGE_KEY = "bt:project-wizard";
+
+type WizardBasics = {
+  name: string;
+  shortDescription: string;
+  overview: string;
+  problem: string;
+  audience: string;
+  category: string;
+  stage: string;
+  workMode: string;
+  visibility: string;
+  businessId: string;
+  effort: string;
+  deadline: string;
+  allowPublicDocs: boolean;
+  collaborators: boolean;
+};
+
+type WizardTeam = {
+  skills: string;
+  compensationType: string;
+  compensationDetails: string;
+  confidentialityNotes: string;
+  ipNotes: string;
+};
+
+type WizardLink = { label: string; url: string };
+type WizardMilestone = { title: string; description: string; dueDate: string };
+
+export type WizardInitial = {
+  basics: WizardBasics;
+  team: WizardTeam;
+  links: WizardLink[];
+  milestones: WizardMilestone[];
+  workAreas: string[];
+  /** Areas that already exist on the project and must not be deleted from here. */
+  persistedAreas?: string[];
+  tasks: (DraftTask & { id?: string })[];
+  coverUrl?: string | null;
+  status?: "draft" | "published";
+};
 
 /** Only http(s) links are accepted; an empty value is simply an unused field. */
 function isWebUrl(value: string): boolean {
@@ -90,6 +134,10 @@ export function ProjectWizard({
   compensationTypes,
   businesses,
   emailVerified,
+  mode = "create",
+  projectId,
+  initial,
+  saved = false,
 }: {
   categories: Option[];
   visibilities: Option[];
@@ -98,53 +146,147 @@ export function ProjectWizard({
   compensationTypes: Option[];
   businesses: Business[];
   emailVerified: boolean;
+  /** Edit mode reopens an existing draft; create mode starts a new project. */
+  mode?: "create" | "edit";
+  projectId?: string;
+  initial?: WizardInitial;
+  /** A success flash: the stored unfinished draft has served its purpose. */
+  saved?: boolean;
 }) {
+  const isEdit = mode === "edit";
+
+  function defaultBasics(): WizardBasics {
+    return {
+      name: "",
+      shortDescription: "",
+      overview: "",
+      problem: "",
+      audience: "",
+      category: categories[0]?.value ?? "other",
+      stage: stages[0]?.value ?? "idea",
+      workMode: workModes[0]?.value ?? "remote",
+      visibility: "public",
+      businessId: "",
+      effort: "",
+      deadline: "",
+      allowPublicDocs: true,
+      collaborators: true,
+    };
+  }
+
+  function defaultTeam(): WizardTeam {
+    return {
+      skills: "",
+      compensationType: compensationTypes[0]?.value ?? "unpaid",
+      compensationDetails: "",
+      confidentialityNotes: "",
+      ipNotes: "",
+    };
+  }
+
+  const blankLinks = (): WizardLink[] =>
+    Array.from({ length: 3 }, (_, index) => initial?.links[index] ?? { label: "", url: "" });
+  const blankMilestones = (): WizardMilestone[] =>
+    Array.from({ length: 2 }, (_, index) => initial?.milestones[index] ?? { title: "", description: "", dueDate: "" });
+
   const [step, setStep] = useState<StepId>(FIRST_STEP);
   // Validation is state, not a disabled button: pressing Continue always answers,
   // naming the field that is missing and why.
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [basics, setBasics] = useState({
-    name: "",
-    shortDescription: "",
-    overview: "",
-    problem: "",
-    audience: "",
-    category: categories[0]?.value ?? "other",
-    stage: stages[0]?.value ?? "idea",
-    workMode: workModes[0]?.value ?? "remote",
-    visibility: "public",
-    businessId: "",
-    effort: "",
-    deadline: "",
-    allowPublicDocs: true,
-    collaborators: true,
-  });
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [basics, setBasics] = useState<WizardBasics>(() => initial?.basics ?? defaultBasics());
+  const [coverUrl, setCoverUrl] = useState<string | null>(initial?.coverUrl ?? null);
   const coverRef = useRef<HTMLInputElement>(null);
-  const [links, setLinks] = useState([
-    { label: "", url: "" },
-    { label: "", url: "" },
-    { label: "", url: "" },
-  ]);
-  const [milestones, setMilestones] = useState([
-    { title: "", description: "", dueDate: "" },
-    { title: "", description: "", dueDate: "" },
-  ]);
+  const [links, setLinks] = useState<WizardLink[]>(blankLinks);
+  const [milestones, setMilestones] = useState<WizardMilestone[]>(blankMilestones);
   // Additional Details start collapsed. A malformed reference URL opens the
   // section so its own error can be seen rather than hidden behind the summary.
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [team, setTeam] = useState({
-    skills: "",
-    compensationType: compensationTypes[0]?.value ?? "unpaid",
-    compensationDetails: "",
-    confidentialityNotes: "",
-    ipNotes: "",
-  });
+  const [team, setTeam] = useState<WizardTeam>(() => initial?.team ?? defaultTeam());
   const [workAreaInput, setWorkAreaInput] = useState("");
-  const [workAreas, setWorkAreas] = useState<string[]>([]);
-  const [tasks, setTasks] = useState<DraftTask[]>([]);
-  const [editing, setEditing] = useState<DraftTask | null>(null);
+  const [workAreas, setWorkAreas] = useState<string[]>(initial?.workAreas ?? []);
+  const [persistedAreas] = useState<string[]>(initial?.persistedAreas ?? initial?.workAreas ?? []);
+  const [tasks, setTasks] = useState<(DraftTask & { id?: string })[]>(initial?.tasks ?? []);
+  const [editingTask, setEditingTask] = useState<DraftTask | null>(null);
   const [taskError, setTaskError] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [hydrated, setHydrated] = useState(mode === "edit");
+
+  /**
+   * Reopen unfinished creation in this tab.
+   *
+   * A failed save redirects back here, and a reload or an accidental back button
+   * should not cost the caption, task list or links that were typed. A success
+   * flash means the draft reached the database, so the stored copy is discarded
+   * rather than reappearing on a later, empty form.
+   */
+  useEffect(() => {
+    if (isEdit) return;
+    if (saved) {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // Private modes can refuse storage; that is not an error worth showing.
+      }
+      return;
+    }
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw) as Partial<{
+          basics: WizardBasics;
+          team: WizardTeam;
+          links: WizardLink[];
+          milestones: WizardMilestone[];
+          workAreas: string[];
+          tasks: (DraftTask & { id?: string })[];
+        }>;
+        if (data.basics) setBasics((current) => ({ ...current, ...data.basics }));
+        if (data.team) setTeam((current) => ({ ...current, ...data.team }));
+        if (Array.isArray(data.links)) setLinks(data.links.slice(0, 3));
+        if (Array.isArray(data.milestones)) setMilestones(data.milestones);
+        if (Array.isArray(data.workAreas)) setWorkAreas(data.workAreas);
+        if (Array.isArray(data.tasks)) setTasks(data.tasks);
+        setRestored(true);
+      }
+    } catch {
+      // Corrupt or unavailable storage is ignored; the form still works.
+    }
+    setHydrated(true);
+    // Runs once: this is hydration from the tab's own storage, not a prop sync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (isEdit || !hydrated) return;
+    const timer = window.setTimeout(() => {
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ basics, team, links, milestones, workAreas, tasks }));
+      } catch {
+        // Ignore quota and privacy-mode failures.
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [isEdit, hydrated, basics, team, links, milestones, workAreas, tasks]);
+
+  const startOver = () => {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Nothing to clear.
+    }
+    setBasics(defaultBasics());
+    setTeam(defaultTeam());
+    setLinks(blankLinks());
+    setMilestones(blankMilestones());
+    setWorkAreas([]);
+    setTasks([]);
+    setEditingTask(null);
+    setErrors({});
+    setStep(FIRST_STEP);
+    setRestored(false);
+    setCoverUrl(null);
+    if (coverRef.current) coverRef.current.value = "";
+  };
 
   const clearError = (key: string) =>
     setErrors((current) => {
@@ -285,7 +427,7 @@ export function ProjectWizard({
       next[index] = task;
       return next;
     });
-    setEditing(null);
+    setEditingTask(null);
     setTaskError(null);
   };
 
@@ -393,7 +535,7 @@ export function ProjectWizard({
         </ol>
       </nav>
 
-      {!emailVerified ? (
+      {!emailVerified && !isEdit ? (
         <div className="mb-4">
           <Alert tone="warning" title="Verify your email to publish">
             You can build the whole project and save it as a draft now. Publishing needs a verified address.{" "}
@@ -405,7 +547,7 @@ export function ProjectWizard({
       ) : null}
 
       <form
-        action={createProjectAction}
+        action={isEdit ? updateProjectSetupAction : createProjectAction}
         className="space-y-4"
         noValidate
         // A draft is always allowed, but it still needs the two fields the server
@@ -413,7 +555,9 @@ export function ProjectWizard({
         // drop everything typed into the rest of the wizard.
         onSubmit={(event) => {
           const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-          if (submitter?.value !== "false") return;
+          // Create: only the draft button needs the basics checked here. Edit: the
+          // one save button does, because it replaces the stored record.
+          if (!isEdit && submitter?.value !== "false") return;
           const found = validateStep(FIRST_STEP);
           if (Object.keys(found).length === 0) return;
           event.preventDefault();
@@ -434,6 +578,17 @@ export function ProjectWizard({
         <p aria-live="polite" className="sr-only">
           Step {step} of {STEPS.length}: {stepLabel(step)}
         </p>
+        {isEdit && projectId ? <input type="hidden" name="projectId" value={projectId} /> : null}
+        {restored ? (
+          <div className="mb-1">
+            <Alert tone="info" title="Unfinished project restored">
+              Everything you typed before the last save attempt is still here.{" "}
+              <button type="button" onClick={startOver} className="font-medium text-brand-600 underline">
+                Start over
+              </button>
+            </Alert>
+          </div>
+        ) : null}
         <input type="hidden" name="tasksJson" value={tasksPayload} />
         <input type="hidden" name="workAreasJson" value={JSON.stringify(workAreas)} />
 
@@ -731,7 +886,9 @@ export function ProjectWizard({
                         type="button"
                         onClick={() => removeWorkArea(area)}
                         aria-label={`Remove work area ${area}`}
-                        className="text-navy-400 hover:text-red-600"
+                        title={persistedAreas.includes(area) ? "Existing areas are managed on the project page" : undefined}
+                        disabled={persistedAreas.includes(area)}
+                        className="text-navy-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                       >
                         <Trash2 size={12} aria-hidden="true" />
                       </button>
@@ -842,8 +999,9 @@ export function ProjectWizard({
               <div>
                 <h2 className="text-[15px] font-semibold text-navy-950">Task breakdown</h2>
                 <p className="mt-1 text-[12.5px] leading-6 text-navy-500">
-                  Break the project into individual pieces of work now, or add them later. A task is not required to have an
-                  assignee — leave it open and it stays available for contributors to apply for.
+                  {isEdit
+                    ? "Tasks already on the board stay there and are managed from the task board. Anything you add here is created when you save."
+                    : "Break the project into individual pieces of work now, or add them later. A task is not required to have an assignee — leave it open and it stays available for contributors to apply for."}
                 </p>
               </div>
               <Badge tone={tasks.length > 0 ? "brand" : "neutral"}>
@@ -877,42 +1035,48 @@ export function ProjectWizard({
                         ) : null}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveTask(index, -1)}
-                        disabled={index === 0}
-                        aria-label={`Move ${task.title} up`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-navy-100 disabled:opacity-40"
-                      >
-                        <ChevronUp size={14} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveTask(index, 1)}
-                        disabled={index === tasks.length - 1}
-                        aria-label={`Move ${task.title} down`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-navy-100 disabled:opacity-40"
-                      >
-                        <ChevronDown size={14} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditing(task)}
-                        aria-label={`Edit ${task.title}`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-navy-100"
-                      >
-                        <Pencil size={13} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTasks((current) => current.filter((entry) => entry.key !== task.key))}
-                        aria-label={`Remove ${task.title}`}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={13} aria-hidden="true" />
-                      </button>
-                    </div>
+                    {task.id ? (
+                      <span className="rounded-full bg-navy-100 px-2 py-0.5 text-[10px] font-medium text-navy-600">
+                        On the task board
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveTask(index, -1)}
+                          disabled={index === 0}
+                          aria-label={`Move ${task.title} up`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-navy-100 disabled:opacity-40"
+                        >
+                          <ChevronUp size={14} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveTask(index, 1)}
+                          disabled={index === tasks.length - 1}
+                          aria-label={`Move ${task.title} down`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-navy-100 disabled:opacity-40"
+                        >
+                          <ChevronDown size={14} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingTask(task)}
+                          aria-label={`Edit ${task.title}`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-navy-100"
+                        >
+                          <Pencil size={13} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTasks((current) => current.filter((entry) => entry.key !== task.key))}
+                          aria-label={`Remove ${task.title}`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-navy-500 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={13} aria-hidden="true" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -924,7 +1088,7 @@ export function ProjectWizard({
               ) : null}
             </ul>
 
-            {!editing ? (
+            {!editingTask ? (
               <button
                 type="button"
                 onClick={() => {
@@ -932,7 +1096,7 @@ export function ProjectWizard({
                     setTaskError(`A project can start with at most ${MAX_TASKS} tasks.`);
                     return;
                   }
-                  setEditing(emptyTask());
+                  setEditingTask(emptyTask());
                 }}
                 className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-navy-200 bg-surface px-3 py-2 text-[12.5px] font-medium text-navy-700 hover:bg-navy-50"
               >
@@ -940,13 +1104,13 @@ export function ProjectWizard({
               </button>
             ) : (
               <TaskEditor
-                task={editing}
+                task={editingTask}
                 workAreas={workAreas}
                 visibilities={visibilities}
-                others={tasks.filter((entry) => entry.key !== editing.key)}
+                others={tasks.filter((entry) => entry.key !== editingTask.key)}
                 onSave={saveTask}
                 onCancel={() => {
-                  setEditing(null);
+                  setEditingTask(null);
                   setTaskError(null);
                 }}
               />
@@ -1152,15 +1316,26 @@ export function ProjectWizard({
             ) : null}
 
             <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <SubmitButton name="publish" value="false" variant="secondary" size="lg" pendingLabel="Saving…">
-                Save as draft
-              </SubmitButton>
-              <SubmitButton name="publish" value="true" size="lg" disabled={blockers.length > 0} pendingLabel="Publishing…">
-                Publish project
-              </SubmitButton>
+              {isEdit ? (
+                <SubmitButton name="save" value="on" size="lg" pendingLabel="Saving…">
+                  Save changes
+                </SubmitButton>
+              ) : (
+                <>
+                  <SubmitButton name="publish" value="false" variant="secondary" size="lg" pendingLabel="Saving…">
+                    Save as draft
+                  </SubmitButton>
+                  <SubmitButton name="publish" value="true" size="lg" disabled={blockers.length > 0} pendingLabel="Publishing…">
+                    Publish project
+                  </SubmitButton>
+                </>
+              )}
             </div>
 
-            <Link href="/projects" className="text-[12.5px] font-medium text-navy-500 underline">
+            <Link
+              href={isEdit && projectId ? `/projects/${projectId}` : "/projects"}
+              className="text-[12.5px] font-medium text-navy-500 underline"
+            >
               Cancel
             </Link>
           </div>
@@ -1170,7 +1345,7 @@ export function ProjectWizard({
               Fix the highlighted {Object.keys(errors).length === 1 ? "field" : "fields"} above to continue to the next step.
             </p>
           ) : null}
-          {blockers.length > 0 ? (
+          {!isEdit && blockers.length > 0 ? (
             <p className="mt-2 text-[11.5px] leading-5 text-navy-500">
               {blockers.length} thing{blockers.length === 1 ? "" : "s"} still needed before publishing. "Save as draft" works at any
               point and keeps everything you have entered.{" "}
@@ -1179,7 +1354,12 @@ export function ProjectWizard({
               </button>
             </p>
           ) : null}
-          {step === 4 && blockers.length === 0 ? (
+          {isEdit ? (
+            <p className="mt-2 text-[11.5px] leading-5 text-navy-500">
+              Saving keeps this project&apos;s current status. Any publishing or joining request stays on the project page.
+            </p>
+          ) : null}
+          {!isEdit && step === 4 && blockers.length === 0 ? (
             <p className="mt-2 text-[11.5px] text-navy-500">Everything a contributor needs is present. Publish when you are ready.</p>
           ) : null}
         </div>
