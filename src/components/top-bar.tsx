@@ -14,9 +14,9 @@ import { Logo } from "@/components/logo";
  *
  * The chrome is one shared bar, but its contents belong to the page underneath it:
  * Home owns the wordmark and the notification bell, Explore and Chats own a search
- * field, a conversation owns a back link. There is no global hamburger: account
- * options live on the Profile page itself, so no page shows a control it does not
- * use and every page keeps exactly one header.
+ * field, a conversation owns a back link. There is no global hamburger: the
+ * account's own menu sits in the profile header, so no page shows a control it
+ * does not use and every page keeps exactly one header.
  */
 function TopBar({ children }: { children: React.ReactNode }) {
   return (
@@ -144,7 +144,8 @@ export function AppHeader({
   if (pathname === "/explore") return <ExploreTopBar />;
   if (pathname === "/chats") return <ChatsTopBar unread={messages} />;
   if (pathname.startsWith("/chats/")) return <ThreadTopBar />;
-  // Your own profile is clean: its account options are part of the page body.
+  // Your own profile keeps the neutral bar; its account menu belongs to the page
+  // header, next to the name, rather than to this shared chrome.
   if (pathname === ownProfileHref) return <NeutralTopBar />;
   return <NeutralTopBar />;
 }

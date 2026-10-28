@@ -154,13 +154,16 @@ the requested steel grey; it is never the only cue for a destination.
   | Explore | discovery search only; no bell |
   | Chats | the inbox title, its live unread count, inbox search and the new-message action |
   | An open conversation | back link to the inbox, nothing else |
-  | Profile (own account) | clean: the wordmark only; account options are a row in the page body |
+  | Profile (own account) | the wordmark, and the account menu in the profile header's top-right corner |
   | Everybody else's profile, and every other page | the wordmark, no controls |
 
-  There is no global hamburger. Account options — Liked Posts & Projects, Your
-  Comments, Settings & account, Notifications and Log out — belong to the Profile
-  page and are ordinary links there, so they never open over content and never
-  need an opaque overlay to stay readable.
+  There is no global hamburger: the only one belongs to the top-right corner of
+  the signed-in account's own profile header, so no other page grows a control it
+  does not use. That menu — Liked Posts & Projects, Your Comments, Settings &
+  Account, Notifications, then Log out below a separator — is a `glass-popover`. It
+  closes on Escape, on a press outside it, and when an entry is followed, and Log
+  out is the only destructive entry. The profile header carries no banner: the
+  avatar, name, username and roles sit directly on the card surface.
 
   The search fields are URL parameters rendered by the server, so a search is
   shareable, back/forward work, and no term is invented on the client.

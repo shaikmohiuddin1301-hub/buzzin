@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, GraduationCap, MapPin, MessageSquare, Plus, Star } from "lucide-react";
 import { blockUserAction, followUserAction } from "@/app/actions/social";
-import { signOutAction } from "@/app/actions/auth";
 import { startDirectMessageAction } from "@/app/actions/chat";
 import { ProjectCard, ResourceCard } from "@/components/cards";
+import { ProfileMenu } from "@/components/client/profile-menu";
 import { Reveal } from "@/components/client/reveal";
 import { ReportForm } from "@/components/report-form";
 import { SubmitButton } from "@/components/client/submit-button";
@@ -24,6 +24,7 @@ import { accountKindLabel } from "@/lib/account";
 import { getCurrentUser } from "@/lib/auth";
 import { canViewProfile, isBlockedEitherWay } from "@/lib/authz";
 import { formatDate, relativeTime } from "@/lib/format";
+import { label } from "@/lib/types";
 import { achievementsFor, reputationSummary } from "@/lib/reputation";
 import { contributionCounts, projectHistory, verifiedContributions } from "@/services/profile";
 import { acceptedWorkForUser, learningHistoryFor, sharesLearningHistory } from "@/services/profileContent";
@@ -119,150 +120,125 @@ export default async function ProfilePage({
     <div>
       <Flash error={error} notice={notice} />
 
-      {/* Header */}
-      <Card className="overflow-hidden">
-        <div
-          className="h-24 ink-hero sm:h-32"
-          aria-hidden="true"
-        />
-        <div className="px-4 pb-5 sm:px-5">
-          <div className="-mt-10 flex flex-wrap items-end justify-between gap-3">
-            <div className="flex items-end gap-3">
-              <span className="rounded-full ring-4 ring-surface">
-                <Avatar name={person.displayName} size={80} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
-              </span>
-              <div className="pb-1">
-                <h1 className="text-xl font-semibold tracking-tight text-navy-950">{person.displayName}</h1>
-                <p className="text-[12.5px] text-navy-500">
-                  @{person.username}
-                  {userRoles.length > 0 ? ` · ${userRoles.join(", ")}` : ""}
-                </p>
+      {/* Header: the person, then their actions, then the facts. There is no banner
+          behind it — the page opens straight onto the avatar, name and username. */}
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <Avatar
+            name={person.displayName}
+            size={72}
+            src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null}
+          />
+
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-semibold tracking-tight text-navy-950 sm:text-[22px]">
+              {person.displayName}
+            </h1>
+            <p className="truncate text-[12.5px] text-navy-500">@{person.username}</p>
+            {userRoles.length > 0 || profileKind !== "individual" ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {userRoles.map((role) => (
+                  <Badge key={role} tone="neutral">
+                    {label(role)}
+                  </Badge>
+                ))}
                 {profileKind !== "individual" ? (
-                  <span className="mt-1 inline-flex">
-                    <Badge tone={profileKind === "business" ? "info" : "brand"}>
-                      {accountKindLabel(profileKind)}
-                    </Badge>
-                  </span>
+                  <Badge tone={profileKind === "business" ? "info" : "brand"}>{accountKindLabel(profileKind)}</Badge>
                 ) : null}
               </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 pb-1">
-              {isSelf ? (
-                <>
-                  <ButtonLink href="/settings?tab=profile" size="sm" variant="primary">
-                    Edit profile
-                  </ButtonLink>
-                  <ButtonLink href="/create" size="sm" variant="creative">
-                    <Plus size={13} aria-hidden="true" /> Create
-                  </ButtonLink>
-                </>
-              ) : viewer ? (
-                <>
-                  <form action={followUserAction}>
-                    <input type="hidden" name="userId" value={person.id} />
-                    <SubmitButton size="sm" variant={following ? "secondary" : "primary"} pendingLabel="…">
-                      {following ? "Following" : "Follow"}
-                    </SubmitButton>
-                  </form>
-                  <form action={startDirectMessageAction}>
-                    <input type="hidden" name="userId" value={person.id} />
-                    <SubmitButton size="sm" variant="secondary" pendingLabel="…">
-                      <MessageSquare size={12} aria-hidden="true" /> Message
-                    </SubmitButton>
-                  </form>
-                  <ReportForm targetType="user" targetId={person.id} returnTo={`/u/${person.username}`} compact />
-                </>
-              ) : (
-                <ButtonLink href="/auth/sign-in" size="sm">
-                  Sign in to follow
-                </ButtonLink>
-              )}
-            </div>
-          </div>
-
-          {person.bio ? <p className="mt-3 max-w-2xl text-[13px] leading-6 text-navy-700">{person.bio}</p> : null}
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-navy-600">
-            {person.location ? (
-              <span className="inline-flex items-center gap-1">
-                <MapPin size={12} aria-hidden="true" /> {person.location}
-              </span>
-            ) : null}
-            <span>Joined {formatDate(person.createdAt)}</span>
-            {person.portfolioUrls && person.portfolioUrls.length > 0 ? (
-              <a
-                href={person.portfolioUrls[0]}
-                target="_blank"
-                rel="nofollow noopener noreferrer"
-                className="text-brand-600 underline"
-              >
-                Portfolio
-              </a>
             ) : null}
           </div>
 
-          {skills.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {skills.map((skill) => (
-                <SkillTag key={skill.id} name={skill.name} href={`/explore?tab=skills&skill=${encodeURIComponent(skill.name)}`} />
-              ))}
-            </div>
-          ) : null}
-
-          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-navy-200 pt-4 sm:grid-cols-4">
-            {[
-              { label: "Posts", value: publishedPosts.length, hint: `${posts.length - publishedPosts.length} draft` },
-              {
-                label: "Followers",
-                value: view.followers ? followers.followers : "—",
-                hint: `Following ${followers.following}`,
-              },
-              {
-                label: "Accepted work",
-                value: view.contributions ? contributions.completed : "—",
-                hint: `${reputation.totals.contribution} contribution pts`,
-              },
-              { label: "Teaching", value: reputation.totals.teaching, hint: "Points from learner feedback" },
-            ].map((metric) => (
-              <div key={metric.label}>
-                <dt className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy-400">{metric.label}</dt>
-                <dd className="mt-0.5 text-xl font-semibold leading-tight text-navy-950">{metric.value}</dd>
-                <dd className="text-[10.5px] leading-4 text-navy-500">{metric.hint}</dd>
-              </div>
-            ))}
-          </dl>
+          {/* The account's own options, in the header's top-right corner. Rendered by
+              this page only, so no other page grows a control it does not use. */}
+          {isSelf ? <ProfileMenu /> : null}
         </div>
-      </Card>
 
-      {/* The signed-in account's options belong to the profile, not to a global
-          hamburger. They are ordinary links on the page, so they stay readable at
-          any scroll position and need no overlay to open. */}
-      {isSelf ? (
-        <Card className="mt-3 px-2 py-1.5" id="account">
-          <nav aria-label="Your account" className="flex flex-wrap items-center gap-x-1 gap-y-1">
-            {[
-              { href: "/me/liked", label: "Liked Posts & Projects" },
-              { href: "/me/comments", label: "Your Comments" },
-              { href: "/settings", label: "Settings & account" },
-              { href: "/notifications", label: "Notifications" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium text-navy-700 transition-colors hover:bg-navy-100 hover:text-navy-950"
-              >
-                {item.label}
-              </Link>
+        {person.bio ? <p className="mt-3 max-w-2xl text-[13px] leading-6 text-navy-700">{person.bio}</p> : null}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {isSelf ? (
+            <>
+              <ButtonLink href="/settings?tab=profile" size="sm" variant="primary">
+                Edit profile
+              </ButtonLink>
+              <ButtonLink href="/create" size="sm" variant="creative">
+                <Plus size={13} aria-hidden="true" /> Create
+              </ButtonLink>
+            </>
+          ) : viewer ? (
+            <>
+              <form action={followUserAction}>
+                <input type="hidden" name="userId" value={person.id} />
+                <SubmitButton size="sm" variant={following ? "secondary" : "primary"} pendingLabel="…">
+                  {following ? "Following" : "Follow"}
+                </SubmitButton>
+              </form>
+              <form action={startDirectMessageAction}>
+                <input type="hidden" name="userId" value={person.id} />
+                <SubmitButton size="sm" variant="secondary" pendingLabel="…">
+                  <MessageSquare size={12} aria-hidden="true" /> Message
+                </SubmitButton>
+              </form>
+              <ReportForm targetType="user" targetId={person.id} returnTo={`/u/${person.username}`} compact />
+            </>
+          ) : (
+            <ButtonLink href="/auth/sign-in" size="sm">
+              Sign in to follow
+            </ButtonLink>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-navy-600">
+          {person.location ? (
+            <span className="inline-flex items-center gap-1">
+              <MapPin size={12} aria-hidden="true" /> {person.location}
+            </span>
+          ) : null}
+          <span>Joined {formatDate(person.createdAt)}</span>
+          {person.portfolioUrls && person.portfolioUrls.length > 0 ? (
+            <a
+              href={person.portfolioUrls[0]}
+              target="_blank"
+              rel="nofollow noopener noreferrer"
+              className="text-brand-600 underline"
+            >
+              Portfolio
+            </a>
+          ) : null}
+        </div>
+
+        {skills.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {skills.map((skill) => (
+              <SkillTag key={skill.id} name={skill.name} href={`/explore?tab=skills&skill=${encodeURIComponent(skill.name)}`} />
             ))}
-            <form action={signOutAction} className="ml-auto">
-              <SubmitButton size="sm" variant="ghost" pendingLabel="Logging out…">
-                Log out
-              </SubmitButton>
-            </form>
-          </nav>
-        </Card>
-      ) : null}
+          </div>
+        ) : null}
+
+        <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-navy-200 pt-4 sm:grid-cols-4">
+          {[
+            { label: "Posts", value: publishedPosts.length, hint: `${posts.length - publishedPosts.length} draft` },
+            {
+              label: "Followers",
+              value: view.followers ? followers.followers : "—",
+              hint: `Following ${followers.following}`,
+            },
+            {
+              label: "Accepted work",
+              value: view.contributions ? contributions.completed : "—",
+              hint: `${reputation.totals.contribution} contribution pts`,
+            },
+            { label: "Teaching", value: reputation.totals.teaching, hint: "Points from learner feedback" },
+          ].map((metric) => (
+            <div key={metric.label}>
+              <dt className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy-400">{metric.label}</dt>
+              <dd className="mt-0.5 text-xl font-semibold leading-tight text-navy-950">{metric.value}</dd>
+              <dd className="text-[10.5px] leading-4 text-navy-500">{metric.hint}</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
 
       {blocked ? (
         <div className="mt-4">
