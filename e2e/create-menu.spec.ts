@@ -25,6 +25,8 @@ async function openCreate(page: Page) {
 }
 
 test("every Create menu option opens its own workflow", async ({ page }) => {
+  // Seven routes on a cold dev server; compilation is the slow part, not the app.
+  test.setTimeout(120_000);
   const options = [
     { link: /^New post/, heading: "New post" },
     { link: /^Share a learning/, heading: "Share a learning" },

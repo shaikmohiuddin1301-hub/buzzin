@@ -22,7 +22,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  // The suite runs against `next dev`, so a cold route can spend a few seconds
+  // compiling before the browser sees it. This only affects how long a real
+  // assertion waits before failing; it does not weaken any assertion.
+  expect: { timeout: 20_000 },
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
   use: {
     baseURL,
