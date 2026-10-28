@@ -3,20 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Heart, LogOut, Menu, MessageSquare, Settings, X } from "lucide-react";
+import { Heart, LogOut, Menu, MessageSquare, Settings, UserRound, X } from "lucide-react";
 import { signOutAction } from "@/app/actions/auth";
 import { cn } from "@/components/ui";
 
 /**
- * The one menu in the app chrome, and it lives on the Profile page only.
+ * The account menu behind the hamburger in the Home and Profile headers.
  *
- * Everything in it belongs to the signed-in account, so it stays the same
- * wherever that profile is opened from. Log out is separated at the bottom and
- * goes through the existing session-ending server action, which clears the
- * cookie before redirecting, so no protected page can be reopened with a stale
- * session.
+ * It is the only menu in the app chrome. Everything in it belongs to the signed-in
+ * account, so it stays the same wherever it is opened from. Log out is separated at
+ * the bottom and goes through the existing session-ending server action, which
+ * clears the cookie before redirecting, so no protected page can be reopened with a
+ * stale session.
  */
-export function ProfileMenu() {
+export function AccountMenu({ profileHref }: { profileHref: string }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,9 +50,10 @@ export function ProfileMenu() {
   }, [open]);
 
   const items = [
+    { href: profileHref, label: "Your profile", icon: UserRound },
     { href: "/me/liked", label: "Liked Posts & Projects", icon: Heart },
     { href: "/me/comments", label: "Your Comments", icon: MessageSquare },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/settings", label: "Settings & account", icon: Settings },
   ];
 
   return (
@@ -62,7 +63,7 @@ export function ProfileMenu() {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        aria-controls="profile-menu"
+        aria-controls="account-menu"
         aria-label={open ? "Close menu" : "Open menu"}
         className={cn(
           "inline-flex h-9 w-9 items-center justify-center rounded-xl border border-navy-200/70 bg-surface text-navy-700 transition hover:bg-navy-50",
@@ -74,10 +75,10 @@ export function ProfileMenu() {
 
       {open ? (
         <div
-          id="profile-menu"
+          id="account-menu"
           ref={panelRef}
           role="menu"
-          aria-label="Profile menu"
+          aria-label="Account menu"
           className="motion-fade glass absolute left-0 top-[calc(100%+0.5rem)] z-50 w-64 overflow-hidden rounded-2xl shadow-float"
         >
           <ul className="p-1.5">

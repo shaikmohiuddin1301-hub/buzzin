@@ -7,26 +7,14 @@ import { followUserAction } from "@/app/actions/social";
 import { ProjectCard, ResourceCard, PersonCard } from "@/components/cards";
 import { Reveal } from "@/components/client/reveal";
 import { SubmitButton } from "@/components/client/submit-button";
-import {
-  Alert,
-  Badge,
-  ButtonLink,
-  Card,
-  EmptyState,
-  Field,
-  Flash,
-  Input,
-  PageHeader,
-  Select,
-  Tabs,
-} from "@/components/ui";
+import { Avatar, Badge, ButtonLink, Card, EmptyState, Field, Flash, Input, Select, Tabs } from "@/components/ui";
 import { readFlash } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { listProjects } from "@/services/projects";
 import { personalisedDiscovery } from "@/services/recommendations";
 import { listResources, learningTopics } from "@/services/learning";
 import { listSkills, searchPeople } from "@/services/users";
-import { listChallenges, listBusinesses } from "@/services/social";
+import { listChallenges, listBusinesses, searchAll } from "@/services/social";
 import {
   COMPENSATION_TYPES,
   PROJECT_CATEGORIES,
@@ -70,7 +58,9 @@ export default async function ExplorePage({
   const format = typeof params.format === "string" ? params.format : "";
   const level = typeof params.level === "string" ? params.level : "";
   const price = typeof params.price === "string" ? (params.price as "free" | "paid") : undefined;
-  const businessQuery = typeof params.bq === "string" ? params.bq : "";
+  // The header search feeds every category, businesses included; `bq` stays for
+  // links made before that field existed.
+  const businessQuery = typeof params.bq === "string" && params.bq ? params.bq : q;
   // Only computed on the For you tab: other tabs keep their own queries.
   const discovery = viewer && tab === "foryou" ? personalisedDiscovery(viewer) : null;
 
@@ -94,6 +84,9 @@ export default async function ExplorePage({
     }
   }
 
+  // The default category answers a header search with results from every kind of
+  // record, so a term never lands on a page that silently ignores it.
+  const allResults = tab === "foryou" && q ? searchAll(q, 4) : null;
   const people = tab === "people" ? searchPeople(q, 30) : [];
   const skillResults = tab === "skills" ? listSkills(q || undefined) : [];
   const resources =
@@ -113,65 +106,116 @@ export default async function ExplorePage({
 
   return (
     <div>
-      <PageHeader
-        title="Explore"
-        description="Projects looking for collaborators, people with the skills, learning material built from real work, and the challenges running now."
-        actions={
-          tab === "foryou" ? (
-            <ButtonLink href="/search" variant="secondary" size="sm">
-              Search everything
-            </ButtonLink>
-          ) : (
-            <form action="/explore" className="flex items-center gap-2">
-              <input type="hidden" name="tab" value={tab} />
-              <label htmlFor="explore-q" className="sr-only">
-                Search
-              </label>
-              <Input id="explore-q" name="q" defaultValue={q} placeholder="Search…" className="h-9 w-48 text-[13px]" />
-              <ButtonLink href="/search" variant="ghost" size="sm">
-                Advanced
-              </ButtonLink>
-            </form>
-          )
-        }
-      />
+      {/* The header carries the search, so the page keeps its title for structure
+          without spending a screen of space on an introduction. */}
+      <h1 className="sr-only">Explore</h1>
 
       <Flash error={error} notice={notice} />
 
-      <Tabs current={tab} items={TABS.map((item) => ({ id: item.id, label: item.label, href: `/explore?tab=${item.id}` }))} />
+      {/* The category rail is the first thing under the header search, so results
+          start high on the screen instead of behind an introduction. */}
+      <Tabs
+        current={tab}
+        items={TABS.map((item) => ({
+          id: item.id,
+          label: item.label,
+          href: q ? `/explore?tab=${item.id}&q=${encodeURIComponent(q)}` : `/explore?tab=${item.id}`,
+        }))}
+      />
+
+      {q ? (
+        <p className="-mt-3 mb-4 flex flex-wrap items-center gap-2 text-[12px] text-navy-500">
+          <span>
+            Results for <span className="font-medium text-navy-800">“{q}”</span>
+          </span>
+          <Link href={buildQuery({ q: undefined })} className="font-medium text-navy-700 underline">
+            Clear search
+          </Link>
+        </p>
+      ) : null}
+
+      {allResults ? (
+        <section className="mb-8" aria-labelledby="explore-results">
+          <h2 id="explore-results" className="text-[15px] font-semibold text-navy-950">
+            Results for “{q}”
+          </h2>
+          {allResults.projects.length + allResults.people.length + allResults.resources.length === 0 ? (
+            <EmptyState
+              title="Nothing matches that search"
+              description="Try a shorter term, or browse the categories above."
+            />
+          ) : (
+            <div className="mt-3 space-y-4">
+              {allResults.projects.length > 0 ? (
+                <Card>
+                  <h3 className="border-b border-navy-200 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-navy-500">
+                    Projects
+                  </h3>
+                  <ul className="divide-y divide-navy-200">
+                    {allResults.projects.map((project) => (
+                      <li key={project.id} className="px-4 py-2.5">
+                        <Link href={`/projects/${project.id}`} className="text-[13px] font-medium text-navy-950 hover:underline">
+                          {project.name}
+                        </Link>
+                        <p className="line-clamp-1 text-[11.5px] text-navy-500">{project.shortDescription}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+
+              {allResults.people.length > 0 ? (
+                <Card>
+                  <h3 className="border-b border-navy-200 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-navy-500">
+                    People
+                  </h3>
+                  <ul className="divide-y divide-navy-200">
+                    {allResults.people.map((person) => (
+                      <li key={person.id} className="flex items-center gap-2.5 px-4 py-2.5">
+                        <Avatar name={person.displayName} size={28} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
+                        <Link href={`/u/${person.username}`} className="text-[13px] font-medium text-navy-950 hover:underline">
+                          {person.displayName}
+                        </Link>
+                        <span className="text-[11.5px] text-navy-500">@{person.username}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+
+              {allResults.resources.length > 0 ? (
+                <Card>
+                  <h3 className="border-b border-navy-200 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-navy-500">
+                    Learning
+                  </h3>
+                  <ul className="divide-y divide-navy-200">
+                    {allResults.resources.map((resource) => (
+                      <li key={resource.id} className="px-4 py-2.5">
+                        <Link href={`/learn/${resource.id}`} className="text-[13px] font-medium text-navy-950 hover:underline">
+                          {resource.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       {tab === "foryou" && discovery ? (
         <div className="space-y-8">
-          <Card className="overflow-hidden">
-            <div className="ink-hero px-5 py-6 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">Personalised discovery</p>
-              <h2 className="mt-1 text-xl font-semibold">Picked for what you want to build and learn</h2>
-              <p className="mt-1.5 max-w-2xl text-[12.5px] leading-6 text-white/70">
-                Ranked from your interests, listed skills, learning goals, follows and saves. Every card explains why it is
-                here, and only public, published content is eligible.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-              <p className="text-[11.5px] leading-5 text-navy-500">
-                {discovery.hasProfileSignals
-                  ? `Tuned to ${discovery.signals.interests} interest${discovery.signals.interests === 1 ? "" : "s"}, ${discovery.signals.skills} skill${discovery.signals.skills === 1 ? "" : "s"}, ${discovery.signals.categories} categor${discovery.signals.categories === 1 ? "y" : "ies"} and ${discovery.signals.goals} goal${discovery.signals.goals === 1 ? "" : "s"}.`
-                  : "No interests, skills or goals saved yet — these are general picks."}
-              </p>
-              <ButtonLink href="/settings?tab=profile" variant="secondary" size="sm">
-                Tune your interests
-              </ButtonLink>
-            </div>
-          </Card>
-
-          {!discovery.hasProfileSignals ? (
-            <Alert tone="info" title="Add interests and skills for sharper matches">
-              Recommendations currently use recency and open opportunities. Tell us what you care about in{" "}
-              <Link href="/settings?tab=profile" className="font-medium underline">
-                your profile
-              </Link>{" "}
-              and every section below will adapt.
-            </Alert>
-          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12px] leading-5 text-navy-500">
+              {discovery.hasProfileSignals
+                ? `Picked from ${discovery.signals.interests} interest${discovery.signals.interests === 1 ? "" : "s"}, ${discovery.signals.skills} skill${discovery.signals.skills === 1 ? "" : "s"}, ${discovery.signals.categories} categor${discovery.signals.categories === 1 ? "y" : "ies"} and ${discovery.signals.goals} goal${discovery.signals.goals === 1 ? "" : "s"}.`
+                : "General picks. Add interests and skills for sharper matches."}
+            </p>
+            <ButtonLink href="/settings?tab=profile" variant="secondary" size="sm">
+              Tune your interests
+            </ButtonLink>
+          </div>
 
           <section>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
@@ -294,9 +338,8 @@ export default async function ExplorePage({
           <Card className="h-fit p-4">
             <form action="/explore" className="space-y-3">
               <input type="hidden" name="tab" value="projects" />
-              <Field label="Search" htmlFor="filter-q">
-                <Input id="filter-q" name="q" defaultValue={q} placeholder="Keywords" />
-              </Field>
+              {/* The term comes from the header search; filters keep it. */}
+              {q ? <input type="hidden" name="q" value={q} /> : null}
               <Field label="Category" htmlFor="filter-category">
                 <Select id="filter-category" name="category" defaultValue={category}>
                   <option value="">Any category</option>
@@ -399,15 +442,11 @@ export default async function ExplorePage({
 
       {tab === "people" ? (
         <div>
-          <form action="/explore" className="mb-4 flex flex-wrap gap-2">
-            <input type="hidden" name="tab" value="people" />
-            <Input name="q" defaultValue={q} placeholder="Search people by name, username or bio" className="max-w-sm" />
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-on-brand">
-              Search
-            </button>
-          </form>
           {people.length === 0 ? (
-            <EmptyState title="No people found" description="Try a different search term." />
+            <EmptyState
+              title="No people found"
+              description={q ? `Nobody matches “${q}”. Try a shorter term or a username.` : "No people to show yet."}
+            />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {people.map((person) => (
@@ -420,13 +459,6 @@ export default async function ExplorePage({
 
       {tab === "skills" ? (
         <div>
-          <form action="/explore" className="mb-4 flex flex-wrap gap-2">
-            <input type="hidden" name="tab" value="skills" />
-            <Input name="q" defaultValue={q} placeholder="Search skills" className="max-w-sm" />
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-on-brand">
-              Search
-            </button>
-          </form>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {skillResults.map((item) => (
               <Card key={item.id} className="p-4">
@@ -450,7 +482,7 @@ export default async function ExplorePage({
         <div>
           <form action="/explore" className="mb-4 grid gap-2 sm:grid-cols-4">
             <input type="hidden" name="tab" value="learning" />
-            <Input name="q" defaultValue={q} placeholder="Search learning" />
+            {q ? <input type="hidden" name="q" value={q} /> : null}
             <Select name="format" defaultValue={format}>
               <option value="">Any format</option>
               {RESOURCE_FORMATS.map((item) => (
@@ -494,11 +526,6 @@ export default async function ExplorePage({
 
       {tab === "businesses" ? (
         <div>
-          <form action="/explore" className="mb-4 flex gap-2">
-            <input type="hidden" name="tab" value="businesses" />
-            <Input name="bq" defaultValue={businessQuery} placeholder="Search businesses" className="max-w-sm" />
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-on-brand">Search</button>
-          </form>
           <div className="grid gap-3 sm:grid-cols-2">
             {businessResults.map((business) => (
               <Card key={business.id} className="p-5">

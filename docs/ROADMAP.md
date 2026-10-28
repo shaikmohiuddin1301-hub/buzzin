@@ -54,7 +54,7 @@ These are product boundaries, not bugs:
 3. **Email delivery** (SMTP or an API provider) with SPF/DKIM/DMARC, plus real verification/reset flows for production.
 4. **Object storage** behind the existing `StorageAdapter` with signed URLs and lifecycle rules; malware scanning and image re-encoding on upload.
 5. **Admin hardening**: MFA for staff, fine-grained permissions, appeal SLAs, retention policies and exportable audit reports.
-6. **Realtime chat** (WebSocket or a managed realtime service) replacing polling, with delivery receipts and typing state.
+6. **Realtime chat, continued.** Delivery is now server-sent events with an in-process bus (see `docs/ARCHITECTURE.md`); the next step is a shared transport for multiple instances, then per-message delivery receipts and typing state.
 7. **Analytics aggregation**: nightly rollups, creator dashboards with date ranges, and honest labelling of estimates vs confirmed outcomes.
 8. **Accessibility audit**: automated axe checks in CI plus manual screen-reader passes; finish dark mode using the existing CSS variables.
 9. **Recommendation quality**: skill/interest matching with explanations, diversity constraints so already-popular creators are not permanently privileged, and clear "promoted" labels if paid placement is ever introduced.

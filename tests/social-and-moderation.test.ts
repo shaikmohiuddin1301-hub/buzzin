@@ -45,6 +45,10 @@ describe("direct messages", () => {
     const a = await makeUser();
     const b = await makeUser();
     updatePreferences(b.id, { allowDirectMessages: "everyone" });
+    // People who share a project are team-mates, so their DM is accepted rather
+    // than waiting in Requests.
+    const { id: projectId } = makeProject(a.id);
+    addMember(projectId, b.id);
     const conversationId = getOrCreateDirectConversation(a.id, b.id);
 
     sendMessage(conversationId, a.id, { body: "Are you free to review the design?" });

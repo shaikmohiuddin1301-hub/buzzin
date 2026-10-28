@@ -11,7 +11,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   Plus,
-  Search,
   Settings,
   Shield,
   UserRound,
@@ -19,73 +18,21 @@ import {
 import { getDb } from "@/db/client";
 import { projectInvitations } from "@/db/schema";
 import { signOutAction } from "@/app/actions/auth";
-import { Avatar, Badge, cn } from "@/components/ui";
+import { Avatar, Badge } from "@/components/ui";
+import { AppSurface } from "@/components/client/app-surface";
 import { BottomTabs } from "@/components/client/bottom-tabs";
-import { NotificationSync } from "@/components/client/notification-sync";
-import { ProfileMenu } from "@/components/client/profile-menu";
+import { SidebarNav } from "@/components/client/sidebar-nav";
 import { SwipeNavigation } from "@/components/client/swipe-navigation";
-import { NotificationBell } from "@/components/notification-bell";
 import { Logo } from "@/components/logo";
+import { AppHeader } from "@/components/top-bar";
 import { accountKindLabel } from "@/lib/account";
-import { pageSurfaceClass } from "@/lib/navigation";
 import { accountContext } from "@/services/account";
 import { unreadMessageCount } from "@/services/chat";
 import { projectsForUser } from "@/services/projects";
 import { unreadNotificationCount } from "@/services/notifications";
 import type { SessionUser } from "@/lib/session";
 
-function NavLink({
-  href,
-  label,
-  icon,
-  active,
-  badge,
-}: {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-  badge?: number;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200",
-        active
-          ? "bg-brand-50 text-brand-600"
-          : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",
-      )}
-    >
-      <span className="flex items-center gap-2.5">
-        <span className={cn(active ? "text-brand-600" : "text-navy-500 group-hover:text-navy-700")}>{icon}</span>
-        {label}
-      </span>
-      {badge ? (
-        <span className="rounded-full bg-coral-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-on-coral">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      ) : null}
-      {active ? (
-        <span
-          aria-hidden="true"
-          className="absolute -left-1 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-brand-600"
-        />
-      ) : null}
-    </Link>
-  );
-}
-
-export async function AppShell({
-  user,
-  activePath,
-  children,
-}: {
-  user: SessionUser;
-  activePath: string;
-  children: React.ReactNode;
-}) {
+export async function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const account = accountContext(user);
   const notifications = unreadNotificationCount(user.id);
   const messages = unreadMessageCount(user.id);
@@ -101,12 +48,7 @@ export async function AppShell({
     )
     .all().length;
 
-  const isActive = (href: string) =>
-    href === "/home" ? activePath === "/home" : activePath === href || activePath.startsWith(`${href}/`);
-
-  // The one menu in the chrome lives on the signed-in account's Profile page and
-  // nowhere else. Viewing somebody else's profile keeps the normal header.
-  const isProfilePage = activePath === `/u/${user.username}`;
+  const profileHref = `/u/${user.username}`;
 
   // The sidebar keeps the five mobile destinations and adds Learning and
   // Projects, which left the bottom bar. Create is the button above them.
@@ -140,7 +82,7 @@ export async function AppShell({
   ];
 
   return (
-    <div className={cn("min-h-screen", pageSurfaceClass(activePath))}>
+    <AppSurface>
       <div className="mx-auto flex w-full max-w-[1440px]">
         {/* Desktop sidebar */}
         <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 p-3 lg:flex">
@@ -159,36 +101,15 @@ export async function AppShell({
             </Link>
           </div>
 
-          <nav aria-label="Main navigation" className="mt-4 flex-1 space-y-1 overflow-y-auto px-2.5 pb-4">
-            {primary.map((item) => (
-              <NavLink key={item.href} {...item} active={isActive(item.href)} />
-            ))}
-
-            <details className="group pt-4" open={secondary.some((item) => isActive(item.href))}>
-              <summary className="cursor-pointer list-none px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-navy-400 [&::-webkit-details-marker]:hidden">
-                Workspace
-              </summary>
-              <div className="space-y-0.5">
-                {secondary.map((item) => (
-                  <NavLink key={item.href} {...item} active={isActive(item.href)} />
-                ))}
-              </div>
-            </details>
-
-            {(user.isAdmin || user.isModerator) && (
-              <details className="group pt-3">
-                <summary className="cursor-pointer list-none px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-navy-400 [&::-webkit-details-marker]:hidden">
-                  Administration
-                </summary>
-                <NavLink
-                  href="/admin"
-                  label="Admin & moderation"
-                  icon={<Shield size={16} aria-hidden="true" />}
-                  active={isActive("/admin")}
-                />
-              </details>
-            )}
-          </nav>
+          <SidebarNav
+            primary={primary}
+            workspace={secondary}
+            admin={
+              user.isAdmin || user.isModerator
+                ? [{ href: "/admin", label: "Admin & moderation", icon: <Shield size={16} aria-hidden="true" /> }]
+                : []
+            }
+          />
 
           <div className="border-t border-navy-200 p-3">
             {invitations > 0 ? (
@@ -229,47 +150,7 @@ export async function AppShell({
 
         {/* Main column */}
         <div className="min-w-0 flex-1">
-          <header className="glass-header sticky top-0 z-30">
-            <div className="relative flex h-14 items-center gap-3 px-4 sm:px-6">
-              {isProfilePage ? (
-                <ProfileMenu />
-              ) : (
-                <div className="lg:hidden">
-                  <Logo href="/home" compact />
-                </div>
-              )}
-
-              <form action="/search" role="search" className="hidden flex-1 md:block">
-                <label htmlFor="global-search" className="sr-only">
-                  Search BuildTogether
-                </label>
-                <div className="relative max-w-md">
-                  <Search
-                    size={15}
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-600"
-                  />
-                  <input
-                    id="global-search"
-                    name="q"
-                    type="search"
-                    placeholder="Search projects, people, skills, learning…"
-                    className="h-9 w-full rounded-lg border border-navy-200 bg-surface pl-9 pr-3 text-[13px] text-navy-900 placeholder:text-navy-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                  />
-                </div>
-              </form>
-
-              <div className="ml-auto flex items-center gap-1.5">
-                {!user.emailVerifiedAt ? (
-                  <Link href="/settings?tab=security" className="hidden sm:block">
-                    <Badge tone="warning">Email unverified</Badge>
-                  </Link>
-                ) : null}
-                <NotificationBell unread={notifications} />
-                <NotificationSync />
-              </div>
-            </div>
-          </header>
+          <AppHeader notifications={notifications} messages={messages} profileHref={profileHref} />
 
           <main
             id="main"
@@ -287,6 +168,6 @@ export async function AppShell({
           <SwipeNavigation ownProfileHref={`/u/${user.username}`} />
         </div>
       </div>
-    </div>
+    </AppSurface>
   );
 }

@@ -254,7 +254,12 @@ export default async function ProfilePage({
 
       {/* Tabs */}
       <div className="mt-5">
-        <ul className="flex gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label="Profile sections">
+        {/* Edge-to-edge scroll on phones, so the tabs never squeeze the content. */}
+        <ul
+          className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+          role="tablist"
+          aria-label="Profile sections"
+        >
           {tabs.map((item) => {
             const active = tab === item.id;
             return (

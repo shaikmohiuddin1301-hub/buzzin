@@ -15,6 +15,7 @@ import {
   markConversationRead,
   muteConversation,
   reportMessage,
+  respondToMessageRequest,
   sendMessage,
 } from "@/services/chat";
 
@@ -24,6 +25,23 @@ export async function startDirectMessageAction(formData: FormData) {
     rateLimit(`dm:start:${user.id}`, 20, 3_600_000);
     const id = getOrCreateDirectConversation(user.id, str(formData, "userId"));
     return { path: `/chats/${id}`, revalidate: ["/chats"] };
+  });
+}
+
+/**
+ * Accept or dismiss a message request.
+ *
+ * Accepting opens the conversation (now in the inbox) with its messages unread;
+ * dismissing returns to the inbox, where the request no longer appears.
+ */
+export async function respondToMessageRequestAction(formData: FormData) {
+  const conversationId = str(formData, "conversationId");
+  const accept = bool(formData, "accept");
+  const backTo = accept ? `/chats/${conversationId}` : "/chats?notice=Message+request+declined.";
+  await runServerAction(backTo, async () => {
+    const user = await requireUserOrThrow();
+    respondToMessageRequest(conversationId, user.id, accept);
+    return { path: backTo, revalidate: ["/chats", `/chats/${conversationId}`] };
   });
 }
 

@@ -271,6 +271,53 @@ test("tablet touch gestures work with the same routes", async ({ page }) => {
   expect(new URL(page.url()).pathname).toBe("/chats");
 });
 
+/**
+ * Drag with real touch events, holding the finger down so the test can inspect
+ * the page mid-gesture. Returns the CDP session so the caller ends the gesture.
+ */
+async function dragStart(page: Page, surface: { x: number; y: number }) {
+  await page.waitForFunction(() => document.documentElement.dataset.swipeReady === "true");
+  const client = await page.context().newCDPSession(page);
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x: surface.x, y: surface.y }],
+  });
+  return client;
+}
+
+test("the page follows the finger while dragging", async ({ page }) => {
+  await page.goto("/home");
+  const surface = await safeSurface(page);
+  const client = await dragStart(page, surface);
+
+  // A slow 45px drag stays under the 56px commit threshold, so the route must
+  // not change; the page should still move with the finger.
+  for (let index = 1; index <= 3; index += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: surface.x - index * 15, y: surface.y }],
+    });
+    await page.waitForTimeout(120);
+  }
+
+  expect(await page.evaluate(() => document.documentElement.dataset.swiping)).toBe("true");
+  const dragged = await page.evaluate(
+    () => getComputedStyle(document.getElementById("main")!).transform,
+  );
+  const offsetX = Number(dragged.replace(/^matrix\(([^)]+)\)$/, "$1").split(",")[4]);
+  expect(offsetX).toBeLessThan(-10);
+
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await client.detach();
+
+  expect(new URL(page.url()).pathname).toBe("/home");
+  // The aborted drag springs back to rest, leaving no transform behind.
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.getElementById("main")!).transform))
+    .toBe("none");
+  expect(await page.evaluate(() => document.documentElement.dataset.swiping)).toBeUndefined();
+});
+
 test("reduced motion still navigates, without the swipe animation", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/explore");

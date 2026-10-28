@@ -155,7 +155,21 @@ Because the seams are typed, replacing one does not require touching pages, acti
 ## 7. Frontend architecture
 
 - **Server components by default.** Data is resolved on the server; the browser receives HTML plus ~103 kB of shared JS.
-- **Client islands only where interaction needs state**: `bottom-tabs` (five-destination bar, Create sheet, keyboard-aware hiding), `swipe-navigation` (touch gesture → the same router push, with View Transitions where supported), `profile-menu` (the one account menu, shown on the signed-in account's profile), `submit-button` (pending state), `story-player` (scene step-through, captions, reduced-motion aware), `auto-refresh` (chat/notification polling with a visibility check).
+- **Client islands only where interaction needs state**: `bottom-tabs` (five-destination bar, Create sheet, keyboard-aware hiding), `swipe-navigation` (touch gesture → the same router push, with View Transitions where supported), `account-menu` (the one account menu, shown on Home and the signed-in account's profile), `header-search` (Explore and inbox terms, read from the URL so results stay server-rendered), `mark-read-on-open` and `scroll-to-end` (a conversation behaves like a messaging app), `chat-stream` (server-sent events for live messages), `submit-button` (pending state), `story-player` (scene step-through, captions, reduced-motion aware).
+- **One shell, page-specific headers**: `AppShell` owns the sidebar, the bottom bar, the skip
+  link and the swipe listener, then renders `AppHeader` from `src/components/top-bar.tsx` —
+  `HomeTopBar` (account menu + bell), `ExploreTopBar` (search), `ChatsTopBar`
+  (title + inbox search + new message), `ThreadTopBar` (back link), `ProfileTopBar`
+  (account menu) and `NeutralTopBar`. `AppHeader` and `AppSurface` read the live
+  pathname on the client, because a layout is not re-rendered for every navigation and
+  a header chosen on the server would keep the previous page's controls. A control is
+  never rendered globally; adding a page-specific action means adding a bar, not a
+  conditional inside one header.
+- **Messaging**: an inbox of real conversations (`listConversations`), a Requests screen
+  for direct messages from outside your projects (`conversation_members.request_status`),
+  a thread that marks itself read through a non-navigating server action, and live
+  delivery through the event stream. Requests, unread counts and notifications all use
+  the same rule: only accepted memberships count.
 - **Design system** in `src/components/ui.tsx` plus `cards.tsx`, `media.tsx`, `comments.tsx`, `post-card.tsx`, `report-form.tsx`, `marketing.tsx`: buttons, fields, panels, tabs, badges, avatars, tables, empty/loading/error states, confirmation dialogs, progress meters, reputation indicators, media player, uploads.
 - **Tokens** in `globals.css` (graphite/silver structure, coral and emerald accents, translucent glass surfaces) with CSS variables so the light and dark themes stay in sync without rewriting components.
 - **Accessibility**: semantic landmarks, labelled form fields, visible focus rings, keyboard-operable menus and tabs, captions/transcripts for media, `prefers-reduced-motion` support, WCAG AA contrast targets, no autoplaying audio.
@@ -165,6 +179,6 @@ Because the seams are typed, replacing one does not require touching pages, acti
 1. SQLite on one node; concurrent writers queue rather than scale horizontally.
 2. No job queue: AI generation and rendering block the request that triggered them.
 3. In-memory rate limiting does not survive a restart and is per instance.
-4. Chat uses polling (`auto-refresh`), not WebSockets; fine for this scale, not for high-frequency traffic.
+4. Chat delivery is server-sent events (`/api/chats/stream` → `src/lib/chat-events.ts`): a write publishes which conversation changed to the members allowed to see it, and open tabs refresh only that view. The bus is in-process, so several instances would need a shared transport (Redis/pub-sub) before horizontal scaling.
 5. No CDN image pipeline: uploaded images are served through the authorised file route at their stored size.
 6. Analytics are computed from event and count tables on read; a large deployment should pre-aggregate nightly.

@@ -704,10 +704,21 @@ export const conversationMembers = sqliteTable(
     role: text("role").$type<"member" | "admin">().notNull().default("member"),
     lastReadAt: text("last_read_at"),
     muted: integer("muted", { mode: "boolean" }).notNull().default(false),
+    /**
+     * A direct message from outside your projects waits in Requests until you
+     * accept it. Group chats and team-mate messages are accepted on creation.
+     */
+    requestStatus: text("request_status")
+      .$type<"accepted" | "pending" | "declined">()
+      .notNull()
+      .default("accepted"),
     removedAt: text("removed_at"),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("conversation_members_uq").on(t.conversationId, t.userId)],
+  (t) => [
+    uniqueIndex("conversation_members_uq").on(t.conversationId, t.userId),
+    index("conversation_members_request_idx").on(t.userId, t.requestStatus),
+  ],
 );
 
 export const messages = sqliteTable(

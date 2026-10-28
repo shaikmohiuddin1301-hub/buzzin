@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BellOff, LogOut, Send, ShieldAlert } from "lucide-react";
+import { BellOff, LogOut, MoreHorizontal, Send, ShieldAlert } from "lucide-react";
 import {
   createDropFromMessageAction,
   leaveConversationAction,
   markReadAction,
   muteConversationAction,
   reportMessageAction,
+  respondToMessageRequestAction,
   sendMessageAction,
 } from "@/app/actions/chat";
-import { AutoRefresh } from "@/components/client/auto-refresh";
+import { ChatStream } from "@/components/client/chat-stream";
+import { MarkReadOnOpen } from "@/components/client/mark-read-on-open";
+import { ScrollToEnd } from "@/components/client/scroll-to-end";
 import { SubmitButton } from "@/components/client/submit-button";
 import { AttachmentLink } from "@/components/media";
 import { ReportForm } from "@/components/report-form";
@@ -29,7 +32,7 @@ import { readFlash } from "@/lib/actions";
 import { requireUser } from "@/lib/auth";
 import { formatDate, relativeTime } from "@/lib/format";
 import { getProjectAccess } from "@/lib/authz";
-import { conversationDetail } from "@/services/chat";
+import { conversationDetail, conversationUnreadCount } from "@/services/chat";
 import { getMedia, signedMediaUrl } from "@/lib/storage";
 import { REPORT_REASONS, label } from "@/lib/types";
 
@@ -55,62 +58,119 @@ export default async function ConversationPage({
   }
 
   const { conversation, member, members, messages, project, area, task } = detail;
+  const pendingRequest = member.requestStatus === "pending";
   // Turning a message into a task is a project-management action, not a chat action, so it follows
   // the project's edit permission rather than conversation membership.
   const canFileDrop = project ? (getProjectAccess(project.id, user)?.canEdit ?? false) : false;
+  const other = members.find((entry) => entry.id !== user.id) ?? null;
   const title =
-    conversation.kind === "direct"
-      ? (members.find((entry) => entry.id !== user.id)?.displayName ?? "Direct message")
-      : (conversation.title ?? "Group chat");
+    conversation.kind === "direct" ? (other?.displayName ?? "Direct message") : (conversation.title ?? "Group chat");
+  const unread = conversationUnreadCount(conversationId, user.id);
 
   return (
     <div>
-      <nav aria-label="Breadcrumb" className="mb-3 text-[12px] text-navy-500">
-        <Link href="/chats" className="hover:underline">Chats</Link> / <span className="text-navy-700">{title}</span>
-      </nav>
+      <MarkReadOnOpen conversationId={conversationId} unread={pendingRequest ? 0 : unread} />
+      <ChatStream conversationId={conversationId} />
 
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-navy-950">{title}</h1>
-          <p className="mt-0.5 text-[12px] text-navy-500">
+      {/* Conversation header: who you are talking to, and one menu for the rest. */}
+      <div className="mb-3 flex items-center gap-3">
+        {conversation.kind === "direct" && other ? (
+          <Avatar
+            name={other.displayName}
+            size={40}
+            src={other.avatarFileId ? `/api/files/${other.avatarFileId}` : null}
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="avatar-surface flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white"
+          >
+            {task ? "✓" : "#"}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[17px] font-semibold tracking-tight text-navy-950">{title}</h1>
+          <p className="truncate text-[11.5px] text-navy-500">
             {task
               ? "Task chat"
               : area
-                ? `Private work area chat · ${area.name}`
+                ? `Work area · ${area.name}`
                 : conversation.kind === "group"
-                  ? "Private project group chat"
-                  : "Direct message"} · {members.length} participant
-            {members.length === 1 ? "" : "s"}
+                  ? "Project group chat"
+                  : "Direct message"}{" "}
+            · {members.length} participant{members.length === 1 ? "" : "s"}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AutoRefresh />
-          <form action={markReadAction}>
-            <input type="hidden" name="conversationId" value={conversationId} />
-            <SubmitButton size="sm" variant="ghost" pendingLabel="…">
-              Mark read
-            </SubmitButton>
-          </form>
-          <form action={muteConversationAction}>
-            <input type="hidden" name="conversationId" value={conversationId} />
-            <input type="hidden" name="mute" value={member.muted ? "false" : "true"} />
-            <SubmitButton size="sm" variant="ghost" pendingLabel="…">
-              <BellOff size={12} aria-hidden="true" /> {member.muted ? "Unmute" : "Mute"}
-            </SubmitButton>
-          </form>
-          <form action={leaveConversationAction}>
-            <input type="hidden" name="conversationId" value={conversationId} />
-            <SubmitButton size="sm" variant="ghost" confirmMessage="Leave this conversation? You will lose access to its history.">
-              <LogOut size={12} aria-hidden="true" /> Leave
-            </SubmitButton>
-          </form>
-        </div>
+
+        <details className="relative shrink-0">
+          <summary
+            aria-label="Conversation options"
+            className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-xl border border-navy-200/70 bg-surface text-navy-700 transition hover:bg-navy-50 [&::-webkit-details-marker]:hidden"
+          >
+            <MoreHorizontal size={18} aria-hidden="true" />
+          </summary>
+          <div className="glass absolute right-0 top-[calc(100%+0.4rem)] z-40 w-60 rounded-2xl p-1.5 shadow-float">
+            <p className="flex items-center gap-1.5 px-3 py-1.5 text-[10.5px] text-navy-500">
+              <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Live updates
+            </p>
+            <form action={markReadAction}>
+              <input type="hidden" name="conversationId" value={conversationId} />
+              <SubmitButton size="sm" variant="ghost" className="w-full justify-start" pendingLabel="…">
+                Mark as read
+              </SubmitButton>
+            </form>
+            <form action={muteConversationAction}>
+              <input type="hidden" name="conversationId" value={conversationId} />
+              <input type="hidden" name="mute" value={member.muted ? "false" : "true"} />
+              <SubmitButton size="sm" variant="ghost" className="w-full justify-start" pendingLabel="…">
+                <BellOff size={12} aria-hidden="true" /> {member.muted ? "Unmute" : "Mute notifications"}
+              </SubmitButton>
+            </form>
+            <form action={leaveConversationAction}>
+              <input type="hidden" name="conversationId" value={conversationId} />
+              <SubmitButton
+                size="sm"
+                variant="ghost"
+                className="w-full justify-start"
+                confirmMessage="Leave this conversation? You will lose access to its history."
+              >
+                <LogOut size={12} aria-hidden="true" /> Leave conversation
+              </SubmitButton>
+            </form>
+          </div>
+        </details>
       </div>
 
       <Flash error={error} notice={notice} />
 
+      {pendingRequest ? (
+        <Card className="mb-3 border-coral-200 p-4">
+          <h2 className="text-[13.5px] font-semibold text-navy-950">Message request</h2>
+          <p className="mt-1 text-[12px] leading-5 text-navy-600">
+            {other?.displayName ?? "This person"} is not on one of your projects. Accept to reply and move the
+            conversation into your inbox; dismissing hides it until they write again.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <form action={respondToMessageRequestAction}>
+              <input type="hidden" name="conversationId" value={conversationId} />
+              <input type="hidden" name="accept" value="on" />
+              <SubmitButton size="sm" pendingLabel="Accepting…">
+                Accept request
+              </SubmitButton>
+            </form>
+            <form action={respondToMessageRequestAction}>
+              <input type="hidden" name="conversationId" value={conversationId} />
+              <SubmitButton size="sm" variant="secondary" pendingLabel="Dismissing…">
+                Dismiss
+              </SubmitButton>
+            </form>
+          </div>
+        </Card>
+      ) : null}
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <Card className="conversation-surface flex min-h-[420px] flex-col">
+        <Card className="conversation-surface flex h-[calc(100dvh-15.5rem)] min-h-[340px] flex-col overflow-hidden lg:h-[calc(100dvh-13rem)]">
           {task ? (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-200 bg-brand-50/60 px-4 py-2 text-[11.5px] text-navy-700">
               <Badge tone="brand">Task</Badge>
@@ -137,7 +197,14 @@ export default async function ConversationPage({
             </div>
           ) : null}
 
-          <div className="flex-1 space-y-3 overflow-y-auto p-4" role="log" aria-live="polite" aria-label="Messages">
+          <div
+            id="message-log"
+            className="flex-1 space-y-3 overflow-y-auto overscroll-contain p-4"
+            role="log"
+            aria-live="polite"
+            aria-label="Messages"
+          >
+            <ScrollToEnd targetId="message-log" />
             {messages.map((row) => {
               const mine = row.message.senderId === user.id;
               const attachment = row.message.attachmentId ? getMedia(row.message.attachmentId) : null;
@@ -189,7 +256,7 @@ export default async function ConversationPage({
                     ) : null}
                     {!row.message.deletedAt ? (
                       <div className={cn("mt-1 flex flex-wrap items-center gap-2 text-[10px]", mine ? "justify-end" : "")}>
-                        {!row.message.parentId ? (
+                        {!pendingRequest && !row.message.parentId ? (
                           <details className="text-left">
                             <summary className="cursor-pointer text-navy-400 hover:text-navy-600">Reply</summary>
                             <form action={sendMessageAction} className="mt-1 w-64 space-y-1 rounded-md border border-navy-200 bg-surface p-2">
@@ -247,30 +314,43 @@ export default async function ConversationPage({
             {messages.length === 0 ? <p className="py-8 text-center text-[12.5px] text-navy-500">No messages yet. Say hello.</p> : null}
           </div>
 
-          <form action={sendMessageAction} encType="multipart/form-data" className="border-t border-navy-200 p-3">
+          {pendingRequest ? (
+            <p className="border-t border-navy-200 p-3 text-center text-[12px] text-navy-500">
+              Accept this request to reply.
+            </p>
+          ) : (
+          <form action={sendMessageAction} className="border-t border-navy-200 p-2.5">
             <input type="hidden" name="conversationId" value={conversationId} />
             <label htmlFor="message-body" className="sr-only">
               Message
             </label>
-            <Textarea
-              id="message-body"
-              name="body"
-              rows={2}
-              maxLength={4000}
-              placeholder="Write a message…"
-              className="min-h-[56px] resize-none"
-            />
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <label htmlFor="attachment" className="text-[11px] text-navy-500">
-                Attach
-              </label>
-              <Input id="attachment" name="attachment" type="file" className="h-8 w-56 text-[11px]" />
-              <p className="text-[10px] text-navy-400">Files are private to this conversation.</p>
-              <SubmitButton size="sm" className="ml-auto" pendingLabel="Sending…">
-                <Send size={12} aria-hidden="true" /> Send
+            <div className="flex items-end gap-2">
+              <Textarea
+                id="message-body"
+                name="body"
+                rows={1}
+                maxLength={4000}
+                placeholder="Message…"
+                className="max-h-28 min-h-[44px] resize-none rounded-2xl border-navy-200/80 bg-surface/80 py-2.5"
+              />
+              <SubmitButton className="h-11 shrink-0 rounded-2xl px-4" pendingLabel="Sending…">
+                <Send size={14} aria-hidden="true" /> Send
               </SubmitButton>
             </div>
+            <details className="mt-1.5 px-1">
+              <summary className="cursor-pointer list-none text-[11px] font-medium text-navy-500 transition hover:text-navy-800 [&::-webkit-details-marker]:hidden">
+                Attach a file
+              </summary>
+              <div className="mt-1.5">
+                <label htmlFor="attachment" className="sr-only">
+                  Attachment
+                </label>
+                <Input id="attachment" name="attachment" type="file" className="h-8 w-full text-[11px]" />
+                <p className="mt-1 text-[10px] text-navy-400">Files are private to this conversation.</p>
+              </div>
+            </details>
           </form>
+          )}
         </Card>
 
         <aside className="space-y-4">

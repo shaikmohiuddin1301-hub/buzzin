@@ -84,6 +84,8 @@ decorative coral and gold accents, and every status badge prints its label next 
 | Grouped sections and task-board columns | `.glass-secondary` (secondary glass) |
 | Outgoing chat bubble | graphite `#34343A` with white text in both themes |
 | Incoming chat bubble | silver-white glass (light) or `#414149` (dark) with a glass border |
+| Message request | glass card with a coral border; Accept is the graphite primary, Dismiss secondary |
+| Inbox row | white glass row, coral unread count, muted timestamp and preview |
 | Like / comment / share icons | coral stroke / graphite / emerald |
 | Learning progress | emerald fill; project progress graphite |
 
@@ -135,8 +137,28 @@ the requested steel grey; it is never the only cue for a destination.
 - A deliberate horizontal swipe moves between the four page destinations (Home · Explore ·
   Chats · Profile). Create is an action, not a destination: it is skipped in both directions
   and the bottom bar ignores gestures. Scroll position is remembered per destination.
-- The header carries no hamburger and no profile shortcut. The only menu is on the Profile
-  page (`ProfileMenu`), and the notification bell is a link to `/notifications`, not a pop-up.
+- The swipe answers immediately: once horizontal intent is clear, only `<main>` moves, as a
+  single `translate3d` per frame on the compositor, capped at 30% of the viewport and held back
+  to 14% at the ends of the sequence. Release commits after 56px of travel, or an 18px flick at
+  0.3px/ms — the rule lives in `swipedFarEnough()`, not in the component. Anything shorter
+  springs back in 240ms instead of jumping. The release hands its offset to the view transition
+  through `--swipe-shift`, so the outgoing snapshot starts under the finger and the 300ms
+  in/out pair reads as one movement. Prefetching both neighbours keeps the incoming page ready,
+  so the transition is not left waiting on data.
+- One shared bar, page-specific contents (`src/components/top-bar.tsx`). Nothing appears on
+  every page just because it exists elsewhere:
+
+  | Page | Header |
+  | --- | --- |
+  | Home | account menu (`AccountMenu`) · wordmark · notification bell (`/notifications`, a link, never a pop-up) |
+  | Explore | discovery search only; no account menu, no bell |
+  | Chats | the inbox title, its live unread count, inbox search and the new-message action |
+  | An open conversation | back link to the inbox, nothing else |
+  | Profile (own account) | account menu only; no bell |
+  | Everybody else's profile, and every other page | the wordmark, no controls |
+
+  The search fields are URL parameters rendered by the server, so a search is
+  shareable, back/forward work, and no term is invented on the client.
 - Desktop: a floating sidebar panel with the same five destinations plus Learning and
   Projects, Workspace links behind a disclosure, and the Create button as the single gradient
   action.

@@ -14,6 +14,7 @@ import {
   workAreas,
 } from "@/db/schema";
 import { assertConversationMember, isBlockedEitherWay, requireProjectAccess, type Viewer } from "@/lib/authz";
+import { publishChatActivity } from "@/lib/chat-events";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { notify } from "@/lib/notify";
 import { rateLimit } from "@/lib/rate-limit";
@@ -39,7 +40,14 @@ export function listConversations(userId: string): ConversationSummary[] {
     .select({ conversation: conversations, member: conversationMembers })
     .from(conversationMembers)
     .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-    .where(and(eq(conversationMembers.userId, userId), isNull(conversationMembers.removedAt)))
+    .where(
+      and(
+        eq(conversationMembers.userId, userId),
+        isNull(conversationMembers.removedAt),
+        // Pending requests belong to the Requests screen, not the inbox.
+        eq(conversationMembers.requestStatus, "accepted"),
+      ),
+    )
     .all();
 
   if (memberships.length === 0) return [];
@@ -77,6 +85,7 @@ export function listConversations(userId: string): ConversationSummary[] {
       and(
         eq(conversationMembers.userId, userId),
         isNull(conversationMembers.removedAt),
+        eq(conversationMembers.requestStatus, "accepted"),
         ne(messages.senderId, userId),
         sql`(${conversationMembers.lastReadAt} is null or ${messages.createdAt} > ${conversationMembers.lastReadAt})`,
       ),
@@ -110,6 +119,26 @@ export function listConversations(userId: string): ConversationSummary[] {
     .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
 }
 
+/** Unread messages in one conversation, for marking it read on open. */
+export function conversationUnreadCount(conversationId: string, userId: string): number {
+  const row = getDb()
+    .select({ count: sql<number>`count(*)` })
+    .from(messages)
+    .innerJoin(conversationMembers, eq(conversationMembers.conversationId, messages.conversationId))
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(conversationMembers.userId, userId),
+        isNull(conversationMembers.removedAt),
+        eq(conversationMembers.requestStatus, "accepted"),
+        ne(messages.senderId, userId),
+        sql`(${conversationMembers.lastReadAt} is null or ${messages.createdAt} > ${conversationMembers.lastReadAt})`,
+      ),
+    )
+    .get();
+  return Number(row?.count ?? 0);
+}
+
 export function unreadMessageCount(userId: string): number {
   return listConversations(userId).reduce((sum, conversation) => sum + conversation.unread, 0);
 }
@@ -124,48 +153,141 @@ export function getOrCreateDirectConversation(initiatorId: string, otherUserId: 
   if (!other || other.status !== "active") throw new NotFoundError("Person not found.");
 
   const prefs = db.select().from(userPreferences).where(eq(userPreferences.userId, otherUserId)).get();
+  const shared = db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.userId, initiatorId), eq(projectMembers.status, "active")))
+    .all()
+    .map((row) => row.projectId);
+  const partner = db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.userId, otherUserId), eq(projectMembers.status, "active")))
+    .all()
+    .map((row) => row.projectId);
+  const worksTogether = shared.some((id) => partner.includes(id));
+
   if (prefs?.allowDirectMessages === "nobody") throw new ForbiddenError("This person does not accept direct messages.");
-  if (prefs?.allowDirectMessages === "project_members") {
-    const shared = db
-      .select({ projectId: projectMembers.projectId })
-      .from(projectMembers)
-      .where(and(eq(projectMembers.userId, initiatorId), eq(projectMembers.status, "active")))
-      .all()
-      .map((row) => row.projectId);
-    const partner = db
-      .select({ projectId: projectMembers.projectId })
-      .from(projectMembers)
-      .where(and(eq(projectMembers.userId, otherUserId), eq(projectMembers.status, "active")))
-      .all()
-      .map((row) => row.projectId);
-    if (!shared.some((id) => partner.includes(id))) {
-      throw new ForbiddenError("This person only accepts messages from people they share a project with.");
-    }
+  if (prefs?.allowDirectMessages === "project_members" && !worksTogether) {
+    throw new ForbiddenError("This person only accepts messages from people they share a project with.");
   }
+
+  // People you already build with land in your inbox; a first message from anyone
+  // else waits in Requests until you accept it.
+  const requiresRequest = !worksTogether;
 
   const existing = db
     .select({ id: conversations.id })
     .from(conversations)
     .innerJoin(conversationMembers, eq(conversationMembers.conversationId, conversations.id))
-    .where(
-      and(
-        eq(conversations.kind, "direct"),
-        inArray(conversationMembers.userId, [initiatorId, otherUserId]),
-        isNull(conversationMembers.removedAt),
-      ),
-    )
+    .where(and(eq(conversations.kind, "direct"), inArray(conversationMembers.userId, [initiatorId, otherUserId])))
     .groupBy(conversations.id)
     .having(sql`count(*) = 2`)
     .get();
-  if (existing) return existing.id;
+
+  if (existing) {
+    const rows = db
+      .select({ userId: conversationMembers.userId, requestStatus: conversationMembers.requestStatus, removedAt: conversationMembers.removedAt })
+      .from(conversationMembers)
+      .where(eq(conversationMembers.conversationId, existing.id))
+      .all();
+    const theirs = rows.find((row) => row.userId === otherUserId);
+    // Reopening a request they dismissed, or writing to someone who left: the
+    // request returns rather than silently splitting the history in two.
+    if (theirs && (theirs.removedAt || theirs.requestStatus === "declined")) {
+      db.update(conversationMembers)
+        .set({ removedAt: null, lastReadAt: null, requestStatus: requiresRequest ? "pending" : "accepted" })
+        .where(and(eq(conversationMembers.conversationId, existing.id), eq(conversationMembers.userId, otherUserId)))
+        .run();
+    }
+    return existing.id;
+  }
 
   const id = randomUUID();
   transaction((tx) => {
     tx.insert(conversations).values({ id, kind: "direct", createdBy: initiatorId }).run();
-    tx.insert(conversationMembers).values({ conversationId: id, userId: initiatorId }).run();
-    tx.insert(conversationMembers).values({ conversationId: id, userId: otherUserId }).run();
+    tx.insert(conversationMembers).values({ conversationId: id, userId: initiatorId, requestStatus: "accepted" }).run();
+    tx.insert(conversationMembers)
+      .values({ conversationId: id, userId: otherUserId, requestStatus: requiresRequest ? "pending" : "accepted" })
+      .run();
   });
   return id;
+}
+
+export type MessageRequest = {
+  conversationId: string;
+  from: { id: string; username: string; displayName: string; avatarFileId: string | null };
+  preview: string | null;
+  lastAt: string | null;
+};
+
+/** Direct conversations waiting for this person to accept them. */
+export function listMessageRequests(userId: string): MessageRequest[] {
+  const db = getDb();
+  const pending = db
+    .select({ conversation: conversations })
+    .from(conversationMembers)
+    .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
+    .where(
+      and(
+        eq(conversationMembers.userId, userId),
+        eq(conversationMembers.requestStatus, "pending"),
+        isNull(conversationMembers.removedAt),
+        eq(conversations.kind, "direct"),
+      ),
+    )
+    .all();
+  if (pending.length === 0) return [];
+
+  return pending
+    .map(({ conversation }) => {
+      const sender = db
+        .select({ id: users.id, username: users.username, displayName: users.displayName, avatarFileId: users.avatarFileId })
+        .from(users)
+        .where(eq(users.id, conversation.createdBy))
+        .get();
+      const last = db
+        .select({ body: messages.body, createdAt: messages.createdAt })
+        .from(messages)
+        .where(and(eq(messages.conversationId, conversation.id), isNull(messages.deletedAt)))
+        .orderBy(desc(messages.createdAt))
+        .get();
+      return {
+        conversationId: conversation.id,
+        from: sender ?? { id: conversation.createdBy, username: "unknown", displayName: "Someone", avatarFileId: null },
+        preview: last?.body ?? null,
+        lastAt: last?.createdAt ?? conversation.createdAt,
+      } satisfies MessageRequest;
+    })
+    .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
+}
+
+/**
+ * Accept or dismiss a message request.
+ *
+ * Accepting moves the conversation into the inbox and leaves it unread, so the
+ * messages that prompted the request are waiting rather than pre-read. Dismissing
+ * keeps the history but removes it from view; someone writing again reopens the
+ * request instead of creating a second conversation.
+ */
+export function respondToMessageRequest(conversationId: string, userId: string, accept: boolean): void {
+  const db = getDb();
+  const member = db
+    .select()
+    .from(conversationMembers)
+    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, userId)))
+    .get();
+  if (!member) throw new NotFoundError("Conversation not found.");
+  if (member.requestStatus !== "pending") throw new AppError("That request has already been answered.", { status: 409, code: "request_answered" });
+
+  db.update(conversationMembers)
+    .set(
+      accept
+        ? { requestStatus: "accepted", lastReadAt: null }
+        : { requestStatus: "declined", removedAt: new Date().toISOString() },
+    )
+    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, userId)))
+    .run();
 }
 
 /**
@@ -363,6 +485,25 @@ export function sendMessage(
   rateLimit(`chat:${senderId}`, 60, 60_000);
 
   const db = getDb();
+  const conversation = db.select().from(conversations).where(eq(conversations.id, conversationId)).get();
+
+  // A dismissed request comes back when the other person writes again: the
+  // history stays in one thread instead of splitting or silently disappearing.
+  if (conversation?.kind === "direct") {
+    for (const row of db
+      .select()
+      .from(conversationMembers)
+      .where(and(eq(conversationMembers.conversationId, conversationId), ne(conversationMembers.userId, senderId)))
+      .all()) {
+      if (row.removedAt || row.requestStatus === "declined") {
+        db.update(conversationMembers)
+          .set({ removedAt: null, requestStatus: "pending", lastReadAt: null })
+          .where(eq(conversationMembers.id, row.id))
+          .run();
+      }
+    }
+  }
+
   let parentId: string | null = null;
   let parentAuthorId: string | null = null;
   if (input.parentId) {
@@ -374,11 +515,22 @@ export function sendMessage(
     parentAuthorId = parent.senderId;
   }
   const members = db
-    .select({ userId: conversationMembers.userId, muted: conversationMembers.muted, username: users.username })
+    .select({
+      userId: conversationMembers.userId,
+      muted: conversationMembers.muted,
+      username: users.username,
+      requestStatus: conversationMembers.requestStatus,
+    })
     .from(conversationMembers)
     .innerJoin(users, eq(users.id, conversationMembers.userId))
     .where(and(eq(conversationMembers.conversationId, conversationId), isNull(conversationMembers.removedAt)))
     .all();
+
+  // A request has to be answered before the recipient replies; the sender is
+  // accepted when the conversation is created.
+  if (members.find((member) => member.userId === senderId)?.requestStatus === "pending") {
+    throw new ForbiddenError("Accept the message request before replying.");
+  }
 
   for (const member of members) {
     if (member.userId !== senderId && isBlockedEitherWay(senderId, member.userId)) {
@@ -391,7 +543,6 @@ export function sendMessage(
     .values({ id, conversationId, senderId, body: input.body.trim(), attachmentId: input.attachmentId ?? null, parentId })
     .run();
 
-  const conversation = db.select().from(conversations).where(eq(conversations.id, conversationId)).get();
   const href = `/chats/${conversationId}`;
 
   // Mentions are explicit intent to reach a person. A busy group chat otherwise
@@ -407,7 +558,8 @@ export function sendMessage(
   const groupTitle = conversation?.title ?? "a conversation";
 
   for (const member of members) {
-    if (member.userId === senderId || member.muted) continue;
+    // Nobody is notified about a conversation they have not accepted.
+    if (member.userId === senderId || member.muted || member.requestStatus !== "accepted") continue;
     const isDirect = conversation?.kind !== "group";
     const isMentioned = mentioned.has(member.username.toLowerCase());
     const isReplyTarget = parentAuthorId === member.userId;
@@ -435,6 +587,14 @@ export function sendMessage(
       entityId: conversationId,
     });
   }
+
+  // Push the change to everyone with the conversation open, so a reply appears
+  // without waiting for a poll or a reload.
+  publishChatActivity({
+    conversationId,
+    memberIds: members.filter((member) => member.requestStatus === "accepted").map((member) => member.userId),
+  });
+
   return id;
 }
 

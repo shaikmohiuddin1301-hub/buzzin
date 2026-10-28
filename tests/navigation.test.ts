@@ -6,6 +6,7 @@ import {
   activeSwipeDestination,
   pageSurfaceClass,
   profileHref,
+  swipedFarEnough,
   swipeDestination,
 } from "@/lib/navigation";
 
@@ -57,6 +58,29 @@ describe("page surfaces", () => {
   });
 });
 
+describe("when a released swipe navigates", () => {
+  it("commits a slow drag once it has travelled far enough", () => {
+    expect(swipedFarEnough({ dx: -56, dy: 0, velocity: 0.1 })).toBe(true);
+    expect(swipedFarEnough({ dx: 90, dy: 4, velocity: 0.05 })).toBe(true);
+    expect(swipedFarEnough({ dx: -55, dy: 0, velocity: 0.1 })).toBe(false);
+  });
+
+  it("commits a short flick from the finger's own speed", () => {
+    expect(swipedFarEnough({ dx: -20, dy: 0, velocity: -0.9 })).toBe(true);
+    expect(swipedFarEnough({ dx: 18, dy: 0, velocity: 0.3 })).toBe(true);
+    expect(swipedFarEnough({ dx: -18, dy: 0, velocity: -0.29 })).toBe(false);
+    expect(swipedFarEnough({ dx: -17, dy: 0, velocity: -2 })).toBe(false);
+  });
+
+  it("ignores a diagonal drag that is really a scroll", () => {
+    expect(swipedFarEnough({ dx: -80, dy: 70, velocity: -1 })).toBe(false);
+  });
+
+  it("ignores a flick that ends up moving the other way", () => {
+    expect(swipedFarEnough({ dx: -30, dy: 0, velocity: 0.9 })).toBe(false);
+  });
+});
+
 describe("horizontal swipe navigation", () => {
   const own = profileHref("maya_okafor");
 
@@ -65,6 +89,8 @@ describe("horizontal swipe navigation", () => {
     expect(swipeDestination("/explore", "left", own)).toBe("/chats");
     expect(swipeDestination("/chats", "left", own)).toBe("/u/maya_okafor");
     expect(swipeDestination("/u/maya_okafor", "left", own)).toBeNull();
+    expect(swipeDestination("/home", "right", own)).toBeNull();
+    expect(swipeDestination("/projects/abc", "left", own)).toBeNull();
   });
 
   it("steps back on a right swipe, returning to Explore from Chats", () => {

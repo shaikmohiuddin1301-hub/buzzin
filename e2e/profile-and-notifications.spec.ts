@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * The chrome around the content: the one account menu and the notification bell.
- * The bell must navigate, not open a decorative pop-up, and every menu entry must
- * belong to the signed-in account.
+ * The chrome around the content: the account menu, the notification bell, and the
+ * rule that neither is global. Home owns the bell; only Home and the signed-in
+ * account's own Profile own the menu. The bell must navigate, not open a decorative
+ * pop-up, and every menu entry must belong to the signed-in account.
  */
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -16,15 +17,16 @@ test("the profile menu is the single account menu and every entry resolves", asy
   await expect(page.getByRole("heading", { name: "About, achievements and links" })).toBeVisible();
 
   await page.getByRole("button", { name: "Open menu" }).click();
-  const menu = page.getByRole("menu", { name: "Profile menu" });
+  const menu = page.getByRole("menu", { name: "Account menu" });
   await expect(menu).toBeVisible();
 
   const items = menu.getByRole("menuitem");
-  await expect(items).toHaveCount(4);
+  await expect(items).toHaveCount(5);
   expect(await items.allTextContents()).toEqual([
+    "Your profile",
     "Liked Posts & Projects",
     "Your Comments",
-    "Settings",
+    "Settings & account",
     "Log Out",
   ]);
 
@@ -39,17 +41,37 @@ test("the profile menu is the single account menu and every entry resolves", asy
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
-test("the account menu exists only on the signed-in account's profile", async ({ page }) => {
+test("each page owns its header: the menu and bell are not global", async ({ page }) => {
+  const header = page.locator("header");
+  const menuButton = header.getByRole("button", { name: "Open menu" });
+  const bell = header.getByRole("link", { name: /^Notifications/ });
+
+  // Home: account menu and bell.
   await page.goto("/home");
-  await expect(page.getByRole("button", { name: "Open menu" })).toHaveCount(0);
-  // The old top-right profile shortcut is gone; Profile is a bottom destination.
-  await expect(page.locator("header").getByRole("link", { name: /profile/i })).toHaveCount(0);
+  await expect(menuButton).toBeVisible();
+  await expect(bell).toBeVisible();
 
-  await page.goto("/u/jonas_b");
-  await expect(page.getByRole("button", { name: "Open menu" })).toHaveCount(0);
+  // Explore: search instead of chrome. No menu, no bell.
+  await page.goto("/explore");
+  await expect(header.getByRole("searchbox", { name: "Search people, projects and skills" })).toBeVisible();
+  await expect(menuButton).toHaveCount(0);
+  await expect(bell).toHaveCount(0);
 
+  // Chats: inbox title and conversation search. No menu, no bell.
+  await page.goto("/chats");
+  await expect(header.getByRole("heading", { name: "Chats" })).toBeVisible();
+  await expect(header.getByRole("searchbox", { name: "Search conversations" })).toBeVisible();
+  await expect(menuButton).toHaveCount(0);
+  await expect(bell).toHaveCount(0);
+
+  // Profile: menu, and no bell.
   await page.goto("/u/maya_okafor");
-  await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
+  await expect(menuButton).toBeVisible();
+  await expect(bell).toHaveCount(0);
+
+  // Somebody else's profile is not the place for your account menu.
+  await page.goto("/u/jonas_b");
+  await expect(menuButton).toHaveCount(0);
 });
 
 test("theme choices live in Settings, apply immediately and survive a reload", async ({ page }) => {
@@ -79,17 +101,21 @@ async function bellUnread(page: import("@playwright/test").Page): Promise<number
 }
 
 test("marking a notification read persists on the server", async ({ page }) => {
-  await page.goto("/notifications");
+  // The bell lives in the Home header, so the count is read there.
+  await page.goto("/home");
   const before = await bellUnread(page);
   expect(before).toBeGreaterThan(0);
 
+  await page.goto("/notifications");
   await page.getByRole("button", { name: "Mark read" }).first().click();
+
+  await page.goto("/home");
   await expect.poll(() => bellUnread(page)).toBe(before - 1);
 
   // A fresh page has no client router cache. The header count is rendered by the
   // server layout, so this proves the read state reached the database.
   const fresh = await page.context().newPage();
-  await fresh.goto("/notifications");
+  await fresh.goto("/home");
   await expect.poll(() => bellUnread(fresh)).toBe(before - 1);
   await fresh.close();
 });

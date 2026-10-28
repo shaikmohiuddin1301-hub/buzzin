@@ -82,4 +82,11 @@ test("the desktop sidebar keeps Learning and Projects alongside the five destina
   }
 
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeHidden();
+
+  // Following a sidebar link highlights the destination it went to, even though the
+  // click was a client-side navigation rather than a full load.
+  await sidebar.getByRole("link", { name: "Projects" }).click();
+  await page.waitForURL("**/projects");
+  await expect(sidebar.getByRole("link", { name: "Projects" })).toHaveAttribute("aria-current", "page");
+  await expect(sidebar.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current", "page");
 });

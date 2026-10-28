@@ -71,6 +71,36 @@ export function activeSwipeDestination(pathname: string): SwipeDestinationId | n
   return null;
 }
 
+/** Gesture thresholds, in CSS pixels and CSS pixels per millisecond. */
+export const SWIPE_MIN_DISTANCE = 56;
+export const SWIPE_FLICK_DISTANCE = 18;
+export const SWIPE_FLICK_VELOCITY = 0.3;
+export const SWIPE_HORIZONTAL_BIAS = 1.2;
+
+/**
+ * Whether a released gesture should navigate.
+ *
+ * A slow drag has to travel `SWIPE_MIN_DISTANCE`. A quick flick commits earlier:
+ * the finger's own speed is used, so waiting for more travel would make a natural
+ * flick feel ignored. Both cases still require a clear horizontal bias, and the
+ * flick has to be travelling the way the gesture was, so a drag that starts fast
+ * and snaps back does not change page.
+ */
+export function swipedFarEnough(input: {
+  dx: number;
+  dy: number;
+  velocity: number;
+}): boolean {
+  const distance = Math.abs(input.dx);
+  if (distance < Math.abs(input.dy) * SWIPE_HORIZONTAL_BIAS) return false;
+  if (distance >= SWIPE_MIN_DISTANCE) return true;
+  return (
+    distance >= SWIPE_FLICK_DISTANCE &&
+    Math.abs(input.velocity) >= SWIPE_FLICK_VELOCITY &&
+    Math.sign(input.velocity) === Math.sign(input.dx)
+  );
+}
+
 /**
  * The destination for a deliberate horizontal swipe.
  *
