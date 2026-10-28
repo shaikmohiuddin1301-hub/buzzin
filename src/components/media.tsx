@@ -30,7 +30,7 @@ export function VideoPlayer({
         {!captionsSrc ? <Badge tone="warning">Captions not available</Badge> : <Badge tone="success">Captions available</Badge>}
       </figcaption>
       {transcript ? (
-        <details className="border-t border-navy-100 bg-surface px-4 py-3">
+        <details className="border-t border-navy-200 bg-surface px-4 py-3">
           <summary className="cursor-pointer text-[12px] font-medium text-navy-700">Read the transcript</summary>
           <p className="mt-2 whitespace-pre-line text-[12.5px] leading-6 text-navy-600">{transcript}</p>
         </details>
@@ -78,7 +78,7 @@ export function AttachmentLink({
           <span className="truncate">{filename}</span>
           <span className="shrink-0 text-[10px] text-navy-400">{(sizeBytes / 1024).toFixed(0)} KB</span>
         </span>
-        <Link href={href} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 hover:underline">
+        <Link href={href} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-600 hover:underline">
           <Download size={12} aria-hidden="true" />
           Open
         </Link>

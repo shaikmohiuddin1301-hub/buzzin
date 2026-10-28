@@ -66,7 +66,8 @@ import {
   recordProjectView,
 } from "@/services/projects";
 import { listTasks, projectInterests } from "@/services/tasks";
-import { listComments } from "@/services/social";
+import { listComments, reactionState } from "@/services/social";
+import { reactAction } from "@/app/actions/social";
 import { projectJourneys, resourcesForProject } from "@/services/learning";
 import { storyboardsForProject } from "@/services/stories";
 import { createWorkAreaAction, openWorkAreaChatAction } from "@/app/actions/workAreas";
@@ -101,6 +102,7 @@ export default async function ProjectPage({
   if (!detail) notFound();
 
   const { project, access, owner, members, milestones, updates, skills: projectSkillRows, counts, isFollowing } = detail;
+  const likeState = reactionState(user.id, "project", projectId);
   const tab = typeof query.tab === "string" && TABS.some((t) => t.id === query.tab) ? query.tab : "overview";
   const returnTo = `/projects/${projectId}?tab=${tab}`;
   const isTeam = access.isMember;
@@ -174,8 +176,8 @@ export default async function ProjectPage({
         / <span className="text-navy-700">{project.name}</span>
       </nav>
 
-      <div className="overflow-hidden rounded-xl border border-navy-200 bg-surface shadow-card">
-        <div className="relative h-40 bg-navy-900 sm:h-56">
+      <div className="overflow-hidden card-surface">
+        <div className="relative h-40 ink-surface sm:h-56">
           {project.coverImageId ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`/api/files/${project.coverImageId}`} alt="" className="h-full w-full object-cover opacity-90" />
@@ -200,7 +202,7 @@ export default async function ProjectPage({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-navy-100 px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-navy-200 px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-navy-500">
             <span className="flex items-center gap-1.5">
               <Avatar name={owner?.displayName ?? "Unknown"} size={22} src={owner?.avatarFileId ? `/api/files/${owner.avatarFileId}` : null} />
@@ -213,7 +215,8 @@ export default async function ProjectPage({
               <Users size={13} aria-hidden="true" /> {members.length} on the team
             </span>
             <span className="flex items-center gap-1">
-              <Heart size={13} aria-hidden="true" /> {counts.followers} following
+              <Heart size={13} aria-hidden="true" /> {counts.followers} following · {likeState.count} like
+              {likeState.count === 1 ? "" : "s"}
             </span>
             <span>{project.viewCount} views</span>
             {project.deadline ? (
@@ -229,6 +232,17 @@ export default async function ProjectPage({
               <input type="hidden" name="returnTo" value={returnTo} />
               <SubmitButton variant={isFollowing ? "secondary" : "primary"} size="sm" pendingLabel="…">
                 {isFollowing ? "Following" : "Follow project"}
+              </SubmitButton>
+            </form>
+            {/* A project like is the same `reactions` record as a post like, so it
+                appears on the account's Liked Posts & Projects page. */}
+            <form action={reactAction}>
+              <input type="hidden" name="targetType" value="project" />
+              <input type="hidden" name="targetId" value={projectId} />
+              <input type="hidden" name="kind" value="like" />
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <SubmitButton variant="secondary" size="sm" pendingLabel="…">
+                <Heart size={13} aria-hidden="true" /> {likeState.mine ? "Liked" : "Like"}
               </SubmitButton>
             </form>
             {!access.isMember ? (
@@ -281,7 +295,7 @@ export default async function ProjectPage({
         </div>
 
         {access.canEdit ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-navy-100 bg-navy-50/40 px-4 py-2.5 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-navy-200 bg-navy-50/40 px-4 py-2.5 sm:px-6">
             <form action={updateProjectCoverAction} className="flex flex-wrap items-center gap-2">
               <input type="hidden" name="projectId" value={projectId} />
               <label htmlFor="coverUpload" className="text-[12px] font-medium text-navy-700">
@@ -359,7 +373,7 @@ export default async function ProjectPage({
               <form action={openProjectChatAction}>
                 <button
                   type="submit"
-                  className="motion-card flex h-full w-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 text-left shadow-card"
+                  className="motion-card flex h-full w-full items-start gap-3 card-surface p-4 text-left shadow-card"
                 >
                   <MessageSquare size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
                   <span>
@@ -369,7 +383,7 @@ export default async function ProjectPage({
                 </button>
               </form>
             ) : (
-              <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+              <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
                 <MessageSquare size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
                 <span>
                   <span className="block text-[13px] font-semibold text-navy-950">Chats</span>
@@ -378,7 +392,7 @@ export default async function ProjectPage({
               </Link>
             )}
 
-            <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+            <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
               <ClipboardList size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
               <span>
                 <span className="block text-[13px] font-semibold text-navy-950">Tasks</span>
@@ -388,7 +402,7 @@ export default async function ProjectPage({
               </span>
             </Link>
 
-            <Link href={`/projects/${projectId}?tab=team`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+            <Link href={`/projects/${projectId}?tab=team`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
               <Users size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
               <span>
                 <span className="block text-[13px] font-semibold text-navy-950">Team</span>
@@ -399,7 +413,7 @@ export default async function ProjectPage({
               </span>
             </Link>
 
-            <Link href={`/projects/${projectId}/accepted`} className="motion-card flex h-full items-start gap-3 rounded-xl border border-navy-200/80 bg-surface p-4 shadow-card">
+            <Link href={`/projects/${projectId}/accepted`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
               <FolderCheck size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
               <span>
                 <span className="block text-[13px] font-semibold text-navy-950">Accepted work</span>
@@ -459,13 +473,13 @@ export default async function ProjectPage({
                   <li key={step.key}>
                     <Link
                       href={step.href}
-                      className="flex items-start gap-2 rounded-lg border border-navy-100 bg-navy-50/50 px-3 py-2 text-[12px] hover:border-navy-200 hover:bg-surface"
+                      className="flex items-start gap-2 rounded-lg border border-navy-200 bg-navy-50/50 px-3 py-2 text-[12px] hover:border-navy-200 hover:bg-surface"
                     >
                       <span
                         aria-hidden="true"
                         className={cn(
                           "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold",
-                          step.done ? "bg-emerald-600 text-white" : "border border-navy-300 bg-surface text-navy-400",
+                          step.done ? "bg-emerald-600 text-on-teal" : "border border-navy-300 bg-surface text-navy-400",
                         )}
                       >
                         {step.done ? "✓" : ""}
@@ -488,7 +502,7 @@ export default async function ProjectPage({
               <div className="prose-bt mt-2 whitespace-pre-line text-[13.5px]">{project.overview ?? project.shortDescription}</div>
 
               {project.problem ? (
-                <div className="mt-5 rounded-lg border border-navy-100 bg-navy-50/60 p-4">
+                <div className="mt-5 rounded-lg border border-navy-200 bg-navy-50/60 p-4">
                   <h3 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">The problem</h3>
                   <p className="mt-1 text-[13px] leading-6 text-navy-700">{project.problem}</p>
                 </div>
@@ -525,7 +539,7 @@ export default async function ProjectPage({
                   label={`${completedMilestones.length} of ${milestones.length} milestones complete`}
                 />
               </div>
-              <ul className="mt-3 divide-y divide-navy-100">
+              <ul className="mt-3 divide-y divide-navy-200">
                 {milestones.slice(0, 4).map((milestone) => (
                   <MilestoneRow key={milestone.id} milestone={milestone} />
                 ))}
@@ -543,7 +557,7 @@ export default async function ProjectPage({
               </div>
               <div className="mt-3 space-y-4">
                 {updates.slice(0, 3).map((update) => (
-                  <article key={update.id} className="rounded-lg border border-navy-100 p-4">
+                  <article key={update.id} className="rounded-lg border border-navy-200 p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-[13px] font-semibold text-navy-900">{update.title}</h3>
                       <Badge tone={update.visibility === "public" ? "success" : "neutral"}>{label(update.visibility)}</Badge>
@@ -602,7 +616,7 @@ export default async function ProjectPage({
               {project.compensationDetails ? (
                 <p className="mt-1 text-[11.5px] leading-5 text-navy-600">{project.compensationDetails}</p>
               ) : null}
-              <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-[10.5px] leading-4 text-amber-800">
+              <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-[10.5px] leading-4 text-amber-700">
                 A listing does not make unpaid work lawful and creates no employment relationship.
               </p>
             </Card>
@@ -666,7 +680,7 @@ export default async function ProjectPage({
                     <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-medium text-navy-700 hover:bg-navy-50 [&::-webkit-details-marker]:hidden">
                       <Pencil size={13} aria-hidden="true" /> Edit project details
                     </summary>
-                    <form action={updateProjectAction} className="mt-2 space-y-2 border-t border-navy-100 pt-2">
+                    <form action={updateProjectAction} className="mt-2 space-y-2 border-t border-navy-200 pt-2">
                       <input type="hidden" name="projectId" value={projectId} />
                       <Field label="Name" htmlFor="edit-name">
                         <Input id="edit-name" name="name" defaultValue={project.name} required />
@@ -738,11 +752,11 @@ export default async function ProjectPage({
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-5">
             <Card>
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Milestones</h2>
                 <p className="text-[12px] text-navy-500">Status is set by the project team. Completion is recorded with a timestamp.</p>
               </div>
-              <ul className="divide-y divide-navy-100 px-5">
+              <ul className="divide-y divide-navy-200 px-5">
                 {milestones.map((milestone) => (
                   <MilestoneRow
                     key={milestone.id}
@@ -768,7 +782,7 @@ export default async function ProjectPage({
                 {milestones.length === 0 ? <li className="py-6 text-center text-[13px] text-navy-500">No milestones yet.</li> : null}
               </ul>
               {access.canEdit ? (
-                <form action={addMilestoneAction} className="border-t border-navy-100 p-5">
+                <form action={addMilestoneAction} className="border-t border-navy-200 p-5">
                   <input type="hidden" name="projectId" value={projectId} />
                   <div className="grid gap-2 sm:grid-cols-[1.5fr_1fr_150px_auto]">
                     <Field label="New milestone" htmlFor="ms-title">
@@ -791,13 +805,13 @@ export default async function ProjectPage({
             </Card>
 
             <Card>
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Project updates</h2>
                 <p className="text-[12px] text-navy-500">Dated narrative from the team. Public updates also appear in the feed.</p>
               </div>
               <div className="space-y-4 p-5">
                 {updates.map((update) => (
-                  <article key={update.id} className="rounded-lg border border-navy-100 p-4">
+                  <article key={update.id} className="rounded-lg border border-navy-200 p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-[13px] font-semibold text-navy-900">{update.title}</h3>
                       <Badge tone={update.visibility === "public" ? "success" : "neutral"}>{label(update.visibility)}</Badge>
@@ -812,7 +826,7 @@ export default async function ProjectPage({
                 {updates.length === 0 ? <p className="text-[13px] text-navy-500">No updates yet.</p> : null}
               </div>
               {access.canEdit ? (
-                <form action={postProjectUpdateAction} className="space-y-2 border-t border-navy-100 p-5">
+                <form action={postProjectUpdateAction} className="space-y-2 border-t border-navy-200 p-5">
                   <input type="hidden" name="projectId" value={projectId} />
                   <Field label="Update title" htmlFor="update-title" required>
                     <Input id="update-title" name="title" required maxLength={140} />
@@ -837,7 +851,7 @@ export default async function ProjectPage({
 
             {access.canEdit ? (
               <Card>
-                <div className="border-b border-navy-100 px-5 py-4">
+                <div className="border-b border-navy-200 px-5 py-4">
                   <h2 className="text-[14px] font-semibold text-navy-950">Share to social</h2>
                   <p className="text-[12px] text-navy-500">
                     Publishes through Ayrshare to the networks linked in your Ayrshare dashboard. Only public updates can
@@ -885,7 +899,7 @@ export default async function ProjectPage({
                   </form>
                 )}
 
-                <ul className="divide-y divide-navy-100 border-t border-navy-100">
+                <ul className="divide-y divide-navy-200 border-t border-navy-200">
                   {shares.length === 0 ? (
                     <li className="px-5 py-4 text-[12px] text-navy-500">Nothing shared from this project yet.</li>
                   ) : (
@@ -950,7 +964,7 @@ export default async function ProjectPage({
       {tab === "tasks" && !isInviteOnlyLimited ? (
         <div className="space-y-5">
           <Card>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-100 px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-200 px-5 py-4">
               <div>
                 <h2 className="text-[14px] font-semibold text-navy-950">Tasks</h2>
                 <p className="text-[12px] text-navy-500">
@@ -985,11 +999,11 @@ export default async function ProjectPage({
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-5">
             <Card>
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Team</h2>
                 <p className="text-[12px] text-navy-500">Active members. Removal revokes workspace and chat access immediately.</p>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {members.map((member) => (
                   <li key={member.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                     <Avatar name={member.displayName} size={32} src={member.avatarFileId ? `/api/files/${member.avatarFileId}` : null} />
@@ -1020,7 +1034,7 @@ export default async function ProjectPage({
             </Card>
 
             <Card>
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Work areas</h2>
                 <p className="text-[12px] text-navy-500">
                   Where work belongs: each area keeps its own tasks, chat and Accepted Work. Create one only when it earns its place.
@@ -1031,7 +1045,7 @@ export default async function ProjectPage({
                   No work areas yet. Tasks stay in the project inbox until you add one.
                 </p>
               ) : (
-                <ul className="divide-y divide-navy-100">
+                <ul className="divide-y divide-navy-200">
                   {workAreaList.map((area) => (
                     <li key={area.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                       <div className="min-w-0 flex-1">
@@ -1057,7 +1071,7 @@ export default async function ProjectPage({
                 </ul>
               )}
               {access.canEdit ? (
-                <form action={createWorkAreaAction} className="grid gap-2 border-t border-navy-100 bg-navy-50/40 px-5 py-4 sm:grid-cols-[1fr_1.4fr_auto]">
+                <form action={createWorkAreaAction} className="grid gap-2 border-t border-navy-200 bg-navy-50/40 px-5 py-4 sm:grid-cols-[1fr_1.4fr_auto]">
                   <input type="hidden" name="projectId" value={projectId} />
                   <Field label="New work area" htmlFor="areaName">
                     <Input id="areaName" name="name" required maxLength={40} placeholder="Design" />
@@ -1076,11 +1090,11 @@ export default async function ProjectPage({
 
             {access.canReview ? (
               <Card>
-                <div className="border-b border-navy-100 px-5 py-4">
+                <div className="border-b border-navy-200 px-5 py-4">
                   <h2 className="text-[14px] font-semibold text-navy-950">Expressions of interest</h2>
                   <p className="text-[12px] text-navy-500">Review profiles, ask a question, or accept with a clear message.</p>
                 </div>
-                <ul className="divide-y divide-navy-100">
+                <ul className="divide-y divide-navy-200">
                   {interests.map((row) => (
                     <li key={row.eoi.id} className="px-5 py-4">
                       <div className="flex flex-wrap items-start gap-3">
@@ -1106,7 +1120,7 @@ export default async function ProjectPage({
                                     href={sample.url}
                                     target="_blank"
                                     rel="noopener noreferrer nofollow"
-                                    className="text-[11px] font-medium text-brand-700 underline"
+                                    className="text-[11px] font-medium text-brand-600 underline"
                                   >
                                     {sample.label}
                                   </a>
@@ -1154,7 +1168,7 @@ export default async function ProjectPage({
 
             {access.canManageTeam ? (
               <Card>
-                <div className="border-b border-navy-100 px-5 py-4">
+                <div className="border-b border-navy-200 px-5 py-4">
                   <h2 className="text-[14px] font-semibold text-navy-950">Invite someone</h2>
                   <p className="text-[12px] text-navy-500">Invite by username. Invitations are visible in their notifications.</p>
                 </div>
@@ -1199,7 +1213,7 @@ export default async function ProjectPage({
                 <input type="hidden" name="scope" value="public_story" />
                 <input type="hidden" name="grant" value={myConsent ? "false" : "true"} />
                 <p className="text-[11px] font-medium text-navy-800">
-                  Public story use: {myConsent ? <span className="text-emerald-700">granted</span> : <span className="text-amber-700">not granted</span>}
+                  Public story use: {myConsent ? <span className="text-emerald-600">granted</span> : <span className="text-amber-700">not granted</span>}
                 </p>
                 <SubmitButton size="sm" variant={myConsent ? "secondary" : "primary"} pendingLabel="…">
                   {myConsent ? "Withdraw consent" : "Grant consent"}
@@ -1266,7 +1280,7 @@ export default async function ProjectPage({
         <div className="space-y-5">
           <div className="grid gap-5 lg:grid-cols-2">
             <Card>
-              <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
+              <div className="flex items-center justify-between border-b border-navy-200 px-5 py-4">
                 <div>
                   <h2 className="text-[14px] font-semibold text-navy-950">Learning journeys</h2>
                   <p className="text-[12px] text-navy-500">Built from approved documentation.</p>
@@ -1277,7 +1291,7 @@ export default async function ProjectPage({
                   </ButtonLink>
                 ) : null}
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {journeys.map((row) => (
                   <li key={row.journey.id} className="px-5 py-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1296,11 +1310,11 @@ export default async function ProjectPage({
             </Card>
 
             <Card>
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Learning resources</h2>
                 <p className="text-[12px] text-navy-500">Free and premium material linked to this project.</p>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {resources.map((row) => (
                   <li key={row.resource.id} className="flex items-center justify-between gap-3 px-5 py-3">
                     <div className="min-w-0">
@@ -1355,7 +1369,7 @@ export default async function ProjectPage({
         <div className="grid gap-5 lg:grid-cols-2">
           <Card className="p-5">
             <h2 className="text-[14px] font-semibold text-navy-950">Completed milestones</h2>
-            <ul className="mt-2 divide-y divide-navy-100">
+            <ul className="mt-2 divide-y divide-navy-200">
               {completedMilestones.map((milestone) => (
                 <MilestoneRow key={milestone.id} milestone={milestone} />
               ))}
@@ -1366,17 +1380,17 @@ export default async function ProjectPage({
           <Card className="p-5">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-[14px] font-semibold text-navy-950">Approved deliverables</h2>
-              <Link href={`/projects/${projectId}/accepted`} className="text-[11.5px] font-medium text-brand-700 hover:underline">
+              <Link href={`/projects/${projectId}/accepted`} className="text-[11.5px] font-medium text-brand-600 hover:underline">
                 Accepted work
               </Link>
             </div>
-            <ul className="mt-2 divide-y divide-navy-100">
+            <ul className="mt-2 divide-y divide-navy-200">
               {approvedDeliverables.map((row) => (
                 <li key={row.deliverable.id} className="py-2.5">
                   <p className="text-[13px] font-medium text-navy-900">{row.deliverable.title}</p>
                   <p className="text-[11px] text-navy-500">{row.taskTitle}</p>
                   {row.deliverable.url ? (
-                    <a href={row.deliverable.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11px] text-brand-700 underline">
+                    <a href={row.deliverable.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11px] text-brand-600 underline">
                       Open deliverable
                     </a>
                   ) : null}
@@ -1384,7 +1398,7 @@ export default async function ProjectPage({
               ))}
               {approvedDeliverables.length === 0 ? <li className="py-3 text-[13px] text-navy-500">No approved deliverables yet.</li> : null}
             </ul>
-            <p className="mt-3 border-t border-navy-100 pt-2 text-[10.5px] text-navy-400">
+            <p className="mt-3 border-t border-navy-200 pt-2 text-[10.5px] text-navy-400">
               Metrics shown are supplied by the project team and are not independently audited.
             </p>
           </Card>

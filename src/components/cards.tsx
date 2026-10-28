@@ -48,8 +48,8 @@ export function ProjectCard({
   reasons?: string[];
 }) {
   return (
-    <article className="motion-card group flex flex-col overflow-hidden rounded-2xl border border-navy-200/60 bg-surface shadow-card">
-      <Link href={`/projects/${project.id}`} className="relative block aspect-[16/9] overflow-hidden bg-navy-900">
+    <article className="motion-card card-surface group flex flex-col overflow-hidden">
+      <Link href={`/projects/${project.id}`} className="relative block aspect-[16/9] overflow-hidden ink-surface">
         {project.coverImageId ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -59,7 +59,7 @@ export function ProjectCard({
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand-800 via-navy-900 to-navy-950">
+          <div className="flex h-full w-full items-center justify-center ink-card">
             <span className="text-3xl font-semibold text-white/75">
               {project.name
                 .split(" ")
@@ -144,8 +144,8 @@ export function ResourceCard({
 }) {
   const target = href ?? `/learn/${resource.id}`;
   return (
-    <article className="motion-card flex gap-4 rounded-2xl border border-navy-200/60 bg-surface p-4 shadow-card">
-      <div className="hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-navy-900 sm:block">
+    <article className="motion-card card-surface flex gap-4 p-4">
+      <div className="hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl ink-surface sm:block">
         {resource.coverImageId ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/files/${resource.coverImageId}`} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -203,7 +203,7 @@ export function PersonCard({
   reasons?: string[];
 }) {
   return (
-    <article className="motion-card flex items-start gap-3 rounded-2xl border border-navy-200/60 bg-surface p-4 shadow-card">
+    <article className="motion-card card-surface flex items-start gap-3 p-4">
       <Avatar name={person.displayName} size={44} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
       <div className="min-w-0 flex-1">
         <h3 className="text-[14px] font-semibold text-navy-950">
@@ -273,7 +273,7 @@ export function MilestoneRow({
         className={cn(
           "mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
           milestone.status === "completed"
-            ? "border-emerald-500 bg-emerald-500 text-white"
+            ? "border-emerald-500 bg-emerald-500 text-on-teal"
             : milestone.status === "in_progress"
               ? "border-brand-500 bg-surface text-brand-600"
               : "border-navy-300 bg-surface",
@@ -315,7 +315,7 @@ export function TaskRow({
   href: string;
 }) {
   return (
-    <li className="border-b border-navy-100 last:border-0">
+    <li className="border-b border-navy-200 last:border-0">
       <Link href={href} className="flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-navy-50/60">
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold text-navy-900">{task.title}</p>

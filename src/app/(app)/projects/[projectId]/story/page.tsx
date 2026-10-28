@@ -187,11 +187,11 @@ export default async function ProjectStoryPage({
               </Card>
 
               <Card>
-                <div className="border-b border-navy-100 px-5 py-4">
+                <div className="border-b border-navy-200 px-5 py-4">
                   <h2 className="text-[14px] font-semibold text-navy-950">Scenes</h2>
                   <p className="text-[12px] text-navy-500">Each scene records its source and its fact status. Editing narration marks it human-authored.</p>
                 </div>
-                <ol className="divide-y divide-navy-100">
+                <ol className="divide-y divide-navy-200">
                   {sceneRows.map((scene, index) => (
                     <li key={scene.id} className="px-5 py-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -301,7 +301,7 @@ export default async function ProjectStoryPage({
                 ))}
               </ul>
               {canManage ? (
-                <form action={generateStoryAction} className="mt-3 border-t border-navy-100 pt-3">
+                <form action={generateStoryAction} className="mt-3 border-t border-navy-200 pt-3">
                   <input type="hidden" name="projectId" value={projectId} />
                   <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="Generating…">
                     Generate a new storyboard
@@ -316,7 +316,7 @@ export default async function ProjectStoryPage({
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Render &amp; review</h2>
 
               {board.animation ? (
-                <div className="mt-2 rounded-md bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-800">
+                <div className="mt-2 rounded-md bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-600">
                   <p className="flex items-center gap-1 font-medium">
                     <CheckCircle2 size={12} aria-hidden="true" /> Animated explainer ready
                   </p>
@@ -359,7 +359,7 @@ export default async function ProjectStoryPage({
                         <Field label="Approval note" htmlFor="approve-note">
                           <Textarea id="approve-note" name="note" rows={2} placeholder="I checked every scene against its source." />
                         </Field>
-                        <SubmitButton size="sm" className="w-full" pendingLabel="…">
+                        <SubmitButton size="sm" variant="positive" className="w-full" pendingLabel="…">
                           Approve
                         </SubmitButton>
                       </form>
@@ -368,7 +368,7 @@ export default async function ProjectStoryPage({
                         <input type="hidden" name="storyboardId" value={board.board.id} />
                         <input type="hidden" name="decision" value="changes_requested" />
                         <input type="hidden" name="note" value="Changes requested from the story editor." />
-                        <SubmitButton size="sm" variant="secondary" className="w-full" pendingLabel="…">
+                        <SubmitButton size="sm" variant="caution" className="w-full" pendingLabel="…">
                           Request changes
                         </SubmitButton>
                       </form>
@@ -387,7 +387,7 @@ export default async function ProjectStoryPage({
                 </div>
               ) : null}
 
-              <p className="mt-3 border-t border-navy-100 pt-2 text-[10.5px] leading-4 text-navy-500">
+              <p className="mt-3 border-t border-navy-200 pt-2 text-[10.5px] leading-4 text-navy-500">
                 Publication requires: approved status, a rendered animation, and project-owner approval. Authors cannot approve
                 their own story.
               </p>

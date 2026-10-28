@@ -49,7 +49,7 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-5">
           <Card className="overflow-hidden">
-            <div className="relative aspect-[16/8] bg-gradient-to-br from-brand-800 via-navy-900 to-navy-950">
+            <div className="relative aspect-[16/8] ink-card">
               {resource.coverImageId ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={`/api/files/${resource.coverImageId}`} alt="" className="h-full w-full object-cover" />
@@ -94,7 +94,7 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
 
           {previewEmbed || course.previewVideoUrl ? (
             <Card className="overflow-hidden">
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Preview</h2>
               </div>
               {previewEmbed ? (
@@ -114,7 +114,7 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
                     href={course.previewVideoUrl!}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
-                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-700 underline"
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-600 underline"
                   >
                     <ExternalLink size={13} aria-hidden="true" />
                     Open {providerLabel(externalProvider(course.previewVideoUrl))} preview
@@ -154,17 +154,17 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
           ) : null}
 
           <Card>
-            <div className="border-b border-navy-100 px-5 py-4">
+            <div className="border-b border-navy-200 px-5 py-4">
               <h2 className="text-[14px] font-semibold text-navy-950">Course outline</h2>
               <p className="text-[11.5px] text-navy-500">Lesson titles are public. Full lesson content requires an account and enrolment.</p>
             </div>
             {curriculum.length === 0 ? (
               <p className="px-5 py-5 text-[12px] text-navy-500">This course has no published modules yet.</p>
             ) : (
-              <ol className="divide-y divide-navy-100">
+              <ol className="divide-y divide-navy-200">
                 {curriculum.map((module, moduleIndex) => (
                   <li key={module.id} className="px-5 py-4">
-                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-700">Module {moduleIndex + 1}</p>
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-600">Module {moduleIndex + 1}</p>
                     <h3 className="mt-0.5 text-[13px] font-semibold text-navy-950">{module.title}</h3>
                     {module.description ? <p className="mt-1 text-[11.5px] leading-5 text-navy-500">{module.description}</p> : null}
                     <ul className="mt-2 space-y-1.5">
@@ -202,7 +202,7 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
                 Create a free account
               </ButtonLink>
             </div>
-            <p className="mt-3 border-t border-navy-100 pt-3 text-[10px] leading-4 text-navy-500">
+            <p className="mt-3 border-t border-navy-200 pt-3 text-[10px] leading-4 text-navy-500">
               Enrolment is explicit. BuildTogether never enrols you automatically and never shares your progress publicly
               without permission.
             </p>
@@ -235,7 +235,7 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
               </div>
             </dl>
             {course.skills && course.skills.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1.5 border-t border-navy-100 pt-3">
+              <div className="mt-3 flex flex-wrap gap-1.5 border-t border-navy-200 pt-3">
                 {course.skills.map((skill) => (
                   <SkillTag key={skill} name={skill} />
                 ))}

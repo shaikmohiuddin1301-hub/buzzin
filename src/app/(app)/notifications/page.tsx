@@ -51,6 +51,18 @@ const TONES: Record<string, "brand" | "success" | "warning" | "danger" | "info" 
   security: "danger",
 };
 
+/** Day bucket for the list, so a long history stays readable. */
+function dayBucket(createdAt: string, now: Date): string {
+  const created = new Date(createdAt);
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  if (created >= startOfToday) return "Today";
+  if (created >= startOfYesterday) return "Yesterday";
+  return "Earlier";
+}
+
 export default async function NotificationsPage({
   searchParams,
 }: {
@@ -72,6 +84,16 @@ export default async function NotificationsPage({
     offset: (page - 1) * NOTIFICATIONS_PAGE_SIZE,
   });
 
+  // Ordered final list; the day headings are derived from the same rows, never invented.
+  const now = new Date();
+  const groups: { label: string; rows: typeof notifications }[] = [];
+  for (const row of notifications) {
+    const bucket = dayBucket(row.notification.createdAt, now);
+    const last = groups[groups.length - 1];
+    if (last && last.label === bucket) last.rows.push(row);
+    else groups.push({ label: bucket, rows: [row] });
+  }
+
   const invitations = getDb()
     .select({ invitation: projectInvitations, projectName: projects.name, inviterName: users.displayName })
     .from(projectInvitations)
@@ -80,21 +102,32 @@ export default async function NotificationsPage({
     .where(and(eq(projectInvitations.inviteeId, user.id), eq(projectInvitations.status, "pending")))
     .all();
 
+  const returnTo = unreadOnly ? "/notifications?filter=unread" : "/notifications";
+
   return (
     <div>
       <PageHeader
         title="Notifications"
         description="Project activity, reviews, messages and safety notices. Notifications are stored on the server and survive sign-out; email and push delivery are not configured in this build."
+        meta={
+          unread > 0 ? (
+            <Badge tone="brand">
+              {unread} unread notification{unread === 1 ? "" : "s"}
+            </Badge>
+          ) : (
+            <span>All caught up</span>
+          )
+        }
         actions={
           unread > 0 ? (
             <form action={markAllReadAction}>
-              <input type="hidden" name="returnTo" value={unreadOnly ? "/notifications?filter=unread" : "/notifications"} />
-              <SubmitButton size="sm" variant="secondary" pendingLabel="Marking…" confirmMessage="Mark all notifications as read?">
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <SubmitButton size="sm" variant="primary" pendingLabel="Marking…" confirmMessage="Mark all notifications as read?">
                 Mark all read
               </SubmitButton>
             </form>
           ) : (
-            <span className="text-[12px] text-navy-500">All caught up</span>
+            <span className="text-[12px] text-navy-500">Nothing to mark</span>
           )
         }
       />
@@ -111,93 +144,103 @@ export default async function NotificationsPage({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Card>
-          <ul className="divide-y divide-navy-100">
-            {notifications.map((row) => {
-              const item = row.notification;
-              const unreadItem = !item.readAt;
-              return (
-                <li key={item.id} className={cn("px-5 py-4 transition-colors", unreadItem && "bg-brand-50/30")}>
-                  <div className="flex items-start gap-3">
-                    {row.actorName ? (
-                      <Avatar name={row.actorName} size={30} src={row.actorAvatar ? `/api/files/${row.actorAvatar}` : null} />
-                    ) : (
-                      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-navy-100 text-[10px] font-semibold text-navy-600">
-                        BT
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {item.href ? (
-                          <Link
-                            href={`/api/notifications/${item.id}/open`}
-                            className="text-[13px] font-medium text-navy-900 hover:text-brand-700 hover:underline"
-                            aria-label={`Open: ${item.title}${unreadItem ? " (unread)" : ""}`}
-                          >
-                            {item.title}
-                          </Link>
-                        ) : (
-                          <p className="text-[13px] font-medium text-navy-900">{item.title}</p>
-                        )}
-                        <Badge tone={TONES[item.kind] ?? "neutral"}>{label(item.kind)}</Badge>
-                        {unreadItem ? (
-                          <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-brand-600" aria-hidden="true" />
-                            <span className="sr-only">Unread</span>
-                          </>
-                        ) : null}
-                      </div>
-                      {item.body ? <p className="mt-0.5 text-[12px] leading-5 text-navy-600">{item.body}</p> : null}
-                      <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
-                        <time className="text-navy-400" dateTime={item.createdAt} title={new Date(item.createdAt).toISOString()}>
-                          {relativeTime(item.createdAt)}
-                        </time>
-                        {item.href ? (
-                          <Link
-                            href={`/api/notifications/${item.id}/open`}
-                            className="font-medium text-brand-700 hover:underline"
-                          >
-                            Open
-                          </Link>
-                        ) : null}
-                        {unreadItem ? (
-                          <form action={markReadAction}>
-                            <input type="hidden" name="notificationId" value={item.id} />
-                            <input type="hidden" name="returnTo" value={unreadOnly ? "/notifications?filter=unread" : "/notifications"} />
-                            <SubmitButton size="sm" variant="ghost" className="h-5 px-1 text-[10px]" pendingLabel="…">
-                              Mark read
-                            </SubmitButton>
-                          </form>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-            {notifications.length === 0 ? (
-              <li className="p-6">
-                <EmptyState
-                  title={unreadOnly ? "No unread notifications" : "No notifications yet"}
-                  description={
-                    unreadOnly
-                      ? "Everything has been read. New assignments, reviews, replies and mentions will appear here."
-                      : "When someone assigns you work, reviews a submission, replies to you, mentions you or invites you to a project, it lands here — even after signing out."
-                  }
-                  action={
-                    unreadOnly ? (
-                      <ButtonLink href="/notifications" size="sm" variant="secondary">
-                        View all notifications
-                      </ButtonLink>
-                    ) : (
-                      <ButtonLink href="/home" size="sm" variant="secondary">
-                        Back to home
-                      </ButtonLink>
-                    )
-                  }
-                />
-              </li>
-            ) : null}
-          </ul>
+          {notifications.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                title={unreadOnly ? "No unread notifications" : "No notifications yet"}
+                description={
+                  unreadOnly
+                    ? "Everything has been read. New assignments, reviews, replies and mentions will appear here."
+                    : "When someone assigns you work, reviews a submission, replies to you, mentions you or invites you to a project, it lands here — even after signing out."
+                }
+                action={
+                  unreadOnly ? (
+                    <ButtonLink href="/notifications" size="sm" variant="secondary">
+                      View all notifications
+                    </ButtonLink>
+                  ) : (
+                    <ButtonLink href="/home" size="sm" variant="secondary">
+                      Back to home
+                    </ButtonLink>
+                  )
+                }
+              />
+            </div>
+          ) : (
+            <div>
+              {groups.map((group) => (
+                <section key={group.label} aria-label={group.label}>
+                  <h2 className="glass-secondary px-5 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy-500">
+                    {group.label}
+                  </h2>
+                  <ul className="divide-y divide-navy-200">
+                    {group.rows.map((row) => {
+                      const item = row.notification;
+                      const unreadItem = !item.readAt;
+                      return (
+                        <li key={item.id} className={cn("px-5 py-4 transition-colors", unreadItem && "bg-navy-100")}>
+                          <div className="flex items-start gap-3">
+                            {row.actorName ? (
+                              <Avatar name={row.actorName} size={30} src={row.actorAvatar ? `/api/files/${row.actorAvatar}` : null} />
+                            ) : (
+                              <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-navy-100 text-[10px] font-semibold text-navy-600">
+                                BT
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {item.href ? (
+                                  <Link
+                                    href={`/api/notifications/${item.id}/open`}
+                                    className="text-[13px] font-medium text-navy-900 hover:text-brand-700 hover:underline"
+                                    aria-label={`Open: ${item.title}${unreadItem ? " (unread)" : ""}`}
+                                  >
+                                    {item.title}
+                                  </Link>
+                                ) : (
+                                  <p className="text-[13px] font-medium text-navy-900">{item.title}</p>
+                                )}
+                                <Badge tone={TONES[item.kind] ?? "neutral"}>{label(item.kind)}</Badge>
+                                {unreadItem ? (
+                                  <>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-coral-500" aria-hidden="true" />
+                                    <span className="sr-only">Unread</span>
+                                  </>
+                                ) : null}
+                              </div>
+                              {item.body ? <p className="mt-0.5 text-[12px] leading-5 text-navy-600">{item.body}</p> : null}
+                              <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
+                                <time className="text-navy-400" dateTime={item.createdAt} title={new Date(item.createdAt).toISOString()}>
+                                  {relativeTime(item.createdAt)}
+                                </time>
+                                {item.href ? (
+                                  <Link
+                                    href={`/api/notifications/${item.id}/open`}
+                                    className="font-medium text-brand-600 hover:underline"
+                                  >
+                                    Open
+                                  </Link>
+                                ) : null}
+                                {unreadItem ? (
+                                  <form action={markReadAction}>
+                                    <input type="hidden" name="notificationId" value={item.id} />
+                                    <input type="hidden" name="returnTo" value={returnTo} />
+                                    <SubmitButton size="sm" variant="ghost" className="h-5 px-1 text-[10px]" pendingLabel="…">
+                                      Mark read
+                                    </SubmitButton>
+                                  </form>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
           {notifications.length > 0 ? (
             <Pagination
               page={page}
@@ -212,10 +255,10 @@ export default async function NotificationsPage({
         <aside className="space-y-4">
           {invitations.length > 0 ? (
             <Card>
-              <div className="border-b border-navy-100 px-4 py-3">
+              <div className="border-b border-navy-200 px-4 py-3">
                 <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Invitations</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {invitations.map((row) => (
                   <li key={row.invitation.id} className="px-4 py-3">
                     <p className="text-[12px] font-medium text-navy-900">{row.projectName}</p>

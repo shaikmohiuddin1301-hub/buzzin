@@ -76,7 +76,7 @@ export function SiteHeader({ signedIn, username }: { signedIn: boolean; username
                 </li>
               </ul>
             </nav>
-            <div className="mt-2 border-t border-navy-100 pt-2">
+            <div className="mt-2 border-t border-navy-200 pt-2">
               {signedIn ? (
                 <ButtonLink href="/home" size="sm" className="w-full">
                   Go to app
@@ -167,7 +167,7 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-navy-100 pt-6 text-[12px] text-navy-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-navy-200 pt-6 text-[12px] text-navy-500 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} BuildTogether. A demonstration platform built for review.</p>
           <p className="max-w-xl">
             Legal pages are initial drafts for review and are not legal advice. Payments are disabled in this build; no

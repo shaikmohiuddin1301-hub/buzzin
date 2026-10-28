@@ -110,13 +110,13 @@ export default async function ConversationPage({
       <Flash error={error} notice={notice} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <Card className="flex min-h-[420px] flex-col">
+        <Card className="conversation-surface flex min-h-[420px] flex-col">
           {task ? (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-100 bg-brand-50/60 px-4 py-2 text-[11.5px] text-navy-700">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-200 bg-brand-50/60 px-4 py-2 text-[11.5px] text-navy-700">
               <Badge tone="brand">Task</Badge>
               <span>
                 Chat for{" "}
-                <Link href={`/tasks/${task.id}`} className="font-medium text-brand-700 underline">
+                <Link href={`/tasks/${task.id}`} className="font-medium text-brand-600 underline">
                   {task.title}
                 </Link>
                 . Files shared here are attached to the task.
@@ -125,11 +125,11 @@ export default async function ConversationPage({
           ) : null}
 
           {project ? (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-100 bg-navy-50/60 px-4 py-2 text-[11.5px] text-navy-600">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-200 bg-navy-50/60 px-4 py-2 text-[11.5px] text-navy-600">
               {area ? <Badge tone="brand">{area.name}</Badge> : null}
               <span>
                 {area ? "Work area chat for" : "Team chat for"}{" "}
-                <Link href={`/projects/${project.id}`} className="font-medium text-brand-700 underline">
+                <Link href={`/projects/${project.id}`} className="font-medium text-brand-600 underline">
                   {project.name}
                 </Link>
                 . Access is revoked automatically when someone leaves the team.
@@ -151,12 +151,12 @@ export default async function ConversationPage({
                   className={cn(
                     "flex gap-2.5 scroll-mt-20",
                     mine ? "flex-row-reverse" : "",
-                    row.message.parentId ? "ml-5 border-l-2 border-navy-100 pl-3" : "",
+                    row.message.parentId ? "ml-5 border-l-2 border-navy-200 pl-3" : "",
                   )}
                 >
                   <Avatar name={row.senderName} size={28} src={row.senderAvatar ? `/api/files/${row.senderAvatar}` : null} />
                   <div className={cn("max-w-[80%]", mine ? "text-right" : "")}>
-                    <p className="text-[10.5px] text-navy-500">
+                    <p className="text-[10.5px] text-navy-600">
                       {mine ? "You" : row.senderName} · {relativeTime(row.message.createdAt)}
                     </p>
                     {parent ? (
@@ -166,8 +166,8 @@ export default async function ConversationPage({
                     ) : null}
                     <div
                       className={cn(
-                        "mt-0.5 inline-block rounded-lg px-3 py-2 text-left text-[12.5px] leading-5",
-                        mine ? "bg-brand-600 text-white" : "bg-navy-50 text-navy-800",
+                        "mt-0.5 inline-block rounded-xl px-3 py-2 text-left text-[12.5px] leading-5",
+                        mine ? "bubble-outgoing" : "bubble-incoming",
                       )}
                     >
                       {row.message.deletedAt ? (
@@ -204,7 +204,7 @@ export default async function ConversationPage({
                         ) : null}
                         {canFileDrop ? (
                           row.message.taskId ? (
-                            <Link href={`/tasks/${row.message.taskId}`} className="text-brand-700 underline">
+                            <Link href={`/tasks/${row.message.taskId}`} className="text-brand-600 underline">
                               Filed as a task
                             </Link>
                           ) : (
@@ -247,7 +247,7 @@ export default async function ConversationPage({
             {messages.length === 0 ? <p className="py-8 text-center text-[12.5px] text-navy-500">No messages yet. Say hello.</p> : null}
           </div>
 
-          <form action={sendMessageAction} encType="multipart/form-data" className="border-t border-navy-100 p-3">
+          <form action={sendMessageAction} encType="multipart/form-data" className="border-t border-navy-200 p-3">
             <input type="hidden" name="conversationId" value={conversationId} />
             <label htmlFor="message-body" className="sr-only">
               Message

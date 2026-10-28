@@ -215,7 +215,7 @@ export default async function JourneyPage({
               <ul className="mt-2 space-y-1.5">
                 {linkedResources.map((resource) => (
                   <li key={resource.id}>
-                    <Link href={`/learn/${resource.id}`} className="text-[11.5px] font-medium text-brand-700 hover:underline">
+                    <Link href={`/learn/${resource.id}`} className="text-[11.5px] font-medium text-brand-600 hover:underline">
                       {resource.title}
                     </Link>
                   </li>

@@ -14,7 +14,7 @@ export default function ForCreatorsPage() {
         secondary={{ href: "/learn", label: "See the learning centre" }}
         aside={
           <Card className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-700">What you can publish</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-600">What you can publish</p>
             <ul className="mt-3 space-y-2 text-[13px] text-navy-700">
               {["Free articles and practical guides", "Animated project stories", "Learning journeys from a task", "Courses with modules and exercises", "Workshops and resource packs", "Premium material with a free preview"].map((item) => (
                 <li key={item} className="flex gap-2">

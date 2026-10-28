@@ -9,7 +9,6 @@ import { saveUploadedFile } from "@/lib/storage";
 import {
   addMilestone,
   archiveProject,
-  createProject,
   createQuickProject,
   deleteProject,
   inviteToProject,
@@ -21,6 +20,8 @@ import {
   toggleProjectFollow,
   updateProject,
 } from "@/services/projects";
+import { createProjectWithTasks } from "@/services/projectSetup";
+import { getUserByUsername } from "@/services/users";
 import {
   assignContributor,
   confirmScope,
@@ -39,6 +40,7 @@ import { addDependency, removeDependency } from "@/services/dependencies";
 import { ensureProjectGroup } from "@/services/chat";
 import { createPost } from "@/services/social";
 import { addWorkLogEntry, approveWorkLogEntry, updateWorkLogEntry, withdrawConsent } from "@/services/worklog";
+import { VISIBILITIES } from "@/lib/types";
 import type {
   CompensationType,
   EoiIntent,
@@ -54,14 +56,147 @@ import type {
 
 /* --------------------------------- projects -------------------------------- */
 
+/** A task as it arrives from the creation wizard. Everything is re-validated here. */
+type WizardTask = {
+  title: string;
+  description?: string;
+  objective?: string;
+  deliverablesSpec?: string;
+  acceptanceCriteria?: string;
+  effort?: string;
+  deadline?: string;
+  skills: string[];
+  workArea?: string;
+  assignee?: string;
+  visibility: Visibility;
+  priority: "low" | "normal" | "high";
+  referenceLinks?: string;
+  dependsOn: number[];
+};
+
+const MAX_NEW_TASKS = 25;
+const MAX_NEW_AREAS = 10;
+
+function parseJson(raw: string, what: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new AppError(`The submitted ${what} could not be read. Reload the page and try again.`);
+  }
+}
+
+/** Work areas are typed as a list of names; each becomes a real work area with its own chat. */
+function parseWorkAreas(raw: string): string[] {
+  if (!raw.trim()) return [];
+  const parsed = parseJson(raw, "work areas");
+  if (!Array.isArray(parsed)) throw new AppError("Work areas must be submitted as a list.");
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of parsed) {
+    if (typeof entry !== "string") continue;
+    const name = entry.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+  }
+  if (names.length > MAX_NEW_AREAS) throw new AppError(`A project can start with at most ${MAX_NEW_AREAS} work areas.`);
+  return names;
+}
+
+function parseTasks(raw: string): WizardTask[] {
+  if (!raw.trim()) return [];
+  const parsed = parseJson(raw, "task breakdown");
+  if (!Array.isArray(parsed)) throw new AppError("The task breakdown must be submitted as a list.");
+  if (parsed.length > MAX_NEW_TASKS) throw new AppError(`A project can start with at most ${MAX_NEW_TASKS} tasks.`);
+
+  return parsed.map((entry) => {
+    const record = (entry && typeof entry === "object" ? entry : {}) as Record<string, unknown>;
+    const text = (key: string) => (typeof record[key] === "string" ? (record[key] as string).trim() : "");
+    const list = (key: string) =>
+      Array.isArray(record[key])
+        ? [...new Set((record[key] as unknown[]).filter((value): value is string => typeof value === "string").map((value) => value.trim()).filter(Boolean))].slice(0, 10)
+        : [];
+    const priority = text("priority");
+    const visibility = text("visibility");
+    return {
+      title: text("title"),
+      description: text("description") || undefined,
+      objective: text("objective") || undefined,
+      deliverablesSpec: text("deliverablesSpec") || undefined,
+      acceptanceCriteria: text("acceptanceCriteria") || undefined,
+      effort: text("effort") || undefined,
+      deadline: text("deadline") || undefined,
+      skills: list("skills"),
+      workArea: text("workArea") || undefined,
+      assignee: text("assignee").replace(/^@/, "") || undefined,
+      visibility: (VISIBILITIES as readonly string[]).includes(visibility) ? (visibility as Visibility) : "public",
+      priority: priority === "low" || priority === "high" ? priority : "normal",
+      referenceLinks: text("referenceLinks") || undefined,
+      dependsOn: Array.isArray(record.dependsOn)
+        ? (record.dependsOn as unknown[]).filter((value): value is number => Number.isInteger(value)).slice(0, MAX_NEW_TASKS)
+        : [],
+    };
+  });
+}
+
+/**
+ * The task's own words, with any reference links kept under a labelled heading so
+ * nothing a creator typed is dropped. The task has no links column of its own.
+ */
+function taskDescription(task: WizardTask): string | undefined {
+  const parts = [task.description, task.referenceLinks ? `Reference links:\n${task.referenceLinks}` : undefined].filter(Boolean);
+  return parts.length > 0 ? parts.join("\n\n") : undefined;
+}
+
+/**
+ * Create a project, its work areas and its whole task breakdown in one transaction.
+ *
+ * Everything is validated before the first write, and the writes share a single
+ * transaction, so a rejected task or a bad work area leaves no half-built project.
+ * Task breakdown is available inside the creation flow itself, not as a separate
+ * page the creator has to find afterwards.
+ */
 export async function createProjectAction(formData: FormData) {
   await runServerAction("/projects/new", async () => {
     const user = await requireUserOrThrow();
-    assertEmailVerified(user);
+    const publish = bool(formData, "publish");
+    // A draft is always allowed; publishing is what needs a verified address.
+    if (publish) assertEmailVerified(user);
     rateLimit(`project:create:${user.id}`, 5, 3_600_000);
 
     const name = str(formData, "name");
-    const publish = bool(formData, "publish");
+    const shortDescription = str(formData, "shortDescription");
+    const overview = optional(formData, "overview");
+    const compensationType = str(formData, "compensationType", "unpaid") as CompensationType;
+    const compensationDetails = optional(formData, "compensationDetails");
+
+    // Required project information, stated plainly instead of hiding it under an
+    // "optional" heading. Save as draft is the escape hatch while it is incomplete.
+    if (name.trim().length < 3) throw new AppError("A project needs a title of at least 3 characters.");
+    if (shortDescription.trim().length < 20) {
+      throw new AppError("A project needs a summary of at least 20 characters so people know what they are joining.");
+    }
+    if (publish && (overview?.trim().length ?? 0) < 40) {
+      throw new AppError("Describe the project in at least 40 characters before publishing. You can save it as a draft first.");
+    }
+    if (publish && compensationType === "unpaid" && !compensationDetails?.trim()) {
+      throw new AppError("Say what unpaid contributors receive (credit, learning, references) before publishing.");
+    }
+
+    const workAreaNames = parseWorkAreas(str(formData, "workAreasJson"));
+    const tasks = parseTasks(str(formData, "tasksJson"));
+
+    // Resolve every named assignee before writing anything, so a typo is reported
+    // instead of silently leaving the task unassigned.
+    const assignees = new Map<number, string>();
+    for (const [index, task] of tasks.entries()) {
+      if (!task.assignee) continue;
+      const person = getUserByUsername(task.assignee);
+      if (!person) throw new AppError(`No account found for @${task.assignee}. Remove the assignee or correct the username.`);
+      assignees.set(index, person.id);
+    }
 
     let coverImageId: string | null = null;
     const cover = file(formData, "cover");
@@ -70,46 +205,68 @@ export async function createProjectAction(formData: FormData) {
       coverImageId = stored.id;
     }
 
-    const { id } = createProject(user.id, {
-      coverImageId,
-      name,
-      shortDescription: str(formData, "shortDescription"),
-      overview: optional(formData, "overview"),
-      problem: optional(formData, "problem"),
-      audience: optional(formData, "audience"),
-      category: str(formData, "category", "software") as ProjectCategory,
-      stage: str(formData, "stage", "idea") as ProjectStage,
-      visibility: str(formData, "visibility", "public") as Visibility,
-      workMode: str(formData, "workMode", "remote") as WorkMode,
-      effort: optional(formData, "effort"),
-      deadline: optional(formData, "deadline"),
-      compensationType: str(formData, "compensationType", "unpaid") as CompensationType,
-      compensationDetails: optional(formData, "compensationDetails"),
-      allowPublicDocs: bool(formData, "allowPublicDocs"),
-      confidentialityNotes: optional(formData, "confidentialityNotes"),
-      ipNotes: optional(formData, "ipNotes"),
-      links: [0, 1, 2].flatMap((index) => {
-        const url = str(formData, `linkUrl${index}`);
-        return url ? [{ label: str(formData, `linkLabel${index}`, "Link"), url }] : [];
-      }),
-      skills: list(formData, "skills", 12),
-      milestones: [0, 1, 2, 3].flatMap((index) => {
-        const title = str(formData, `milestoneTitle${index}`);
-        return title
-          ? [{ title, description: optional(formData, `milestoneDescription${index}`), dueDate: optional(formData, `milestoneDue${index}`) }]
-          : [];
-      }),
-      publish,
-      businessId: optional(formData, "businessId") ?? null,
-    });
+    // The project, its work areas and its whole task breakdown are one unit of work:
+    // validation happens first and every write shares a single transaction.
+    const created = createProjectWithTasks(
+      user.id,
+      {
+        coverImageId,
+        name,
+        shortDescription,
+        overview,
+        problem: optional(formData, "problem"),
+        audience: optional(formData, "audience"),
+        category: str(formData, "category", "software") as ProjectCategory,
+        stage: str(formData, "stage", "idea") as ProjectStage,
+        visibility: str(formData, "visibility", "public") as Visibility,
+        workMode: str(formData, "workMode", "remote") as WorkMode,
+        effort: optional(formData, "effort"),
+        deadline: optional(formData, "deadline"),
+        compensationType,
+        compensationDetails,
+        allowPublicDocs: bool(formData, "allowPublicDocs"),
+        openToCollaborators: bool(formData, "collaborators"),
+        confidentialityNotes: optional(formData, "confidentialityNotes"),
+        ipNotes: optional(formData, "ipNotes"),
+        links: [0, 1, 2].flatMap((index) => {
+          const url = str(formData, `linkUrl${index}`);
+          return url ? [{ label: str(formData, `linkLabel${index}`, "Link"), url }] : [];
+        }),
+        skills: list(formData, "skills", 12),
+        milestones: [0, 1, 2, 3].flatMap((index) => {
+          const title = str(formData, `milestoneTitle${index}`);
+          return title
+            ? [{ title, description: optional(formData, `milestoneDescription${index}`), dueDate: optional(formData, `milestoneDue${index}`) }]
+            : [];
+        }),
+        publish,
+        businessId: optional(formData, "businessId") ?? null,
+      },
+      {
+        workAreas: workAreaNames,
+        tasks: tasks.map((task, index) => ({
+          ...task,
+          description: taskDescription(task),
+          assigneeId: assignees.get(index),
+        })),
+      },
+    );
 
     // Every project starts with a team chat, so "where do we talk about this?"
     // never depends on someone finding a button afterwards.
-    ensureProjectGroup(id, user.id);
+    ensureProjectGroup(created.id, user.id);
+
+    const summary = [
+      publish ? "Project+published." : "Draft+saved.",
+      created.areaCount > 0 ? `${created.areaCount}+work+area${created.areaCount === 1 ? "" : "s"}.` : null,
+      created.taskCount > 0 ? `${created.taskCount}+task${created.taskCount === 1 ? "" : "s"}+created.` : null,
+    ]
+      .filter(Boolean)
+      .join("+");
 
     return {
-      path: `/projects/${id}?${publish ? "notice=Project+published." : "notice=Draft+saved."}`,
-      revalidate: ["/explore", "/home", "/projects/new"],
+      path: `/projects/${created.id}?notice=${summary}`,
+      revalidate: ["/explore", "/home", "/projects/new", "/projects"],
     };
   });
 }

@@ -56,9 +56,9 @@ export default async function TaskJourneyPage({
     .orderBy(desc(learningJourneys.createdAt))
     .all();
 
-  const eligible = entries.filter(
-    (entry) => entry.visibility === "public" || entry.authorId === user.id || access.canReview,
-  );
+  // Mirrors the rule the draft action applies, so the list cannot promise entries
+  // the draft would then refuse to cite.
+  const eligible = entries.filter((entry) => entry.visibility === "public" || entry.authorId === user.id);
 
   return (
     <div>
@@ -94,8 +94,8 @@ export default async function TaskJourneyPage({
               <Library size={15} aria-hidden="true" /> Draft from approved documentation
             </h2>
             <p className="mt-1 text-[12.5px] leading-6 text-navy-600">
-              The draft includes only entries that are visible to you and approved for public use. Entries that are team-only
-              or awaiting approval are skipped, and the draft tells you how many.
+              The draft cites public entries and your own documentation. Other people&rsquo;s entries that are still awaiting
+              approval are skipped, and the draft tells you how many.
             </p>
             <form action={draftJourneyFromTaskAction} className="mt-3">
               <input type="hidden" name="taskId" value={taskId} />
@@ -104,11 +104,11 @@ export default async function TaskJourneyPage({
           </Card>
 
           <Card>
-            <div className="border-b border-navy-100 px-5 py-4">
+            <div className="border-b border-navy-200 px-5 py-4">
               <h2 className="text-[14px] font-semibold text-navy-950">Eligible entries ({eligible.length})</h2>
-              <p className="text-[12px] text-navy-500">Public and awaiting-approval documentation from this task.</p>
+              <p className="text-[12px] text-navy-500">Public entries, plus your own documentation from this task.</p>
             </div>
-            <ul className="divide-y divide-navy-100">
+            <ul className="divide-y divide-navy-200">
               {eligible.map((entry) => (
                 <li key={entry.id} className="px-5 py-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -152,7 +152,7 @@ export default async function TaskJourneyPage({
             <ul className="mt-2 space-y-2">
               {journeys.map((journey) => (
                 <li key={journey.id}>
-                  <Link href={`/learn/journeys/${journey.id}`} className="text-[11.5px] font-medium text-brand-700 hover:underline">
+                  <Link href={`/learn/journeys/${journey.id}`} className="text-[11.5px] font-medium text-brand-600 hover:underline">
                     {journey.title}
                   </Link>
                   <div className="mt-0.5 flex items-center gap-1.5">

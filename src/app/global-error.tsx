@@ -10,12 +10,12 @@
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <html lang="en-GB">
-      <body style={{ fontFamily: "system-ui, sans-serif", background: "#f7f8fb", margin: 0 }}>
+      <body style={{ fontFamily: "system-ui, sans-serif", background: "#F5F5F3", margin: 0 }}>
         <main style={{ margin: "0 auto", maxWidth: "32rem", padding: "6rem 1.5rem" }}>
-          <h1 style={{ fontSize: "1.5rem", color: "#0b1220" }}>BuildTogether is unavailable</h1>
-          <p style={{ color: "#2a4063", lineHeight: 1.6 }}>
+          <h1 style={{ fontSize: "1.5rem", color: "#34343A" }}>BuildTogether is unavailable</h1>
+          <p style={{ color: "#56565F", lineHeight: 1.6 }}>
             The application could not start. If you operate this deployment, check{" "}
-            <a href="/api/health" style={{ color: "#5b34e6" }}>
+            <a href="/api/health" style={{ color: "#34343A", textDecoration: "underline" }}>
               /api/health
             </a>{" "}
             and the server logs.
@@ -27,8 +27,8 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
               marginTop: "1rem",
               borderRadius: "0.5rem",
               border: "none",
-              background: "#6d4aff",
-              color: "white",
+              background: "#34343A",
+              color: "#FFFFFF",
               padding: "0.5rem 1rem",
               cursor: "pointer",
             }}

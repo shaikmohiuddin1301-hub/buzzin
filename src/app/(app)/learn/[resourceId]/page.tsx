@@ -214,7 +214,7 @@ export default async function ResourcePage({
                     You can read the preview{curriculum.some((module) => module.lessons.some((lesson) => lesson.isFreePreview)) ? " and any free-preview lessons" : ""}.
                     The full body, transcript and exercises are withheld by the server until you have access.
                   </p>
-                  <p className="mt-2 text-[11.5px] leading-5 text-amber-800">
+                  <p className="mt-2 text-[11.5px] leading-5 text-amber-700">
                     <strong>Payments are disabled in this build.</strong> No charge is made. Requesting access sends a message
                     to the creator, who grants it manually from their studio.
                   </p>
@@ -230,7 +230,7 @@ export default async function ResourcePage({
                       </SubmitButton>
                     </form>
                   ) : (
-                    <p className="mt-2 text-[11.5px] text-amber-800">No product is linked yet, so access cannot be requested.</p>
+                    <p className="mt-2 text-[11.5px] text-amber-700">No product is linked yet, so access cannot be requested.</p>
                   )}
                 </div>
               </div>
@@ -278,7 +278,7 @@ export default async function ResourcePage({
                   <strong className="font-semibold text-navy-800">Attribution:</strong> {course.attribution}
                 </p>
               ) : null}
-              <p className="mt-4 border-t border-navy-100 pt-3 text-[10.5px] leading-4 text-navy-500">
+              <p className="mt-4 border-t border-navy-200 pt-3 text-[10.5px] leading-4 text-navy-500">
                 Lessons may include videos and resources hosted by other platforms. Those items remain the property of their
                 creators and open on the original site. BuildTogether does not host or re-upload them.
               </p>
@@ -287,7 +287,7 @@ export default async function ResourcePage({
 
           {isCourse && course?.previewVideoUrl ? (
             <Card className="overflow-hidden">
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Course preview</h2>
                 <p className="text-[11.5px] text-navy-500">Shared from the original platform.</p>
               </div>
@@ -308,7 +308,7 @@ export default async function ResourcePage({
                     href={course.previewVideoUrl}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
-                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-700 underline"
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-600 underline"
                   >
                     <ExternalLink size={13} aria-hidden="true" />
                     {providerLabel(externalProvider(course.previewVideoUrl))} preview (opens {externalHost(course.previewVideoUrl)})
@@ -335,7 +335,7 @@ export default async function ResourcePage({
 
           {curriculum.length > 0 ? (
             <Card>
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-100 px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-200 px-5 py-4">
                 <div>
                   <h2 className="text-[14px] font-semibold text-navy-950">Curriculum</h2>
                   <p className="text-[12px] text-navy-500">
@@ -343,9 +343,9 @@ export default async function ResourcePage({
                     {courseProgress ? ` · ${courseProgress.completedLessons} completed` : ""}
                   </p>
                 </div>
-                {overall > 0 ? <span className="text-[11px] font-medium text-brand-700">{overall}% complete</span> : null}
+                {overall > 0 ? <span className="text-[11px] font-medium text-brand-600">{overall}% complete</span> : null}
               </div>
-              <div className="divide-y divide-navy-100">
+              <div className="divide-y divide-navy-200">
                 {curriculum.map((module, moduleIndex) => (
                   <section key={module.id} className="px-5 py-4">
                     <h3 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">
@@ -356,7 +356,7 @@ export default async function ResourcePage({
                       {module.lessons.map((lesson) => {
                         const completed = completedLessonIds.includes(lesson.id);
                         return (
-                          <li key={lesson.id} className="rounded-lg border border-navy-100 transition hover:border-brand-200 hover:bg-brand-50/30">
+                          <li key={lesson.id} className="rounded-lg border border-navy-200 transition hover:border-brand-200 hover:bg-brand-50/30">
                             <div className="flex flex-wrap items-center gap-2 p-3">
                               {isCourse ? (
                                 <Link
@@ -410,7 +410,7 @@ export default async function ResourcePage({
                 ))}
               </div>
               {premium && !entitled ? (
-                <p className="border-t border-navy-100 px-5 py-3 text-[11px] text-amber-700">
+                <p className="border-t border-navy-200 px-5 py-3 text-[11px] text-amber-700">
                   Lessons without a free preview are withheld by the server until access is granted.
                 </p>
               ) : null}
@@ -454,7 +454,7 @@ export default async function ResourcePage({
             {feedback.length > 0 ? (
               <ul className="mt-2 space-y-3">
                 {feedback.map((item) => (
-                  <li key={item.id} className="rounded-lg border border-navy-100 p-3">
+                  <li key={item.id} className="rounded-lg border border-navy-200 p-3">
                     <div className="flex items-center gap-2">
                       <Star size={12} aria-hidden="true" className="fill-amber-400 text-amber-400" />
                       <span className="text-[12px] font-semibold text-navy-900">{item.rating}/5</span>
@@ -471,7 +471,7 @@ export default async function ResourcePage({
               <p className="mt-1.5 text-[12px] text-navy-500">No feedback yet.</p>
             )}
             {!detail.isOwner ? (
-              <form action={feedbackAction} className="mt-4 space-y-2 border-t border-navy-100 pt-3">
+              <form action={feedbackAction} className="mt-4 space-y-2 border-t border-navy-200 pt-3">
                 <input type="hidden" name="resourceId" value={resourceId} />
                 <Field label="Your rating" htmlFor="rating">
                   <Select id="rating" name="rating" defaultValue="5">
@@ -505,7 +505,7 @@ export default async function ResourcePage({
               {resource.status !== "published" && canEdit ? (
                 <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
                   <p className="text-[11.5px] font-semibold text-amber-900">Draft preview</p>
-                  <p className="mt-0.5 text-[10.5px] leading-4 text-amber-800">
+                  <p className="mt-0.5 text-[10.5px] leading-4 text-amber-700">
                     Learners cannot see this course until it is published. You are seeing it as an editor.
                   </p>
                 </div>
@@ -517,13 +517,13 @@ export default async function ResourcePage({
                     </span>
                     {overall >= 100 && courseLessonCount > 0 ? <Badge tone="success">Completed</Badge> : <Badge tone="brand">In progress</Badge>}
                   </div>
-                  <Progress value={overall} label={`${overall}% · ${courseProgress?.completedLessons ?? 0} of ${courseProgress?.totalLessons ?? 0} lessons`} />
+                  <Progress tone="teal" value={overall} label={`${overall}% · ${courseProgress?.completedLessons ?? 0} of ${courseProgress?.totalLessons ?? 0} lessons`} />
                   {nextLessonId ? (
                     <ButtonLink href={`/learn/${resourceId}/lessons/${nextLessonId}`} size="sm" className="mt-1 w-full">
                       Continue learning <ArrowRight size={13} aria-hidden="true" />
                     </ButtonLink>
                   ) : (
-                    <p className="rounded-lg bg-emerald-50 px-2 py-1.5 text-[10.5px] leading-4 text-emerald-800">
+                    <p className="rounded-lg bg-emerald-50 px-2 py-1.5 text-[10.5px] leading-4 text-emerald-600">
                       All lessons are marked complete. This records your learning activity, not an accepted contribution.
                     </p>
                   )}
@@ -539,7 +539,7 @@ export default async function ResourcePage({
                   </p>
                 </form>
               ) : premium && !entitled ? (
-                <p className="mt-2 text-[11px] leading-5 text-amber-800">
+                <p className="mt-2 text-[11px] leading-5 text-amber-700">
                   Access must be granted before you can enrol. Payments are disabled in this build.
                 </p>
               ) : (
@@ -604,7 +604,7 @@ export default async function ResourcePage({
             <Card className="p-4">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Your progress</h2>
               <div className="mt-2">
-                <Progress value={overall} label={`${overall}% complete`} />
+                <Progress tone="teal" value={overall} label={`${overall}% complete`} />
               </div>
             </Card>
           ) : null}

@@ -45,7 +45,7 @@ export function ShareButton({
       onClick={share}
       aria-label="Share this post"
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-navy-500 transition hover:bg-navy-100 hover:text-navy-800",
+        "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700",
         status === "error" && "text-red-600",
         className,
       )}

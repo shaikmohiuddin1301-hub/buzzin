@@ -155,9 +155,9 @@ Because the seams are typed, replacing one does not require touching pages, acti
 ## 7. Frontend architecture
 
 - **Server components by default.** Data is resolved on the server; the browser receives HTML plus ~103 kB of shared JS.
-- **Client islands only where interaction needs state**: `app-nav` (mobile menu + active item), `submit-button` (pending state), `story-player` (scene step-through, captions, reduced-motion aware), `auto-refresh` (chat/notification polling with a visibility check).
+- **Client islands only where interaction needs state**: `bottom-tabs` (five-destination bar, Create sheet, keyboard-aware hiding), `swipe-navigation` (touch gesture → the same router push, with View Transitions where supported), `profile-menu` (the one account menu, shown on the signed-in account's profile), `submit-button` (pending state), `story-player` (scene step-through, captions, reduced-motion aware), `auto-refresh` (chat/notification polling with a visibility check).
 - **Design system** in `src/components/ui.tsx` plus `cards.tsx`, `media.tsx`, `comments.tsx`, `post-card.tsx`, `report-form.tsx`, `marketing.tsx`: buttons, fields, panels, tabs, badges, avatars, tables, empty/loading/error states, confirmation dialogs, progress meters, reputation indicators, media player, uploads.
-- **Tokens** in `globals.css` (navy structure, restrained purple accents, neutral surfaces) with CSS variables so a dark theme can be added without rewriting components.
+- **Tokens** in `globals.css` (graphite/silver structure, coral and emerald accents, translucent glass surfaces) with CSS variables so the light and dark themes stay in sync without rewriting components.
 - **Accessibility**: semantic landmarks, labelled form fields, visible focus rings, keyboard-operable menus and tabs, captions/transcripts for media, `prefers-reduced-motion` support, WCAG AA contrast targets, no autoplaying audio.
 
 ## 8. Known architectural limitations

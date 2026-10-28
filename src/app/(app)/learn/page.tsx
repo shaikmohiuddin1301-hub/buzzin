@@ -103,13 +103,13 @@ export default async function LearnPage({
                 </Select>
               </Field>
               <div className="sm:col-span-5">
-                <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-brand-700">
+                <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-[13px] font-medium text-on-brand hover:bg-brand-700">
                   Apply
                 </button>
               </div>
             </form>
             {topics.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1.5 border-t border-navy-100 pt-3">
+              <div className="mt-3 flex flex-wrap gap-1.5 border-t border-navy-200 pt-3">
                 <Link href="/learn" className="rounded-md bg-navy-100 px-2 py-1 text-[11px] font-medium text-navy-700">
                   All topics
                 </Link>
@@ -118,7 +118,7 @@ export default async function LearnPage({
                     key={item.topic}
                     href={`/learn?topic=${encodeURIComponent(item.topic)}`}
                     className={`rounded-md px-2 py-1 text-[11px] font-medium ${
-                      topic === item.topic ? "bg-brand-600 text-white" : "bg-navy-50 text-navy-700 hover:bg-navy-100"
+                      topic === item.topic ? "bg-brand-600 text-on-brand" : "bg-navy-50 text-navy-700 hover:bg-navy-100"
                     }`}
                   >
                     {item.topic} ({item.count})
@@ -163,7 +163,7 @@ export default async function LearnPage({
                 ))}
               </ul>
             )}
-            <Link href="/courses" className="mt-2 inline-block text-[10.5px] font-medium text-brand-700 hover:underline">
+            <Link href="/courses" className="mt-2 inline-block text-[10.5px] font-medium text-brand-600 hover:underline">
               Public course catalogue →
             </Link>
           </Card>
@@ -179,7 +179,7 @@ export default async function LearnPage({
                     <Link href={`/learn/${item.resource.id}`} className="text-[12px] font-medium text-navy-900 hover:underline">
                       {item.resource.title}
                     </Link>
-                    <Progress value={item.pct} label={`${item.pct}% · updated ${relativeTime(item.updatedAt)}`} />
+                    <Progress tone="teal" value={item.pct} label={`${item.pct}% · updated ${relativeTime(item.updatedAt)}`} />
                   </li>
                 ))}
               </ul>
@@ -206,7 +206,7 @@ export default async function LearnPage({
               <ul className="mt-2 space-y-1.5">
                 {entitlements.slice(0, 5).map((row) => (
                   <li key={row.entitlement.id}>
-                    <Link href={`/learn/${row.resource.id}`} className="text-[11.5px] font-medium text-brand-700 hover:underline">
+                    <Link href={`/learn/${row.resource.id}`} className="text-[11.5px] font-medium text-brand-600 hover:underline">
                       {row.resource.title}
                     </Link>
                     <p className="text-[10px] text-navy-400">granted {relativeTime(row.entitlement.grantedAt)}</p>

@@ -81,11 +81,11 @@ export default async function BusinessDetailPage({
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3.5">
+              <div className="border-b border-navy-200 px-5 py-3.5">
                 <h2 className="text-[13px] font-semibold text-navy-900">Public project portfolio</h2>
                 <p className="text-[11px] text-navy-500">Only published projects attached to this organisation appear here.</p>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {portfolio.map((project) => (
                   <li key={project.id} className="px-5 py-3.5">
                     <div className="flex flex-wrap items-center gap-2">
@@ -168,10 +168,10 @@ export default async function BusinessDetailPage({
       {tab === "team" ? (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <Card>
-            <div className="border-b border-navy-100 px-5 py-3.5">
+            <div className="border-b border-navy-200 px-5 py-3.5">
               <h2 className="text-[13px] font-semibold text-navy-900">Team</h2>
             </div>
-            <ul className="divide-y divide-navy-100">
+            <ul className="divide-y divide-navy-200">
               {members.map((member) => (
                 <li key={member.id} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div className="flex items-center gap-2">

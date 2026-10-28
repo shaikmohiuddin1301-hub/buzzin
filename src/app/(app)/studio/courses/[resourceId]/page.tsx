@@ -99,7 +99,7 @@ export default async function CourseBuilderPage({
             <span>{curriculum.length} modules</span>
             <span>{lessonCount} lessons</span>
             <span>Updated {formatDate(resource.updatedAt)}</span>
-            <Link href={`/learn/${resource.id}`} className="font-medium text-brand-700 hover:underline">
+            <Link href={`/learn/${resource.id}`} className="font-medium text-brand-600 hover:underline">
               Learner view →
             </Link>
           </>
@@ -181,12 +181,12 @@ export default async function CourseBuilderPage({
                 />
               </div>
             ) : (
-              <div className="divide-y divide-navy-100">
+              <div className="divide-y divide-navy-200">
                 {curriculum.map((module, moduleIndex) => (
                   <section key={module.id} className="p-4 sm:p-5">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-700">Module {moduleIndex + 1}</p>
+                        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-600">Module {moduleIndex + 1}</p>
                         <h3 className="mt-0.5 text-[14px] font-semibold text-navy-950">{module.title}</h3>
                         {module.description ? <p className="mt-1 text-[12px] leading-5 text-navy-500">{module.description}</p> : null}
                       </div>
@@ -218,10 +218,10 @@ export default async function CourseBuilderPage({
                     </div>
 
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-[11.5px] font-medium text-brand-700 hover:underline">
+                      <summary className="cursor-pointer text-[11.5px] font-medium text-brand-600 hover:underline">
                         Edit module details
                       </summary>
-                      <form action={updateModuleAction} className="mt-3 space-y-3 rounded-lg border border-navy-100 p-3">
+                      <form action={updateModuleAction} className="mt-3 space-y-3 rounded-lg border border-navy-200 p-3">
                         <input type="hidden" name="resourceId" value={resource.id} />
                         <input type="hidden" name="moduleId" value={module.id} />
                         <Field label="Module title" htmlFor={`module-title-${module.id}`}>
@@ -241,7 +241,7 @@ export default async function CourseBuilderPage({
                         const exercise = exerciseFor.get(lesson.id);
                         const media = lesson.mediaId ? getMedia(lesson.mediaId) : null;
                         return (
-                          <li key={lesson.id} className="rounded-xl border border-navy-100 bg-navy-50/30 p-3">
+                          <li key={lesson.id} className="rounded-xl border border-navy-200 bg-navy-50/30 p-3">
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-1.5">
@@ -299,10 +299,10 @@ export default async function CourseBuilderPage({
                             </div>
 
                             <details className="mt-2">
-                              <summary className="cursor-pointer text-[11.5px] font-medium text-brand-700 hover:underline">
+                              <summary className="cursor-pointer text-[11.5px] font-medium text-brand-600 hover:underline">
                                 Edit lesson
                               </summary>
-                              <form action={updateLessonAction} encType="multipart/form-data" className="mt-3 space-y-3 rounded-lg border border-navy-100 bg-surface p-3">
+                              <form action={updateLessonAction} encType="multipart/form-data" className="mt-3 space-y-3 rounded-lg border border-navy-200 bg-surface p-3">
                                 <input type="hidden" name="resourceId" value={resource.id} />
                                 <input type="hidden" name="lessonId" value={lesson.id} />
                                 <Field label="Lesson title" htmlFor={`lesson-title-${lesson.id}`}>
@@ -353,7 +353,7 @@ export default async function CourseBuilderPage({
                                     ))}
                                   </Select>
                                 </Field>
-                                <div className="rounded-lg border border-navy-100 bg-navy-50/50 p-3">
+                                <div className="rounded-lg border border-navy-200 bg-navy-50/50 p-3">
                                   <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">Practical exercise</p>
                                   <div className="mt-2 space-y-3">
                                     <Field label="Exercise title" htmlFor={`lesson-ex-title-${lesson.id}`}>
@@ -379,7 +379,7 @@ export default async function CourseBuilderPage({
                     </ul>
 
                     <details className="mt-3">
-                      <summary className="inline-flex cursor-pointer items-center gap-1 text-[12px] font-medium text-brand-700 hover:underline">
+                      <summary className="inline-flex cursor-pointer items-center gap-1 text-[12px] font-medium text-brand-600 hover:underline">
                         <Plus size={13} aria-hidden="true" /> Add a lesson
                       </summary>
                       <form action={addLessonAction} encType="multipart/form-data" className="mt-3 space-y-3 rounded-lg border border-dashed border-navy-200 p-3">
@@ -429,7 +429,7 @@ export default async function CourseBuilderPage({
                             </Select>
                           </Field>
                         </div>
-                        <div className="rounded-lg border border-navy-100 bg-navy-50/50 p-3">
+                        <div className="rounded-lg border border-navy-200 bg-navy-50/50 p-3">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">Practical exercise</p>
                           <div className="mt-2 space-y-3">
                             <Field label="Exercise title" htmlFor={`new-lesson-ex-title-${module.id}`}>
@@ -578,7 +578,7 @@ export default async function CourseBuilderPage({
               {collaborators.length === 0 ? <li className="text-[11.5px] text-navy-500">No co-editors yet.</li> : null}
             </ul>
             {isOwner ? (
-              <form action={addCollaboratorAction} className="mt-3 space-y-2 border-t border-navy-100 pt-3">
+              <form action={addCollaboratorAction} className="mt-3 space-y-2 border-t border-navy-200 pt-3">
                 <input type="hidden" name="resourceId" value={resource.id} />
                 <Field label="Add by username" htmlFor="collaborator-username">
                   <Input id="collaborator-username" name="username" placeholder="username" maxLength={40} />
@@ -613,7 +613,7 @@ export default async function CourseBuilderPage({
             <p className="mt-1.5 text-[11.5px] leading-5 text-navy-600">
               Public URL:
               <br />
-              <Link href={`/courses/${resource.id}`} className="break-all font-medium text-brand-700 hover:underline">
+              <Link href={`/courses/${resource.id}`} className="break-all font-medium text-brand-600 hover:underline">
                 /courses/{resource.id}
               </Link>
             </p>

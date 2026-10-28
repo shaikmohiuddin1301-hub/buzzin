@@ -45,6 +45,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The browser suite runs its own server and must not clobber the developer's
+  // `.next` cache (switching build → dev there leaves stale route manifests).
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // better-sqlite3 is a native module: keep it out of the bundler.
   serverExternalPackages: ["better-sqlite3"],
   poweredByHeader: false,

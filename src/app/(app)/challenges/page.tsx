@@ -33,10 +33,10 @@ export default async function ChallengesPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
-          <div className="border-b border-navy-100 px-5 py-3.5">
+          <div className="border-b border-navy-200 px-5 py-3.5">
             <h2 className="text-[13px] font-semibold text-navy-900">Active challenges</h2>
           </div>
-          <ul className="divide-y divide-navy-100">
+          <ul className="divide-y divide-navy-200">
             {rows.map((row) => (
               <li key={row.challenge.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-center gap-2">
@@ -67,10 +67,10 @@ export default async function ChallengesPage() {
 
         <aside className="space-y-4">
           <Card>
-            <div className="border-b border-navy-100 px-4 py-3">
+            <div className="border-b border-navy-200 px-4 py-3">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Paid work open now</h2>
             </div>
-            <ul className="divide-y divide-navy-100">
+            <ul className="divide-y divide-navy-200">
               {openProjects.map((project) => (
                 <li key={project.id} className="px-4 py-2.5">
                   <Link href={`/projects/${project.id}`} className="text-[12px] font-medium text-navy-900 hover:underline">

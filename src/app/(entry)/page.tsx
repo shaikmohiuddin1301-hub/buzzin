@@ -33,7 +33,7 @@ export default async function EntryPage({
 
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-700">Welcome to BuildTogether</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">Welcome to BuildTogether</p>
       <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Sign in to keep building</h1>
       <p className="mt-2 text-sm leading-6 text-navy-600">
         Your projects, chats, learning and contribution record, in one place.
@@ -48,7 +48,7 @@ export default async function EntryPage({
         <SignInForm next="/home" />
       </div>
 
-      <div className="mt-6 rounded-xl border border-navy-200 bg-surface p-4">
+      <div className="mt-6 card-surface p-4">
         <p className="text-[13px] font-semibold text-navy-950">New to BuildTogether?</p>
         <p className="mt-1 text-[12px] leading-5 text-navy-600">
           Create a free account to start a project, contribute to one, or learn from work that is already documented.
@@ -60,12 +60,12 @@ export default async function EntryPage({
 
       <p className="mt-6 text-center text-[12px] leading-5 text-navy-500">
         Not ready to join?{" "}
-        <Link href="/welcome" className="inline-flex items-center gap-0.5 font-medium text-brand-700 hover:underline">
+        <Link href="/welcome" className="inline-flex items-center gap-0.5 font-medium text-brand-600 hover:underline">
           Explore BuildTogether
           <ArrowUpRight size={12} aria-hidden="true" />
         </Link>{" "}
         or{" "}
-        <Link href="/courses" className="font-medium text-brand-700 hover:underline">
+        <Link href="/courses" className="font-medium text-brand-600 hover:underline">
           browse public courses
         </Link>
         .

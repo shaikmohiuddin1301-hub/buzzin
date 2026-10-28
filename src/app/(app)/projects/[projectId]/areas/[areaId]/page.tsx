@@ -64,7 +64,7 @@ export default async function WorkAreaPage({
               </form>
             ) : null}
             {area.access.canEdit ? (
-              <ButtonLink href={`/projects/${projectId}/tasks`} variant="ghost" size="sm">
+              <ButtonLink href={`/projects/${projectId}/tasks`} variant="creative" size="sm">
                 New task
               </ButtonLink>
             ) : null}
@@ -79,7 +79,7 @@ export default async function WorkAreaPage({
           {drops.length === 0 ? (
             <p className="mt-3 text-[13px] text-navy-500">No tasks filed here yet.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-navy-100">
+            <ul className="mt-3 divide-y divide-navy-200">
               {drops.map((task) => (
                 <li key={task.id} className="py-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -111,7 +111,7 @@ export default async function WorkAreaPage({
               description="When a reviewer approves a submission in this area, the deliverable appears here automatically."
             />
           ) : (
-            <ul className="mt-3 divide-y divide-navy-100">
+            <ul className="mt-3 divide-y divide-navy-200">
               {accepted.map((item) => (
                 <li key={item.id} className="py-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -126,7 +126,7 @@ export default async function WorkAreaPage({
                     {item.reviewedAt ? ` · ${relativeTime(item.reviewedAt)}` : ""}
                   </p>
                   {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11.5px] text-brand-700 underline">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11.5px] text-brand-600 underline">
                       Open deliverable
                     </a>
                   ) : null}

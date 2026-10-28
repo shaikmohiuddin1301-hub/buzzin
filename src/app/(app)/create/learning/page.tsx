@@ -74,7 +74,7 @@ export default async function NewLearningPage({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-navy-100 pt-3">
+          <div className="flex flex-wrap items-center gap-3 border-t border-navy-200 pt-3">
             <SubmitButton variant="secondary" pendingLabel="Saving…">
               Save as draft
             </SubmitButton>

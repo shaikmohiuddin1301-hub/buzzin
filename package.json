@@ -20,7 +20,9 @@
     "cap:android": "cap sync android",
     "cap:ios": "cap sync ios",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
+    "@playwright/test": "1.55.0",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "22.10.5",
     "@types/react": "19.1.9",

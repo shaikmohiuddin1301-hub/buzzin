@@ -196,7 +196,7 @@ export default async function TaskPage({
             <div className="prose-bt mt-2 whitespace-pre-line text-[13.5px]">{task.description ?? "No detailed description was provided."}</div>
 
             {task.deliverablesSpec ? (
-              <div className="mt-4 rounded-lg border border-navy-100 bg-navy-50/60 p-4">
+              <div className="mt-4 rounded-lg border border-navy-200 bg-navy-50/60 p-4">
                 <h3 className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">Deliverables</h3>
                 <p className="mt-1 whitespace-pre-line text-[13px] leading-6 text-navy-700">{task.deliverablesSpec}</p>
               </div>
@@ -204,7 +204,7 @@ export default async function TaskPage({
 
             {task.acceptanceCriteria ? (
               <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
-                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800">Acceptance criteria</h3>
+                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Acceptance criteria</h3>
                 <p className="mt-1 whitespace-pre-line text-[13px] leading-6 text-emerald-900">{task.acceptanceCriteria}</p>
               </div>
             ) : (
@@ -261,11 +261,11 @@ export default async function TaskPage({
 
           {submissions.length > 0 ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-4">
+              <div className="border-b border-navy-200 px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-navy-950">Submissions</h2>
                 <p className="text-[12px] text-navy-500">Every submission keeps its review record.</p>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {submissions.map((row) => (
                   <li key={row.submission.id} className="px-5 py-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -290,11 +290,11 @@ export default async function TaskPage({
                         .map((file) => (
                           <li key={file.id} className="text-[12px]">
                             {file.url ? (
-                              <a href={file.url} target="_blank" rel="noopener noreferrer nofollow" className="text-brand-700 underline">
+                              <a href={file.url} target="_blank" rel="noopener noreferrer nofollow" className="text-brand-600 underline">
                                 {file.title}
                               </a>
                             ) : (
-                              <Link href={file.fileId ? `/api/files/${file.fileId}` : "#"} className="text-brand-700 underline">
+                              <Link href={file.fileId ? `/api/files/${file.fileId}` : "#"} className="text-brand-600 underline">
                                 {file.title}
                               </Link>
                             )}
@@ -318,7 +318,7 @@ export default async function TaskPage({
                               placeholder="Meets the acceptance criteria because…"
                             />
                           </Field>
-                          <SubmitButton size="sm" pendingLabel="…">
+                          <SubmitButton size="sm" variant="positive" pendingLabel="…">
                             Approve work
                           </SubmitButton>
                           <p className="text-[10.5px] leading-4 text-navy-500">
@@ -339,7 +339,7 @@ export default async function TaskPage({
                               placeholder="What needs to change, specifically?"
                             />
                           </Field>
-                          <SubmitButton size="sm" variant="secondary" pendingLabel="…">
+                          <SubmitButton size="sm" variant="caution" pendingLabel="…">
                             Request changes
                           </SubmitButton>
                         </form>
@@ -363,7 +363,7 @@ export default async function TaskPage({
                     key={file.id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-navy-50/60 px-2.5 py-1.5 text-[12px]"
                   >
-                    <a href={`/api/files/${file.id}`} className="font-medium text-brand-700 underline">
+                    <a href={`/api/files/${file.id}`} className="font-medium text-brand-600 underline">
                       {file.filename}
                     </a>
                     <span className="text-[10.5px] text-navy-500">
@@ -491,7 +491,7 @@ export default async function TaskPage({
               )}
 
               {canEdit && prerequisiteCandidates.length > 0 ? (
-                <form action={addDependencyAction} className="mt-3 space-y-2 border-t border-navy-100 pt-3">
+                <form action={addDependencyAction} className="mt-3 space-y-2 border-t border-navy-200 pt-3">
                   <input type="hidden" name="taskId" value={taskId} />
                   <input type="hidden" name="projectId" value={project.id} />
                   <Field label="Requires" htmlFor="dependsOnTaskId" hint="The prerequisite is satisfied when that task is approved.">
@@ -547,7 +547,7 @@ export default async function TaskPage({
                 </SubmitButton>
               </form>
 
-              <form action={assignTaskAreaAction} className="mt-3 space-y-2 border-t border-navy-100 pt-3">
+              <form action={assignTaskAreaAction} className="mt-3 space-y-2 border-t border-navy-200 pt-3">
                 <input type="hidden" name="taskId" value={taskId} />
                 <Field label="Work area" htmlFor="workAreaId" hint="Its canonical home, used by the Accepted Work collection.">
                   <Select id="workAreaId" name="workAreaId" defaultValue={task.workAreaId ?? ""}>
@@ -565,7 +565,7 @@ export default async function TaskPage({
               </form>
 
               {candidateMembers.length > 0 ? (
-                <form action={assignContributorAction} className="mt-3 space-y-2 border-t border-navy-100 pt-3">
+                <form action={assignContributorAction} className="mt-3 space-y-2 border-t border-navy-200 pt-3">
                   <input type="hidden" name="taskId" value={taskId} />
                   <Field label="Assign a team member" htmlFor="userId">
                     <Select id="userId" name="userId" required>
@@ -617,7 +617,7 @@ export default async function TaskPage({
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Interest ({interests.length})</h2>
               <ul className="mt-2 space-y-2">
                 {interests.map((row) => (
-                  <li key={row.eoi.id} className="rounded-md border border-navy-100 p-2">
+                  <li key={row.eoi.id} className="rounded-md border border-navy-200 p-2">
                     <div className="flex items-center gap-2">
                       <Avatar name={row.userName} size={22} src={row.avatarFileId ? `/api/files/${row.avatarFileId}` : null} />
                       <Link href={`/u/${row.username}`} className="text-[12px] font-medium text-navy-900 hover:underline">

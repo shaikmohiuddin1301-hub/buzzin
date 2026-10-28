@@ -59,7 +59,7 @@ function CourseTile({
 }) {
   return (
     <article className="motion-card flex flex-col overflow-hidden rounded-2xl border border-navy-200/60 bg-surface shadow-card">
-      <div className="relative aspect-[16/8] overflow-hidden bg-gradient-to-br from-brand-800 via-navy-900 to-navy-950">
+      <div className="relative aspect-[16/8] overflow-hidden ink-card">
         {row.resource.coverImageId ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/files/${row.resource.coverImageId}`} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -82,7 +82,7 @@ function CourseTile({
           </Link>
         </h3>
         <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-navy-600">{row.resource.summary ?? "No description yet."}</p>
-        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-navy-100 pt-3 text-[10.5px]">
+        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-navy-200 pt-3 text-[10.5px]">
           <div>
             <dt className="text-navy-400">Lessons</dt>
             <dd className="font-semibold text-navy-800">{row.lessonCount}</dd>
@@ -262,7 +262,7 @@ export default async function StudioPage({
                     />
                   </div>
                 ) : (
-                  <ul className="divide-y divide-navy-100">
+                  <ul className="divide-y divide-navy-200">
                     {recent.map((item) => (
                       <li key={`${item.kind}-${item.id}`} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                         <div className="min-w-0">
@@ -382,7 +382,7 @@ export default async function StudioPage({
                 />
               </div>
             ) : (
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {teachings.map((resource) => (
                   <ResourceRow key={resource.id} resource={resource} />
                 ))}
@@ -463,7 +463,7 @@ export default async function StudioPage({
                     {item.resource.summary ?? `${label(item.resource.format)} · ${label(item.resource.level)}`}
                   </p>
                   <div className="mt-auto pt-3">
-                    <Progress value={item.pct} label={`${item.pct}% · updated ${relativeTime(item.updatedAt)}`} />
+                    <Progress tone="teal" value={item.pct} label={`${item.pct}% · updated ${relativeTime(item.updatedAt)}`} />
                   </div>
                 </Card>
               ))}
@@ -486,7 +486,7 @@ export default async function StudioPage({
             {courseDrafts.length === 0 ? (
               <p className="px-5 py-5 text-[12px] text-navy-500">No course drafts. Published courses are in My courses.</p>
             ) : (
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {courseDrafts.map((row) => (
                   <li key={row.resource.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                     <div className="min-w-0">
@@ -513,7 +513,7 @@ export default async function StudioPage({
             {draftResources.length === 0 ? (
               <p className="px-5 py-5 text-[12px] text-navy-500">No unpublished teachings.</p>
             ) : (
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {draftResources.map((resource) => (
                   <ResourceRow key={resource.id} resource={resource} />
                 ))}
@@ -525,7 +525,7 @@ export default async function StudioPage({
             {draftJourneys.length === 0 ? (
               <p className="px-5 py-5 text-[12px] text-navy-500">No journey drafts. Journeys start from an approved task record.</p>
             ) : (
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {draftJourneys.map((journey) => (
                   <li key={journey.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                     <Link href={`/learn/journeys/${journey.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -593,7 +593,7 @@ export default async function StudioPage({
                       <Td>{row.stats.completions}</Td>
                       <Td>
                         <div className={cn("min-w-[110px]", row.stats.learners === 0 && "text-navy-400")}>
-                          {row.stats.learners === 0 ? "No learners yet" : <Progress value={row.stats.averagePct} label={`${row.stats.averagePct}%`} />}
+                          {row.stats.learners === 0 ? "No learners yet" : <Progress tone="teal" value={row.stats.averagePct} label={`${row.stats.averagePct}%`} />}
                         </div>
                       </Td>
                     </tr>

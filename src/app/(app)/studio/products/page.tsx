@@ -75,7 +75,7 @@ export default async function StudioProductsPage({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
         <Card>
-          <div className="border-b border-navy-100 px-5 py-4">
+          <div className="border-b border-navy-200 px-5 py-4">
             <h2 className="text-[14px] font-semibold text-navy-950">Your products</h2>
           </div>
           <Table>

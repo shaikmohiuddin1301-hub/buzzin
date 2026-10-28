@@ -86,12 +86,12 @@ export default async function PostPage({
             </Link>
           ) : null}
           {post.resourceId ? (
-            <Link href={`/learn/${post.resourceId}`} className="mt-3 inline-flex text-[11.5px] font-medium text-brand-700 underline">
+            <Link href={`/learn/${post.resourceId}`} className="mt-3 inline-flex text-[11.5px] font-medium text-brand-600 underline">
               Open the related learning
             </Link>
           ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-navy-100 pt-3">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-navy-200 pt-3">
             {viewer ? (
               <>
                 <form action={reactAction}>

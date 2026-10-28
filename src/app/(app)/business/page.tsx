@@ -48,10 +48,10 @@ export default async function BusinessPage({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <Card>
-            <div className="border-b border-navy-100 px-5 py-3.5">
+            <div className="border-b border-navy-200 px-5 py-3.5">
               <h2 className="text-[13px] font-semibold text-navy-900">Organisations you belong to</h2>
             </div>
-            <ul className="divide-y divide-navy-100">
+            <ul className="divide-y divide-navy-200">
               {mine.map((entry) => {
                 const projects = projectsForBusiness(entry.business.id);
                 return (
@@ -87,7 +87,7 @@ export default async function BusinessPage({
           </Card>
 
           <Card>
-            <div className="border-b border-navy-100 px-5 py-3.5">
+            <div className="border-b border-navy-200 px-5 py-3.5">
               <h2 className="text-[13px] font-semibold text-navy-900">Public business directory</h2>
             </div>
             <ul className="grid gap-2 p-4 sm:grid-cols-2">

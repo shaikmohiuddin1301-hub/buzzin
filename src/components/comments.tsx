@@ -55,7 +55,7 @@ export function CommentThread({
         </form>
       ) : (
         <p className="rounded-lg bg-navy-50 px-3 py-2 text-[12px] text-navy-600">
-          <Link href="/auth/sign-in" className="font-medium text-brand-700 underline">
+          <Link href="/auth/sign-in" className="font-medium text-brand-600 underline">
             Sign in
           </Link>{" "}
           to join the discussion.
@@ -67,7 +67,7 @@ export function CommentThread({
       ) : (
         <ul className="space-y-4">
           {comments.map((entry) => (
-            <li key={entry.comment.id} className="rounded-lg border border-navy-100 bg-surface p-3">
+            <li key={entry.comment.id} className="rounded-lg border border-navy-200 bg-surface p-3">
               <div className="flex items-start gap-2.5">
                 <Avatar name={entry.authorName} size={28} src={entry.authorAvatar ? `/api/files/${entry.authorAvatar}` : null} />
                 <div className="min-w-0 flex-1">
@@ -82,7 +82,7 @@ export function CommentThread({
                   <p className="mt-1 whitespace-pre-line text-[13px] leading-6 text-navy-700">{entry.comment.body}</p>
 
                   {entry.replies.length > 0 ? (
-                    <ul className="mt-3 space-y-3 border-l-2 border-navy-100 pl-3">
+                    <ul className="mt-3 space-y-3 border-l-2 border-navy-200 pl-3">
                       {entry.replies.map((reply) => (
                         <li key={reply.comment.id}>
                           <div className="flex flex-wrap items-baseline gap-2">

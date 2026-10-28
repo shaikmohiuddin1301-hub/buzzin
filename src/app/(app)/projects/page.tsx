@@ -39,7 +39,7 @@ export default async function ProjectsPage() {
             My work
             <span className="rounded-full bg-navy-100 px-1.5 py-0.5 text-[10px] text-navy-600">{assigned.length}</span>
           </h2>
-          <Card className="mt-2 divide-y divide-navy-100">
+          <Card className="mt-2 divide-y divide-navy-200">
             {assigned.map(({ task, projectName }) => (
               <Link
                 key={task.id}
@@ -136,7 +136,7 @@ function ProjectGroup({
             <Reveal key={project.id} delay={Math.min(index * 45, 180)}>
             <Link
               href={`/projects/${project.id}`}
-              className="motion-card block rounded-2xl border border-navy-200/70 bg-surface p-4 shadow-card"
+              className="motion-card block card-surface p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-[14px] font-semibold text-navy-950">{project.name}</h3>

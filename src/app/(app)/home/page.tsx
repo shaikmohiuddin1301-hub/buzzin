@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { BookOpen, Building2, CalendarClock, Compass, LayoutDashboard, Sparkles, Users } from "lucide-react";
+import { BookOpen, Building2, CalendarClock, LayoutDashboard, Sparkles, Users } from "lucide-react";
 import { getDb } from "@/db/client";
 import { projectInvitations, projects, tasks, users } from "@/db/schema";
 import { createPostAction } from "@/app/actions/social";
 import { respondToInvitationAction } from "@/app/actions/projects";
 import { Reveal } from "@/components/client/reveal";
 import { SubmitButton } from "@/components/client/submit-button";
+import { FollowingActivityRail } from "@/components/following-activity";
 import { PostCard } from "@/components/post-card";
 import {
   Alert,
@@ -31,6 +32,7 @@ import { upcomingDeadlines } from "@/services/tasks";
 import { searchPeople } from "@/services/users";
 import { getPreferences } from "@/services/users";
 import { listResources } from "@/services/learning";
+import { followingActivity } from "@/services/activity";
 import { formatDate } from "@/lib/format";
 import { label } from "@/lib/types";
 import type { FeedFilter } from "@/lib/types";
@@ -86,6 +88,7 @@ export default async function HomePage({
   const suggestedProjects = listProjects({ limit: 3, sort: "active" }, user);
   const suggestedPeople = searchPeople("", 3).filter((person) => person.id !== user.id);
   const following = followedProjects(user.id);
+  const activity = followingActivity(user.id, { limit: 10 });
   const learningPicks = listResources({ limit: 3 });
   const openTasks = getDb()
     .select({
@@ -115,14 +118,9 @@ export default async function HomePage({
               : "Updates from the people and projects you follow."
         }
         actions={
-          <>
-            <ButtonLink href="/explore" variant="secondary" size="sm">
-              <Compass size={14} aria-hidden="true" /> Explore
-            </ButtonLink>
-            <ButtonLink href="/projects/new" size="sm">
-              Start a project
-            </ButtonLink>
-          </>
+          <ButtonLink href="/projects/new" size="sm">
+            Start a project
+          </ButtonLink>
         }
       />
 
@@ -155,50 +153,7 @@ export default async function HomePage({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
-          {following.length > 0 ? (
-            <div className="mb-4" aria-label="Projects you follow">
-              <ul className="flex gap-3 overflow-x-auto pb-1">
-                {following.slice(0, 10).map((project) => (
-                  <li key={project.id} className="w-[68px] shrink-0">
-                    <Link href={`/projects/${project.id}`} className="group flex flex-col items-center gap-1.5">
-                      <span className="rounded-full bg-gradient-to-tr from-brand-500 to-coral-400 p-[2px] transition group-hover:from-brand-600 group-hover:to-coral-500">
-                        <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-surface bg-navy-100">
-                          {project.coverImageId ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={`/api/files/${project.coverImageId}`}
-                              alt=""
-                              loading="lazy"
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-[15px] font-semibold text-navy-600">
-                              {project.name
-                                .split(" ")
-                                .slice(0, 2)
-                                .map((word) => word[0])
-                                .join("")}
-                            </span>
-                          )}
-                        </span>
-                      </span>
-                      <span className="w-full truncate text-center text-[10.5px] leading-4 text-navy-600 group-hover:text-navy-900">
-                        {project.name}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-                <li className="w-[68px] shrink-0">
-                  <Link href="/explore?tab=projects" className="flex flex-col items-center gap-1.5">
-                    <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full border border-dashed border-navy-300 text-navy-500 transition hover:border-brand-400 hover:text-brand-700">
-                      <Users size={18} aria-hidden="true" />
-                    </span>
-                    <span className="w-full truncate text-center text-[10.5px] leading-4 text-navy-500">Discover</span>
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          ) : null}
+          <FollowingActivityRail items={activity} />
 
           <Tabs
             current={filter}
@@ -303,11 +258,11 @@ export default async function HomePage({
         <aside className="space-y-4">
           {account.kind === "business" ? (
             <Card>
-              <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
+              <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
                 <Building2 size={14} aria-hidden="true" className="text-brand-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Your organisations</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {account.businesses.map((business) => (
                   <li key={business.id} className="px-4 py-3">
                     <Link href={`/business/${business.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -320,7 +275,7 @@ export default async function HomePage({
                 ))}
               </ul>
               {organisationProjects.length > 0 ? (
-                <ul className="border-t border-navy-100">
+                <ul className="border-t border-navy-200">
                   {organisationProjects.map((project) => (
                     <li key={project.id} className="px-4 py-2.5">
                       <Link href={`/projects/${project.id}`} className="text-[12px] font-medium text-navy-800 hover:underline">
@@ -331,7 +286,7 @@ export default async function HomePage({
                   ))}
                 </ul>
               ) : null}
-              <div className="border-t border-navy-100 px-4 py-2">
+              <div className="border-t border-navy-200 px-4 py-2">
                 <ButtonLink href="/business" variant="ghost" size="sm">
                   Business workspace →
                 </ButtonLink>
@@ -339,7 +294,7 @@ export default async function HomePage({
             </Card>
           ) : account.kind === "creator" ? (
             <Card>
-              <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
+              <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
                 <LayoutDashboard size={14} aria-hidden="true" className="text-brand-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Creator workspace</h2>
               </div>
@@ -347,7 +302,7 @@ export default async function HomePage({
                 {account.publishedTeaching} published teaching{account.publishedTeaching === 1 ? " item" : " items"}
                 {account.draftTeaching > 0 ? ` · ${account.draftTeaching} draft${account.draftTeaching === 1 ? "" : "s"} waiting` : ""}.
               </p>
-              <div className="flex flex-wrap gap-2 border-t border-navy-100 px-4 py-2">
+              <div className="flex flex-wrap gap-2 border-t border-navy-200 px-4 py-2">
                 <ButtonLink href="/studio" variant="ghost" size="sm">
                   Studio →
                 </ButtonLink>
@@ -358,12 +313,33 @@ export default async function HomePage({
             </Card>
           ) : null}
 
+          {/* Projects and Learning left the bottom bar, so Home keeps a real way in. */}
+          <Card className="p-4">
+            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Your workspace</h2>
+            <ul className="mt-2 space-y-1.5 text-[12.5px]">
+              {[
+                { href: "/projects", label: "Your projects and my work" },
+                { href: "/learn", label: "Learning centre" },
+                { href: "/chats", label: "Your chats" },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="flex items-center justify-between text-navy-700 hover:text-brand-700">
+                    {link.label}
+                    <span aria-hidden="true" className="text-navy-300">
+                      →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
           {invitations.length > 0 ? (
             <Card>
-              <div className="border-b border-navy-100 px-4 py-3">
+              <div className="border-b border-navy-200 px-4 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">Project invitations</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {invitations.map((row) => (
                   <li key={row.invitation.id} className="px-4 py-3">
                     <p className="text-[12.5px] font-medium text-navy-900">{row.projectName}</p>
@@ -396,11 +372,11 @@ export default async function HomePage({
 
           {deadlines.length > 0 ? (
             <Card>
-              <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
+              <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
                 <CalendarClock size={14} aria-hidden="true" className="text-brand-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Your active tasks</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {deadlines.map((row) => (
                   <li key={row.task.id} className="px-4 py-3">
                     <Link href={`/tasks/${row.task.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -418,10 +394,10 @@ export default async function HomePage({
 
           {openTasks.length > 0 ? (
             <Card>
-              <div className="border-b border-navy-100 px-4 py-3">
+              <div className="border-b border-navy-200 px-4 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">Open tasks</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {openTasks.map((task) => (
                   <li key={task.id} className="px-4 py-3">
                     <Link href={`/tasks/${task.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -434,7 +410,7 @@ export default async function HomePage({
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-navy-100 px-4 py-2">
+              <div className="border-t border-navy-200 px-4 py-2">
                 <ButtonLink href="/explore?tab=projects&sort=active" variant="ghost" size="sm">
                   Find more →
                 </ButtonLink>
@@ -443,10 +419,10 @@ export default async function HomePage({
           ) : null}
 
           <Card>
-            <div className="border-b border-navy-100 px-4 py-3">
+            <div className="border-b border-navy-200 px-4 py-3">
               <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-navy-500">Discover</h2>
             </div>
-            <ul className="divide-y divide-navy-100">
+            <ul className="divide-y divide-navy-200">
               {suggestedProjects.map((project) => (
                 <li key={project.id} className="px-4 py-3">
                   <Link href={`/projects/${project.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -461,7 +437,7 @@ export default async function HomePage({
               ))}
             </ul>
             {suggestedPeople.length > 0 ? (
-              <div className="border-t border-navy-100">
+              <div className="border-t border-navy-200">
                 <div className="flex items-center gap-2 px-4 pt-3">
                   <Users size={13} aria-hidden="true" className="text-brand-600" />
                   <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-navy-500">People to follow</h3>
@@ -504,11 +480,11 @@ export default async function HomePage({
 
           {learningPicks.length > 0 ? (
             <Card>
-              <div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3">
+              <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
                 <BookOpen size={14} aria-hidden="true" className="text-brand-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Learning picks</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {learningPicks.map((resource) => (
                   <li key={resource.id} className="px-4 py-3">
                     <Link href={`/learn/${resource.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -520,7 +496,7 @@ export default async function HomePage({
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-navy-100 px-4 py-2">
+              <div className="border-t border-navy-200 px-4 py-2">
                 <ButtonLink href="/learn" variant="ghost" size="sm">
                   Learning centre →
                 </ButtonLink>

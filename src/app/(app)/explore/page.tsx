@@ -358,7 +358,7 @@ export default async function ExplorePage({
               </Field>
                 </div>
               </details>
-              <button type="submit" className="w-full rounded-xl bg-brand-600 px-3 py-2 text-[13px] font-medium text-white transition hover:bg-brand-700">
+              <button type="submit" className="w-full rounded-xl bg-brand-600 px-3 py-2 text-[13px] font-medium text-on-brand transition hover:bg-brand-700">
                 Apply filters
               </button>
               <Link href="/explore" className="block text-center text-[11px] text-navy-500 hover:underline">
@@ -402,7 +402,7 @@ export default async function ExplorePage({
           <form action="/explore" className="mb-4 flex flex-wrap gap-2">
             <input type="hidden" name="tab" value="people" />
             <Input name="q" defaultValue={q} placeholder="Search people by name, username or bio" className="max-w-sm" />
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-white">
+            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-on-brand">
               Search
             </button>
           </form>
@@ -423,7 +423,7 @@ export default async function ExplorePage({
           <form action="/explore" className="mb-4 flex flex-wrap gap-2">
             <input type="hidden" name="tab" value="skills" />
             <Input name="q" defaultValue={q} placeholder="Search skills" className="max-w-sm" />
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-white">
+            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-on-brand">
               Search
             </button>
           </form>
@@ -435,7 +435,7 @@ export default async function ExplorePage({
                     <h3 className="text-[13.5px] font-semibold text-navy-950">{item.name}</h3>
                     <p className="text-[11px] text-navy-500">{item.category ?? "General"} · {item.people} people · {item.projects} projects</p>
                   </div>
-                  <Link href={`/explore?tab=projects&skill=${item.slug}`} className="text-[11px] font-medium text-brand-700 hover:underline">
+                  <Link href={`/explore?tab=projects&skill=${item.slug}`} className="text-[11px] font-medium text-brand-600 hover:underline">
                     Projects →
                   </Link>
                 </div>
@@ -468,7 +468,7 @@ export default async function ExplorePage({
               <option value="free">Free only</option>
               <option value="paid">Premium only</option>
             </Select>
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-[13px] font-medium text-white sm:col-span-4">
+            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-[13px] font-medium text-on-brand sm:col-span-4">
               Filter learning
             </button>
           </form>
@@ -497,7 +497,7 @@ export default async function ExplorePage({
           <form action="/explore" className="mb-4 flex gap-2">
             <input type="hidden" name="tab" value="businesses" />
             <Input name="bq" defaultValue={businessQuery} placeholder="Search businesses" className="max-w-sm" />
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-white">Search</button>
+            <button type="submit" className="rounded-lg bg-brand-600 px-4 text-[13px] font-medium text-on-brand">Search</button>
           </form>
           <div className="grid gap-3 sm:grid-cols-2">
             {businessResults.map((business) => (

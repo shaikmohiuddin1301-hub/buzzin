@@ -55,6 +55,25 @@ describe("learning journeys", () => {
     expect(detail.steps.every((step) => step.sourceType === "work_log" && step.sourceId)).toBe(true);
   });
 
+  it("never cites another contributor's unapproved notes, even for the project owner", async () => {
+    const { owner, contributor, taskId } = await documentedTask();
+    addWorkLogEntry(taskId, contributor.id, {
+      kind: "note",
+      title: "Landowner access changed",
+      body: "We lost permission for the bank and paused the site rather than trespass. This is not approved for public use.",
+      visibility: "public_pending",
+    });
+
+    const { journeyId, skipped } = draftJourneyFromTask(taskId, owner.id);
+    const detail = journeyDetail(journeyId, owner)!;
+
+    // The two public entries are cited; the contributor's private note is skipped
+    // with a count rather than throwing halfway through the draft.
+    expect(skipped).toBe(1);
+    expect(detail.steps).toHaveLength(2);
+    expect(detail.steps.map((step) => step.title)).not.toContain("Landowner access changed");
+  });
+
   it("requires owner approval before a project-linked journey goes public", async () => {
     const { owner, contributor, taskId } = await documentedTask();
     const { journeyId } = draftJourneyFromTask(taskId, contributor.id);

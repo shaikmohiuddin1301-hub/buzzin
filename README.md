@@ -81,7 +81,8 @@ npm run dev         # development server
 npm run build       # production build
 npm start           # serve the production build
 npm run typecheck   # tsc --noEmit (ESLint is not configured in this build)
-npm test            # vitest run (66 integration tests)
+npm test            # vitest run (251 integration tests)
+npm run test:e2e    # Playwright browser suite (own seeded database on :3100)
 npm run db:generate # regenerate SQL migrations from db/schema.ts (drizzle-kit)
 npm run db:migrate  # apply pending migrations
 npm run db:seed     # fictional demo data
@@ -107,7 +108,7 @@ npm run db:reset    # delete the local database file (development only)
 | `/home` | Personalised feed with filters, reactions, comments, saves, shares |
 | `/explore` | Projects, people, skills, learning, businesses, challenges |
 | `/search` | Global search across every content type |
-| `/projects/new` | Multi-step project creation wizard (draft → preview → publish) |
+| `/projects/new` | Four-step creation wizard with task breakdown, draft and publish |
 | `/projects/[projectId]` | Project workspace: overview, progress, tasks, team, discussion, journeys, results, analytics |
 | `/projects/[projectId]/tasks` | Task list and kanban board |
 | `/projects/[projectId]/story` | Storyboard editor, review workflow and animated explainer |
@@ -164,26 +165,42 @@ These are deliberate, documented boundaries — not hidden gaps.
 4. **Storage is a private local folder.** The S3 adapter is a documented seam that returns `501 storage_not_configured` until implemented.
 5. **Rate limiting is in-memory per process.** Correct for a single node and for tests; a multi-instance deployment must move the buckets to Redis/Upstash.
 6. **No OAuth, no MFA.** The schema and settings page have room for them; neither is claimed as working.
-7. **Browser end-to-end tests are not automated.** The suite is integration-level (services, permissions, entitlements, moderation) plus manual HTTP verification of every route. Playwright is the planned next step.
+7. **Browser coverage is deliberately narrow, though no longer shell-only.** Playwright drives the real app for registration, the five-destination navigation, horizontal swipe transitions, the Create sheet, the profile menu, the notification bell and server-persisted read state, the Settings theme, the project-creation wizard, submission → review → accepted work, journey drafting and publication, a moderation decision with its audit entry, and premium gating for unentitled and entitled readers. Storyboard generation and rendering, chat, courses and the business workspace are still exercised at the service level only.
 
 ---
 
 ## 8. Testing
 
 ```bash
-npm test        # 66 integration tests across 6 suites
+npm test          # 251 integration tests across 23 suites
+npm run test:e2e  # 41 Playwright checks against the real app
 ```
 
 | Suite | Covers |
 | --- | --- |
 | `tests/auth.test.ts` | Registration, password hashing, duplicate accounts, rate limits, sign-in, verification, reset, password change, session revocation |
+| `tests/account-context.test.ts` | Individual/creator/business account derivation and Create ordering |
 | `tests/projects.test.ts` | Creation and validation, drafts, private visibility, owner-only edits/deletes, interest, invitations, removal, following, analytics access |
+| `tests/project-creation-wizard.test.ts` | Project plus work areas and the whole task breakdown in one transaction; drafts keep their tasks |
+| `tests/project-setup-and-task-chats.test.ts` | Publish validation, task work language, automatic task chats and Accepted Work |
 | `tests/tasks.test.ts` | Task creation rules, interest → assignment → scope, submission, review, denial cases, self-review prevention, documentation visibility |
+| `tests/work-areas.test.ts` | Work areas, quick projects, project chat and filing a chat message as a Drop |
+| `tests/dependencies.test.ts` | Blocking dependencies and accepted-work collections |
 | `tests/journeys-and-stories.test.ts` | Journey drafting from approved docs, owner approval gate, storyboard generation permissions, source citation, review before publish, consent withdrawal |
 | `tests/learning.test.ts` | Publishing, discovery, paid preview requirements, server-side entitlement gating, grant/revoke permissions, progress and feedback |
+| `tests/courses.test.ts` | Course structure, publication, enrolment, permissions and upload validation |
+| `tests/library-and-activity.test.ts` | Liked posts and projects, your comments, following activity and assigned work |
+| `tests/notifications.test.ts` | Task, comment, invitation, chat and teaching notifications plus delivery rules |
+| `tests/profile-content.test.ts` | Profile posts, accepted work, feed preferences and visibility |
+| `tests/recommendations.test.ts` | Project, people and learning recommendations |
 | `tests/social-and-moderation.test.ts` | DM privacy preferences, blocking, group access revocation, comments/reactions/saves, moderation with reason codes and audit trail, disputes, data export and account deletion |
+| `tests/social-shares.test.ts` | Sharing a project update and the share history |
+| `tests/database-guards.test.ts` | Append-only audit history, one pending submission per task, clean migrations |
+| `tests/form.test.ts`, `tests/routing.test.ts`, `tests/theme.test.ts`, `tests/navigation.test.ts` | FormData file reading, safe redirects, theme preference and the five-destination navigation contract |
 
-Each suite runs against a throwaway SQLite database (`tests/setup.ts`), applies the real migrations, and exercises the same code paths the UI uses.
+Each Vitest suite runs against a throwaway SQLite database (`tests/setup.ts`), applies the real migrations, and exercises the same code paths the UI uses.
+
+The browser suite (`e2e/`) starts its own server on port 3100 with a freshly migrated and seeded database (`.tmp-e2e/`). It registers a new account, signs in through the real form, and drives the shell, swipe navigation and its View Transitions, profile menu, notifications, Settings theme and project wizard. Specs that need a second role open their own context through the same sign-in form (`e2e/support.ts`), so a contributor, an administrator and an entitled learner are all real sessions rather than database fixtures. Touch gestures are delivered as real CDP touch events, so the swipe tests exercise the same listener path a phone does. It needs Chromium once: `npx playwright install chromium`. Playwright is pinned to 1.55 because the project still supports Node 18; newer releases require Node 20.
 
 ---
 

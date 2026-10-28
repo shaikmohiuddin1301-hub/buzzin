@@ -8,17 +8,21 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
 
 /* --------------------------------- button --------------------------------- */
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "subtle";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "creative" | "positive" | "caution" | "subtle";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
+  // Graphite = ordinary primary action; coral = creation; emerald = positive completion.
   primary:
-    "bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-300",
+    "bg-brand-600 text-on-brand shadow-sm hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-200 disabled:text-navy-600",
   secondary:
-    "border border-navy-200 bg-surface text-navy-800 shadow-sm hover:border-navy-300 hover:bg-navy-50",
+    "border border-navy-200 bg-surface/60 text-brand-600 shadow-sm backdrop-blur-sm hover:border-navy-300 hover:bg-brand-50",
   ghost: "text-navy-700 hover:bg-navy-100",
-  danger: "bg-red-700 text-white shadow-sm hover:bg-red-800",
-  subtle: "bg-brand-50 text-brand-700 hover:bg-brand-100",
+  danger: "bg-red-600 text-on-danger shadow-sm hover:bg-red-700 disabled:bg-red-200 disabled:text-navy-600",
+  creative: "bg-coral-500 text-on-coral shadow-sm hover:bg-coral-600 active:bg-coral-700 disabled:bg-coral-200 disabled:text-navy-600",
+  positive: "bg-emerald-500 text-on-teal shadow-sm hover:bg-emerald-600 active:bg-emerald-700 disabled:bg-emerald-200 disabled:text-navy-600",
+  caution: "bg-amber-300 text-on-caution shadow-sm hover:bg-amber-400 active:bg-amber-500 disabled:bg-amber-100 disabled:text-navy-600",
+  subtle: "bg-brand-50 text-brand-600 hover:bg-brand-100",
 };
 
 const sizes: Record<Size, string> = {
@@ -165,7 +169,7 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-wrap items-start justify-between gap-3 border-b border-navy-100 px-5 py-4", className)}>
+    <div className={cn("flex flex-wrap items-start justify-between gap-3 border-b border-navy-200 px-5 py-4", className)}>
       <div className="min-w-0">
         <h2 className="text-[15px] font-semibold text-navy-950">{title}</h2>
         {description ? <div className="mt-0.5 text-[13px] text-navy-500">{description}</div> : null}
@@ -190,7 +194,7 @@ export function PageHeader({
 }) {
   return (
     <header className="mb-6">
-      {eyebrow ? <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-700">{eyebrow}</div> : null}
+      {eyebrow ? <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-600">{eyebrow}</div> : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 max-w-3xl">
           <h1 className="text-2xl font-semibold tracking-tight text-navy-950 sm:text-[28px]">{title}</h1>
@@ -219,7 +223,7 @@ export function Section({
   return (
     <section className={cn("card-surface", className)}>
       {title ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy-100 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy-200 px-5 py-4">
           <div>
             <h2 className="text-[15px] font-semibold text-navy-950">{title}</h2>
             {description ? <p className="mt-0.5 text-[13px] text-navy-500">{description}</p> : null}
@@ -235,12 +239,13 @@ export function Section({
 /* --------------------------------- badges --------------------------------- */
 
 const tones = {
-  neutral: "bg-navy-100 text-navy-700",
-  brand: "bg-brand-50 text-brand-700",
-  success: "bg-emerald-50 text-emerald-700",
-  warning: "bg-amber-50 text-amber-800",
+  neutral: "bg-navy-100 text-navy-800",
+  brand: "bg-brand-50 text-brand-600",
+  success: "bg-emerald-50 text-emerald-600",
+  warning: "bg-amber-50 text-amber-700",
   danger: "bg-red-50 text-red-600",
-  info: "bg-sky-50 text-sky-700",
+  info: "bg-brand-50 text-brand-600",
+  coral: "bg-coral-500 text-on-coral",
 } as const;
 
 export type Tone = keyof typeof tones;
@@ -274,14 +279,15 @@ const statusTones: Record<string, Tone> = {
   reviewing_interest: "warning",
   assigned: "brand",
   in_progress: "brand",
-  submitted: "info",
+  submitted: "warning",
   revision_requested: "warning",
+  accepted: "success",
   completed: "success",
   cancelled: "neutral",
   pending: "warning",
   approved: "success",
   rejected: "danger",
-  in_review: "info",
+  in_review: "warning",
   blocked: "danger",
   active: "success",
   suspended: "danger",
@@ -304,18 +310,42 @@ export function StatusBadge({ status, className }: { status: string; className?:
   );
 }
 
-/** Task statuses use work language (To do / Needs review / Approved), not system values. */
+/**
+ * Task statuses use work language (To do / Needs review / Approved), not system
+ * values, and carry a text label as well as colour so status never relies on hue.
+ */
+const taskTones: Record<string, string> = {
+  draft: "bg-status-todo text-status-todo-text",
+  open: "bg-status-todo text-status-todo-text",
+  reviewing_interest: "bg-status-todo text-status-todo-text",
+  assigned: "bg-status-todo text-status-todo-text",
+  in_progress: "bg-status-progress text-status-progress-text",
+  submitted: "bg-status-review text-status-review-text",
+  revision_requested: "bg-status-review text-status-review-text",
+  completed: "bg-status-approved text-status-approved-text",
+  blocked: "bg-status-blocked text-status-blocked-text",
+  cancelled: "bg-status-todo text-status-todo-text",
+  needs_review: "bg-status-review text-status-review-text",
+  approved: "bg-status-approved text-status-approved-text",
+};
+
 export function TaskStatusBadge({ status, className }: { status: string; className?: string }) {
   return (
-    <Badge tone={statusTones[status] ?? "neutral"} className={cn("motion-status", className)}>
+    <span
+      className={cn(
+        "motion-status inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors duration-150",
+        taskTones[status] ?? "bg-status-todo text-status-todo-text",
+        className,
+      )}
+    >
       <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
       {taskStatusLabel(status)}
-    </Badge>
+    </span>
   );
 }
 
 export function SkillTag({ name, href }: { name: string; href?: string }) {
-  const content = <span className="rounded-md bg-navy-50 px-2 py-1 text-[12px] font-medium text-navy-700">{name}</span>;
+  const content = <span className="rounded-md bg-brand-50 px-2 py-1 text-[12px] font-medium text-brand-600">{name}</span>;
   return href ? <Link href={href}>{content}</Link> : content;
 }
 
@@ -430,10 +460,10 @@ export function Alert({
   children?: ReactNode;
 }) {
   const styles = {
-    info: "border-sky-200 bg-sky-50 text-sky-900",
-    success: "border-emerald-200 bg-emerald-50 text-emerald-900",
-    warning: "border-amber-200 bg-amber-50 text-amber-900",
-    danger: "border-red-200 bg-red-50 text-red-900",
+    info: "border-brand-200 bg-brand-50 text-brand-600",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-600",
+    warning: "border-amber-200 bg-amber-50 text-amber-700",
+    danger: "border-red-200 bg-red-50 text-red-600",
   }[tone];
   return (
     <div className={cn("rounded-lg border px-4 py-3 text-[13px] leading-6", styles)}>
@@ -465,7 +495,15 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("skeleton h-4 w-full", className)} aria-hidden="true" />;
 }
 
-export function Progress({ value, label }: { value: number; label?: string }) {
+export function Progress({
+  value,
+  label,
+  tone = "brand",
+}: {
+  value: number;
+  label?: string;
+  tone?: "brand" | "teal";
+}) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
   return (
     <div>
@@ -478,7 +516,10 @@ export function Progress({ value, label }: { value: number; label?: string }) {
         aria-label={label ?? "Progress"}
       >
         <div
-          className="h-full rounded-full bg-gradient-to-r from-brand-500 to-coral-500 transition-[width] duration-300 ease-out"
+          className={cn(
+            "h-full rounded-full transition-[width] duration-300 ease-out",
+            tone === "teal" ? "bg-emerald-500" : "bg-brand-500",
+          )}
           style={{ width: `${clamped}%` }}
         />
       </div>
@@ -531,7 +572,7 @@ export function Tabs({
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200",
                 active
-                  ? "bg-brand-600 text-white shadow-sm"
+                  ? "bg-brand-600 text-on-brand shadow-sm"
                   : "text-navy-600 hover:bg-navy-100/80 hover:text-navy-900",
               )}
             >
@@ -603,7 +644,7 @@ export function Td({
   colSpan?: number;
 }) {
   return (
-    <td colSpan={colSpan} className={cn("border-b border-navy-100 px-3 py-2.5 align-top text-[13px] text-navy-700", className)}>
+    <td colSpan={colSpan} className={cn("border-b border-navy-200 px-3 py-2.5 align-top text-[13px] text-navy-700", className)}>
       {children}
     </td>
   );
@@ -638,7 +679,7 @@ export function Pagination({
   };
 
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-between border-t border-navy-100 px-5 py-3 text-[13px]">
+    <nav aria-label="Pagination" className="flex items-center justify-between border-t border-navy-200 px-5 py-3 text-[13px]">
       <span className="text-navy-500">
         Page {page} of {pages}
       </span>
@@ -659,7 +700,7 @@ export function Pagination({
 }
 
 export function Divider({ className }: { className?: string }) {
-  return <hr className={cn("border-navy-100", className)} />;
+  return <hr className={cn("border-navy-200", className)} />;
 }
 
 export function DefinitionList({ items }: { items: { term: string; value: ReactNode }[] }) {

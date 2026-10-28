@@ -160,9 +160,9 @@ class LocalStoryProvider implements StoryProvider {
 
         return `
         <g class="slide s${index}">
-          <rect x="0" y="0" width="${width}" height="${height}" fill="#0b1220"/>
-          <circle cx="${180 + (index % 3) * 340}" cy="${520 - (index % 2) * 90}" r="260" fill="#6d4aff" opacity="0.12"/>
-          <text x="96" y="150" fill="#b7a6ff" font-size="22" font-family="Segoe UI, Arial, sans-serif" letter-spacing="3">SCENE ${String(
+          <rect x="0" y="0" width="${width}" height="${height}" fill="#222226"/>
+          <circle cx="${180 + (index % 3) * 340}" cy="${520 - (index % 2) * 90}" r="260" fill="#b8b8c1" opacity="0.1"/>
+          <text x="96" y="150" fill="#b8b8c1" font-size="22" font-family="Segoe UI, Arial, sans-serif" letter-spacing="3">SCENE ${String(
             index + 1,
           ).padStart(2, "0")} / ${String(scenes.length).padStart(2, "0")}</text>
           <text x="96" y="222" fill="#ffffff" font-size="44" font-weight="700" font-family="Segoe UI, Arial, sans-serif">${escapeXml(
@@ -171,18 +171,18 @@ class LocalStoryProvider implements StoryProvider {
           ${lines
             .map(
               (line, lineIndex) =>
-                `<text x="96" y="${290 + lineIndex * 44}" fill="#d7def0" font-size="28" font-family="Segoe UI, Arial, sans-serif">${escapeXml(
+                `<text x="96" y="${290 + lineIndex * 44}" fill="#e7e7eb" font-size="28" font-family="Segoe UI, Arial, sans-serif">${escapeXml(
                   line,
                 )}</text>`,
             )
             .join("")}
-          <rect x="96" y="612" width="${Math.max(160, scene.title.length * 9)}" height="34" rx="17" fill="#1b2a44"/>
-          <text x="112" y="635" fill="#9aafcd" font-size="17" font-family="Segoe UI, Arial, sans-serif">${escapeXml(
+          <rect x="96" y="612" width="${Math.max(160, scene.title.length * 9)}" height="34" rx="17" fill="#34343a"/>
+          <text x="112" y="635" fill="#b8b8c1" font-size="17" font-family="Segoe UI, Arial, sans-serif">${escapeXml(
             sourceLabel,
           )}</text>
           ${
             credits
-              ? `<text x="96" y="682" fill="#7c8aa5" font-size="18" font-family="Segoe UI, Arial, sans-serif">Contributors: ${escapeXml(
+              ? `<text x="96" y="682" fill="#777780" font-size="18" font-family="Segoe UI, Arial, sans-serif">Contributors: ${escapeXml(
                   truncate(credits, 90),
                 )}</text>`
               : ""
@@ -209,7 +209,7 @@ class LocalStoryProvider implements StoryProvider {
       <style>
         @media (prefers-reduced-motion: reduce) { g.slide { animation: none !important; opacity: 0; } g.slide.s0 { opacity: 1; } }
       </style>
-      ${slides || `<rect width="${width}" height="${height}" fill="#0b1220"/>`}
+      ${slides || `<rect width="${width}" height="${height}" fill="#222226"/>`}
     </svg>`;
 
     return Buffer.from(svg, "utf8");

@@ -76,7 +76,7 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
           className="pointer-events-none absolute inset-0 opacity-70"
           style={{
             background:
-              "radial-gradient(60% 60% at 20% 30%, rgba(109,74,255,0.35), transparent 70%), radial-gradient(40% 40% at 85% 80%, rgba(90,120,255,0.18), transparent 70%)",
+              "radial-gradient(60% 60% at 20% 30%, rgba(184,184,193,0.35), transparent 70%), radial-gradient(40% 40% at 85% 80%, rgba(255,120,90,0.12), transparent 70%)",
           }}
         />
 
@@ -132,7 +132,7 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
           type="button"
           onClick={() => setPlaying((value) => !value)}
           disabled={reduced}
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3 text-sm font-medium text-on-brand hover:bg-brand-500 disabled:opacity-50"
           aria-label={playing ? "Pause story" : "Play story"}
         >
           {playing ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}

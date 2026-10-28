@@ -14,7 +14,7 @@ export default function HowItWorksPage() {
         secondary={{ href: "/projects/new", label: "Start a project" }}
         aside={
           <Card className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-700">In one sentence</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-600">In one sentence</p>
             <p className="mt-2 text-[15px] leading-7 text-navy-800">
               Build something → document the work → turn the journey into learning → build reputation and an audience →
               unlock better work.

@@ -153,7 +153,7 @@ export default async function NewCoursePage({
             <Textarea id="attribution" name="attribution" rows={2} maxLength={600} placeholder="Course notes adapted from… with permission. External videos remain the property of their creators." />
           </Field>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-navy-100 pt-4">
+          <div className="flex flex-wrap items-center gap-3 border-t border-navy-200 pt-4">
             <SubmitButton pendingLabel="Creating…">
               <BookOpen size={15} aria-hidden="true" /> Create course draft
             </SubmitButton>

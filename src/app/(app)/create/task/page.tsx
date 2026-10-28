@@ -42,7 +42,7 @@ export default async function NewTaskPage() {
                     <p className="truncate text-[13.5px] font-semibold text-navy-950">{project.name}</p>
                     <p className="text-[11.5px] text-navy-500">{relationship}</p>
                   </div>
-                  <span className="text-[12px] font-medium text-brand-700">Add a task</span>
+                  <span className="text-[12px] font-medium text-brand-600">Add a task</span>
                 </Card>
               </Link>
             </li>

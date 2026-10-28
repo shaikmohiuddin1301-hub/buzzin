@@ -14,7 +14,7 @@ export default function AboutPage() {
         secondary={{ href: "/contact", label: "Get in touch" }}
         aside={
           <Card className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-700">Status</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-600">Status</p>
             <dl className="mt-3 space-y-3 text-[13px]">
               <div>
                 <dt className="font-medium text-navy-900">Build</dt>

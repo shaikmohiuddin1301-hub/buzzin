@@ -77,7 +77,7 @@ export default async function StudioSalesPage({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
-          <div className="border-b border-navy-100 px-5 py-4">
+          <div className="border-b border-navy-200 px-5 py-4">
             <h2 className="text-[14px] font-semibold text-navy-950">Access grants</h2>
           </div>
           <Table>
@@ -132,10 +132,10 @@ export default async function StudioSalesPage({
 
         <aside className="space-y-4">
           <Card>
-            <div className="border-b border-navy-100 px-4 py-3">
+            <div className="border-b border-navy-200 px-4 py-3">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Access requests</h2>
             </div>
-            <ul className="divide-y divide-navy-100">
+            <ul className="divide-y divide-navy-200">
               {sales.rows
                 .filter((row) => row.order.status === "pending")
                 .map((row) => (

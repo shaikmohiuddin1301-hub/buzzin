@@ -59,7 +59,7 @@ export default function ErrorScreen({ reset }: { error: Error & { digest?: strin
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 px-6 py-16">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand-700">BuildTogether</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">BuildTogether</p>
         <h1 className="mt-3 text-2xl font-semibold text-navy-950">
           {databaseDown ? "This deployment cannot reach its database" : "Something went wrong"}
         </h1>
@@ -96,7 +96,7 @@ export default function ErrorScreen({ reset }: { error: Error & { digest?: strin
         <Button type="button" onClick={reset} size="sm">
           Try again
         </Button>
-        <a href="/api/health" className="text-sm text-brand-700 underline underline-offset-2">
+        <a href="/api/health" className="text-sm text-brand-600 underline underline-offset-2">
           View service health
         </a>
       </div>

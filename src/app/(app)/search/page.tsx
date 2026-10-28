@@ -30,7 +30,7 @@ export default async function SearchPage({
           <Field label="Search BuildTogether" htmlFor="q" className="flex-1">
             <Input id="q" name="q" defaultValue={query} placeholder="Try “accessibility”, “sensor”, “field data”" autoFocus={!query} />
           </Field>
-          <button type="submit" className="mt-auto h-10 rounded-lg bg-brand-600 px-5 text-[13px] font-medium text-white hover:bg-brand-700">
+          <button type="submit" className="mt-auto h-10 rounded-lg bg-brand-600 px-5 text-[13px] font-medium text-on-brand hover:bg-brand-700">
             Search
           </button>
         </form>
@@ -47,10 +47,10 @@ export default async function SearchPage({
         <div className="space-y-5">
           {results?.projects.length ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3">
+              <div className="border-b border-navy-200 px-5 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">Projects</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {results.projects.map((project) => (
                   <li key={project.id} className="px-5 py-3">
                     <Link href={`/projects/${project.id}`} className="text-[13px] font-semibold text-navy-900 hover:underline">
@@ -69,10 +69,10 @@ export default async function SearchPage({
 
           {results?.people.length ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3">
+              <div className="border-b border-navy-200 px-5 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">People</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {results.people.map((person) => (
                   <li key={person.id} className="px-5 py-3">
                     <Link href={`/u/${person.username}`} className="text-[13px] font-semibold text-navy-900 hover:underline">
@@ -88,10 +88,10 @@ export default async function SearchPage({
 
           {results?.resources.length ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3">
+              <div className="border-b border-navy-200 px-5 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">Learning resources</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {results.resources.map((resource) => (
                   <li key={resource.id} className="flex items-center justify-between gap-3 px-5 py-3">
                     <div>
@@ -111,7 +111,7 @@ export default async function SearchPage({
 
           {results?.skills.length ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3">
+              <div className="border-b border-navy-200 px-5 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">Skills</h2>
               </div>
               <ul className="flex flex-wrap gap-2 p-5">
@@ -128,10 +128,10 @@ export default async function SearchPage({
 
           {results?.businesses.length ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3">
+              <div className="border-b border-navy-200 px-5 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">Businesses</h2>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {results.businesses.map((business) => (
                   <li key={business.id} className="px-5 py-3">
                     <Link href={`/business/${business.id}`} className="text-[13px] font-semibold text-navy-900 hover:underline">

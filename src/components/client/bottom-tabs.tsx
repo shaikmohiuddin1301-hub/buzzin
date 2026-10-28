@@ -1,21 +1,23 @@
 "use client";
 
 /**
- * Floating primary navigation (mobile and tablet).
+ * Primary bottom navigation (mobile and tablet).
  *
- * Seven destinations in a fixed order, inside a floating pill that keeps clear of the
- * viewport edges, the home indicator and the on-screen keyboard. The Create action is the
- * one raised element so it reads as the main doing-action without shouting: every other
- * destination keeps the same 44px target and the same icon weight.
+ * Exactly five destinations — Home · Explore · Create · Chats · Profile — laid out
+ * in a five-column grid so the Create action sits at the exact horizontal centre
+ * whatever length the other labels are. Learning and Projects are no longer here;
+ * they stay reachable from the sidebar, the Create sheet, the Profile menu and
+ * the pages themselves.
  *
- * The bar hides while a text field has focus (the on-screen keyboard owns that space) and
- * while the Create sheet is open. Nothing here is load-bearing for navigation: without
- * JavaScript the sidebar links and full pages still work.
+ * The bar hides while a text field has focus (the on-screen keyboard owns that
+ * space) and while the Create sheet is open. Nothing here is load-bearing for
+ * navigation: without JavaScript the sidebar links and full pages still work.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { orderByAccountPriority, type AccountKind } from "@/lib/account";
+import { BOTTOM_NAV, profileHref } from "@/lib/navigation";
 import {
   BookOpen,
   ClipboardList,
@@ -33,17 +35,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/components/ui";
 
-type CreateProject = { id: string; name: string };
+const TAB_ICONS = {
+  home: Home,
+  explore: Compass,
+  chats: MessageSquare,
+  profile: UserRound,
+} as const;
 
-const TABS = [
-  { href: "/home", label: "Home", icon: Home },
-  { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/chats", label: "Chats", icon: MessageSquare },
-  { href: "/learn", label: "Learning", icon: BookOpen },
-  { create: true, href: "#create", label: "Create", icon: Plus },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "#profile", label: "Profile", icon: UserRound },
-] as const;
+type CreateProject = { id: string; name: string };
 
 const CREATE_OPTIONS = [
   { href: "/projects/new", label: "New project", description: "An idea and a team.", icon: FolderKanban },
@@ -77,7 +76,7 @@ export function BottomTabs({
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const profileHref = `/u/${username}`;
+  const profilePath = profileHref(username);
   const isActive = (href: string) =>
     href === "/home" ? pathname === "/home" : pathname === href || pathname.startsWith(`${href}/`);
 
@@ -139,7 +138,7 @@ export function BottomTabs({
           />
           <div
             ref={panelRef}
-            className="motion-sheet absolute inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] rounded-3xl border border-navy-200/70 glass p-4 shadow-float"
+            className="motion-sheet glass absolute inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] rounded-3xl p-4 shadow-float"
           >
             <div className="mb-1 flex items-center justify-between">
               <div>
@@ -168,7 +167,7 @@ export function BottomTabs({
                       <span
                         className={cn(
                           "inline-flex h-9 w-9 items-center justify-center rounded-xl",
-                          disabled ? "bg-navy-100 text-navy-400" : "bg-brand-50 text-brand-700",
+                          disabled ? "bg-navy-100 text-navy-400" : "bg-brand-50 text-brand-600",
                         )}
                         aria-hidden="true"
                       >
@@ -227,63 +226,86 @@ export function BottomTabs({
 
       <div
         className={cn(
-          "fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 px-3 lg:hidden",
+          "fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 lg:hidden",
           "transition-all duration-300 ease-out",
           hidden ? "pointer-events-none translate-y-[130%] opacity-0" : "translate-y-0 opacity-100",
         )}
       >
         <nav
           aria-label="Primary"
-          className="mx-auto flex max-w-lg items-center justify-between gap-0.5 rounded-[1.75rem] border border-navy-200/60 glass px-1.5 py-1.5 shadow-float"
+          data-swipe-ignore
+          className="glass-bar mx-auto grid max-w-lg grid-cols-5 items-center rounded-[1.75rem] px-1.5 py-1.5 shadow-float"
         >
-          {TABS.map((tab) => {
-            if ("create" in tab) {
+          {/* Five entries from one shared list, into five equal columns, so the
+              third (Create) is dead centre by construction. */}
+          {BOTTOM_NAV.map((entry) => {
+            if (entry.id === "create") {
               return (
-                <button
-                  key="create"
-                  ref={triggerRef}
-                  type="button"
-                  onClick={() => setOpen(true)}
-                  aria-haspopup="dialog"
-                  aria-expanded={open}
-                  aria-label="Create"
-                  className="-my-4 mx-1 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full create-glow text-white shadow-glow transition active:scale-95"
-                >
-                  <Plus size={22} aria-hidden="true" />
-                </button>
+                <div key="create" className="flex items-center justify-center">
+                  <button
+                    ref={triggerRef}
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={open}
+                    aria-label="Create"
+                    className="-mt-4 inline-flex h-12 w-12 items-center justify-center rounded-full create-glow text-white shadow-glow transition duration-200 active:scale-95"
+                  >
+                    <Plus size={22} aria-hidden="true" />
+                  </button>
+                </div>
               );
             }
-
-            const href = tab.href === "#profile" ? profileHref : tab.href;
-            const active = isActive(href);
-            const Icon = tab.icon;
-            const badge = href === "/chats" ? unread : 0;
-
+            const href = entry.id === "profile" ? profilePath : entry.href;
             return (
-              <Link
-                key={tab.label}
+              <TabCell
+                key={entry.id}
                 href={href}
-                aria-current={active ? "page" : undefined}
-                aria-label={tab.label}
-                className={cn(
-                  "relative flex h-11 min-w-0 items-center justify-center rounded-full transition-all duration-200",
-                  active ? "gap-1.5 bg-brand-50 px-2.5 text-brand-700" : "w-10 text-navy-500 hover:text-navy-900",
-                )}
-              >
-                <span className="relative">
-                  <Icon size={20} aria-hidden="true" strokeWidth={active ? 2.2 : 1.8} />
-                  {badge > 0 ? (
-                    <span className="absolute -right-2 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[9px] font-bold leading-none text-white ring-2 ring-surface">
-                      {badge > 9 ? "9+" : badge}
-                    </span>
-                  ) : null}
-                </span>
-                {active ? <span className="text-[11px] font-semibold motion-fade">{tab.label}</span> : null}
-              </Link>
+                label={entry.label}
+                icon={TAB_ICONS[entry.id]}
+                active={entry.id === "profile" ? pathname.startsWith("/u/") : isActive(entry.href)}
+                badge={entry.id === "chats" ? unread : 0}
+              />
             );
           })}
         </nav>
       </div>
     </>
+  );
+}
+
+function TabCell({
+  href,
+  label,
+  icon: Icon,
+  active,
+  badge = 0,
+}: {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  active: boolean;
+  badge?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      aria-label={badge > 0 ? `${label}, ${badge} unread` : label}
+      className={cn(
+        "flex h-12 w-full flex-col items-center justify-center gap-0.5 rounded-2xl transition-colors duration-200",
+        active ? "bg-brand-50 text-brand-600" : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",
+      )}
+    >
+      <span className="relative">
+        <Icon size={20} aria-hidden="true" strokeWidth={active ? 2.2 : 1.8} />
+        {badge > 0 ? (
+          <span className="absolute -right-2 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-coral-500 px-1 text-[9px] font-bold leading-none text-on-coral ring-2 ring-surface">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        ) : null}
+      </span>
+      <span className={cn("text-[10px] leading-none", active ? "font-semibold" : "font-medium")}>{label}</span>
+    </Link>
   );
 }

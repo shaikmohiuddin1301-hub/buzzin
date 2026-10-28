@@ -14,7 +14,7 @@ export default function ForBusinessesPage() {
         secondary={{ href: "/explore", label: "See project pages" }}
         aside={
           <Card className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-700">Business permissions</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-600">Business permissions</p>
             <div className="mt-3">
               <DefinitionList
                 items={[

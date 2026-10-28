@@ -66,7 +66,7 @@ export default async function VerifyEmailPage({
 
       <p className="mt-6 text-sm text-navy-600">
         Need to sign in?{" "}
-        <Link href="/auth/sign-in" className="font-medium text-brand-700 hover:underline">
+        <Link href="/auth/sign-in" className="font-medium text-brand-600 hover:underline">
           Go to sign in
         </Link>
       </p>

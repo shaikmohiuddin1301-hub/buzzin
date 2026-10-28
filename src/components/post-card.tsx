@@ -76,14 +76,15 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
             </Link>
           ) : null}
 
-          <div className="mt-3 flex items-center gap-0.5 border-t border-navy-100 pt-2">
+          <div className="mt-3 flex items-center gap-0.5 border-t border-navy-200 pt-2">
             <form action={reactAction}>
               <input type="hidden" name="targetType" value="post" />
               <input type="hidden" name="targetId" value={post.id} />
               <input type="hidden" name="kind" value="like" />
               <input type="hidden" name="returnTo" value={returnTo} />
               <SubmitIconButton label={post.liked ? "Remove like" : "Like this post"}>
-                <Heart size={14} aria-hidden="true" className={post.liked ? "fill-brand-600 text-brand-600" : ""} />
+                {/* Dark coral keeps the outline at 3:1 on white; the fill stays the brand coral. */}
+                <Heart size={14} aria-hidden="true" className={post.liked ? "fill-coral-500 text-coral-600" : "text-coral-600"} />
                 <span>{post.likeCount}</span>
               </SubmitIconButton>
             </form>
@@ -92,7 +93,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
               href={`/posts/${post.id}#comments`}
               className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-navy-500 hover:bg-navy-100 hover:text-navy-800"
             >
-              <MessageCircle size={14} aria-hidden="true" />
+              <MessageCircle size={14} aria-hidden="true" className="text-brand-600" />
               {post.commentCount}
             </Link>
 

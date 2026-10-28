@@ -73,7 +73,7 @@ export default async function NewPostPage({
             </Field>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-navy-100 pt-4">
+          <div className="flex flex-wrap items-center gap-3 border-t border-navy-200 pt-4">
             <SubmitButton name="publish" value="on" pendingLabel="Publishing…">
               Publish post
             </SubmitButton>

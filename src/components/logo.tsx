@@ -17,7 +17,7 @@ export function Logo({ href = "/", light = false, compact = false }: { href?: st
       >
         {/* Two blocks locking together */}
         <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" aria-hidden="true">
-          <rect x="3" y="4" width="8" height="8" rx="1.5" fill="#9575ff" />
+          <rect x="3" y="4" width="8" height="8" rx="1.5" fill="#FF785A" />
           <rect x="13" y="12" width="8" height="8" rx="1.5" fill="#ffffff" fillOpacity="0.9" />
           <rect x="13" y="4" width="8" height="6" rx="1.5" fill="#ffffff" fillOpacity="0.35" />
           <rect x="3" y="14" width="8" height="6" rx="1.5" fill="#ffffff" fillOpacity="0.35" />

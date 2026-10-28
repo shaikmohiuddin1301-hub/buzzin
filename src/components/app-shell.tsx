@@ -21,18 +21,17 @@ import { projectInvitations } from "@/db/schema";
 import { signOutAction } from "@/app/actions/auth";
 import { Avatar, Badge, cn } from "@/components/ui";
 import { BottomTabs } from "@/components/client/bottom-tabs";
-import { NotificationMenu } from "@/components/client/notification-menu";
 import { NotificationSync } from "@/components/client/notification-sync";
-import { QuickThemeToggle } from "@/components/client/theme-toggle";
-import { MobileNav } from "@/components/client/app-nav";
+import { ProfileMenu } from "@/components/client/profile-menu";
+import { SwipeNavigation } from "@/components/client/swipe-navigation";
+import { NotificationBell } from "@/components/notification-bell";
 import { Logo } from "@/components/logo";
 import { accountKindLabel } from "@/lib/account";
+import { pageSurfaceClass } from "@/lib/navigation";
 import { accountContext } from "@/services/account";
 import { unreadMessageCount } from "@/services/chat";
 import { projectsForUser } from "@/services/projects";
-import { listNotifications, unreadNotificationCount } from "@/services/notifications";
-import { relativeTime } from "@/lib/format";
-import { label } from "@/lib/types";
+import { unreadNotificationCount } from "@/services/notifications";
 import type { SessionUser } from "@/lib/session";
 
 function NavLink({
@@ -55,16 +54,16 @@ function NavLink({
       className={cn(
         "group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200",
         active
-          ? "bg-brand-50 text-brand-800 shadow-sm"
-          : "text-navy-600 hover:bg-navy-50/80 hover:text-navy-900",
+          ? "bg-brand-50 text-brand-600"
+          : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",
       )}
     >
       <span className="flex items-center gap-2.5">
-        <span className={cn(active ? "text-brand-600" : "text-navy-400 group-hover:text-navy-600")}>{icon}</span>
+        <span className={cn(active ? "text-brand-600" : "text-navy-500 group-hover:text-navy-700")}>{icon}</span>
         {label}
       </span>
       {badge ? (
-        <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+        <span className="rounded-full bg-coral-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-on-coral">
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}
@@ -89,17 +88,6 @@ export async function AppShell({
 }) {
   const account = accountContext(user);
   const notifications = unreadNotificationCount(user.id);
-  const recentNotifications = listNotifications(user.id, { limit: 6 }).map((row) => ({
-    id: row.notification.id,
-    title: row.notification.title,
-    kind: row.notification.kind,
-    kindLabel: label(row.notification.kind),
-    actorName: row.actorName,
-    actorAvatar: row.actorAvatar ? `/api/files/${row.actorAvatar}` : null,
-    createdAtLabel: relativeTime(row.notification.createdAt),
-    createdAtIso: row.notification.createdAt,
-    read: !!row.notification.readAt,
-  }));
   const messages = unreadMessageCount(user.id);
   const invitations = getDb()
     .select({ id: projectInvitations.id })
@@ -116,7 +104,12 @@ export async function AppShell({
   const isActive = (href: string) =>
     href === "/home" ? activePath === "/home" : activePath === href || activePath.startsWith(`${href}/`);
 
-  // The same six destinations as the mobile bar (Create is the button above them).
+  // The one menu in the chrome lives on the signed-in account's Profile page and
+  // nowhere else. Viewing somebody else's profile keeps the normal header.
+  const isProfilePage = activePath === `/u/${user.username}`;
+
+  // The sidebar keeps the five mobile destinations and adds Learning and
+  // Projects, which left the bottom bar. Create is the button above them.
   const primary = [
     { href: "/home", label: "Home", icon: <Home size={17} aria-hidden="true" /> },
     { href: "/explore", label: "Explore", icon: <Compass size={17} aria-hidden="true" /> },
@@ -147,11 +140,11 @@ export async function AppShell({
   ];
 
   return (
-    <div className="min-h-screen bg-surface-muted">
+    <div className={cn("min-h-screen", pageSurfaceClass(activePath))}>
       <div className="mx-auto flex w-full max-w-[1440px]">
         {/* Desktop sidebar */}
         <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 p-3 lg:flex">
-          <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-navy-200/60 bg-surface shadow-card">
+          <div className="card-surface flex h-full w-full flex-col overflow-hidden">
           <div className="px-5 pb-3 pt-5">
             <Logo href="/home" />
           </div>
@@ -159,7 +152,7 @@ export async function AppShell({
           <div className="px-3">
             <Link
               href="/create"
-              className="create-glow flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
+              className="create-glow flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-glow transition-colors"
             >
               <Plus size={17} aria-hidden="true" />
               Create
@@ -197,11 +190,11 @@ export async function AppShell({
             )}
           </nav>
 
-          <div className="border-t border-navy-100 p-3">
+          <div className="border-t border-navy-200 p-3">
             {invitations > 0 ? (
               <Link
                 href="/notifications"
-                className="mb-2 block rounded-lg bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800 hover:bg-amber-100"
+                className="mb-2 block rounded-lg bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-700 hover:bg-amber-100"
               >
                 {invitations} pending project {invitations === 1 ? "invitation" : "invitations"}
               </Link>
@@ -236,19 +229,15 @@ export async function AppShell({
 
         {/* Main column */}
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-navy-200/70 glass">
+          <header className="glass-header sticky top-0 z-30">
             <div className="relative flex h-14 items-center gap-3 px-4 sm:px-6">
-              <div className="lg:hidden">
-                <Logo href="/home" compact />
-              </div>
-              <MobileNav
-                items={[
-                  ...secondary.map((item) => ({ ...item, badge: item.href === "/notifications" ? notifications : undefined })),
-                  ...(user.isAdmin || user.isModerator
-                    ? [{ href: "/admin", label: "Admin", icon: <Shield size={16} aria-hidden="true" /> }]
-                    : []),
-                ]}
-              />
+              {isProfilePage ? (
+                <ProfileMenu />
+              ) : (
+                <div className="lg:hidden">
+                  <Logo href="/home" compact />
+                </div>
+              )}
 
               <form action="/search" role="search" className="hidden flex-1 md:block">
                 <label htmlFor="global-search" className="sr-only">
@@ -258,14 +247,14 @@ export async function AppShell({
                   <Search
                     size={15}
                     aria-hidden="true"
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-400"
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-600"
                   />
                   <input
                     id="global-search"
                     name="q"
                     type="search"
                     placeholder="Search projects, people, skills, learning…"
-                    className="h-9 w-full rounded-lg border border-navy-200 bg-navy-50/60 pl-9 pr-3 text-[13px] text-navy-900 placeholder:text-navy-400 focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    className="h-9 w-full rounded-lg border border-navy-200 bg-surface pl-9 pr-3 text-[13px] text-navy-900 placeholder:text-navy-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
                   />
                 </div>
               </form>
@@ -276,20 +265,8 @@ export async function AppShell({
                     <Badge tone="warning">Email unverified</Badge>
                   </Link>
                 ) : null}
-                <QuickThemeToggle />
-                <NotificationMenu unread={notifications} items={recentNotifications} />
+                <NotificationBell unread={notifications} />
                 <NotificationSync />
-                <Link
-                  href={`/u/${user.username}`}
-                  className="inline-flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-navy-100"
-                  aria-label="Your profile"
-                >
-                  <Avatar
-                    name={user.displayName}
-                    size={28}
-                    src={user.avatarFileId ? `/api/files/${user.avatarFileId}` : user.avatarUrl}
-                  />
-                </Link>
               </div>
             </div>
           </header>
@@ -307,6 +284,7 @@ export async function AppShell({
             projects={editableProjects}
             accountKind={account.kind}
           />
+          <SwipeNavigation ownProfileHref={`/u/${user.username}`} />
         </div>
       </div>
     </div>

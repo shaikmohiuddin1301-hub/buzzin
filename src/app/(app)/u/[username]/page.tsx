@@ -34,7 +34,9 @@ import { accountContext } from "@/services/account";
 
 export const dynamic = "force-dynamic";
 
-const TABS = ["posts", "projects", "teachings", "learnings", "accepted", "about"] as const;
+// About is no longer a tab; the information it held is shown in the profile footer
+// section below the tabs, and nothing was deleted from the database.
+const TABS = ["posts", "projects", "teachings", "learnings", "accepted"] as const;
 type Tab = (typeof TABS)[number];
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
@@ -110,7 +112,6 @@ export default async function ProfilePage({
     { id: "teachings", label: "Teachings", count: resources.length + journeys.length },
     { id: "learnings", label: "Learnings", count: learnings.length },
     { id: "accepted", label: "Accepted", count: accepted.length },
-    { id: "about", label: "About" },
   ];
 
   return (
@@ -148,10 +149,10 @@ export default async function ProfilePage({
             <div className="flex flex-wrap items-center gap-2 pb-1">
               {isSelf ? (
                 <>
-                  <ButtonLink href="/settings?tab=profile" size="sm" variant="secondary">
+                  <ButtonLink href="/settings?tab=profile" size="sm" variant="primary">
                     Edit profile
                   </ButtonLink>
-                  <ButtonLink href="/create" size="sm">
+                  <ButtonLink href="/create" size="sm" variant="creative">
                     <Plus size={13} aria-hidden="true" /> Create
                   </ButtonLink>
                 </>
@@ -193,7 +194,7 @@ export default async function ProfilePage({
                 href={person.portfolioUrls[0]}
                 target="_blank"
                 rel="nofollow noopener noreferrer"
-                className="text-brand-700 underline"
+                className="text-brand-600 underline"
               >
                 Portfolio
               </a>
@@ -208,7 +209,7 @@ export default async function ProfilePage({
             </div>
           ) : null}
 
-          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-navy-100 pt-4 sm:grid-cols-4">
+          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-navy-200 pt-4 sm:grid-cols-4">
             {[
               { label: "Posts", value: publishedPosts.length, hint: `${posts.length - publishedPosts.length} draft` },
               {
@@ -264,15 +265,15 @@ export default async function ProfilePage({
                   aria-selected={active}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors",
+                    "inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-1.5 text-[12.5px] font-medium transition-colors",
                     active
-                      ? "border-brand-500/60 bg-brand-50 text-brand-800"
-                      : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300 hover:text-navy-900",
+                      ? "border-brand-500 text-brand-600"
+                      : "border-transparent text-navy-500 hover:text-navy-900",
                   )}
                 >
                   {item.label}
                   {typeof item.count === "number" && item.count > 0 ? (
-                    <span className="rounded-full bg-navy-100 px-1.5 text-[10px] font-semibold text-navy-600">{item.count}</span>
+                    <span className={cn("rounded-full px-1.5 text-[10px] font-semibold", active ? "bg-brand-50 text-brand-600" : "bg-navy-100 text-navy-600")}>{item.count}</span>
                   ) : null}
                 </Link>
               </li>
@@ -348,7 +349,7 @@ export default async function ProfilePage({
                 className={cn(
                   "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
                   projectFilter === filter.id
-                    ? "border-brand-500 bg-brand-50 text-brand-700"
+                    ? "border-brand-500 bg-brand-50 text-brand-600"
                     : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
                 )}
                 aria-current={projectFilter === filter.id ? "page" : undefined}
@@ -389,11 +390,11 @@ export default async function ProfilePage({
 
           {attributions.length > 0 && view.contributions ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3.5">
+              <div className="border-b border-navy-200 px-5 py-3.5">
                 <h2 className="text-[13px] font-semibold text-navy-900">Contribution history</h2>
                 <p className="text-[11px] text-navy-500">Owner-confirmed records. These are not independent verification.</p>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {attributions.map((row) => (
                   <li key={row.attribution.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                     <Link href={`/projects/${row.attribution.projectId}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -447,10 +448,10 @@ export default async function ProfilePage({
 
               {journeys.length > 0 ? (
                 <Card>
-                  <div className="border-b border-navy-100 px-5 py-3.5">
+                  <div className="border-b border-navy-200 px-5 py-3.5">
                     <h2 className="text-[13px] font-semibold text-navy-900">Learning journeys</h2>
                   </div>
-                  <ul className="divide-y divide-navy-100">
+                  <ul className="divide-y divide-navy-200">
                     {journeys.map((journey) => (
                       <li key={journey.id} className="px-5 py-3">
                         <Link href={`/learn/journeys/${journey.id}`} className="text-[12.5px] font-medium text-navy-900 hover:underline">
@@ -540,7 +541,7 @@ export default async function ProfilePage({
                   <li key={`${item.attributionId}-${item.deliverable?.id ?? "none"}`}>
                     <Card className="motion-card h-full p-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link href={`/projects/${item.projectId}`} className="text-[12px] font-medium text-brand-700 hover:underline">
+                        <Link href={`/projects/${item.projectId}`} className="text-[12px] font-medium text-brand-600 hover:underline">
                           {item.projectName}
                         </Link>
                         <Badge tone={item.verificationMethod === "owner_confirmed" ? "info" : "success"}>
@@ -558,7 +559,7 @@ export default async function ProfilePage({
                       {item.summary ? <p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-navy-600">{item.summary}</p> : null}
                       <div className="mt-2 flex flex-wrap gap-3 text-[11.5px]">
                         {item.taskId ? (
-                          <Link href={`/tasks/${item.taskId}`} className="text-brand-700 underline">
+                          <Link href={`/tasks/${item.taskId}`} className="text-brand-600 underline">
                             View the task
                           </Link>
                         ) : null}
@@ -567,13 +568,13 @@ export default async function ProfilePage({
                             href={item.deliverable.url}
                             target="_blank"
                             rel="noopener noreferrer nofollow"
-                            className="text-brand-700 underline"
+                            className="text-brand-600 underline"
                           >
                             Open deliverable
                           </a>
                         ) : null}
                         {item.deliverable?.fileId ? (
-                          <Link href={`/api/files/${item.deliverable.fileId}`} className="text-brand-700 underline">
+                          <Link href={`/api/files/${item.deliverable.fileId}`} className="text-brand-600 underline">
                             Download file
                           </Link>
                         ) : null}
@@ -590,15 +591,18 @@ export default async function ProfilePage({
         </div>
       ) : null}
 
-      {/* About */}
-      {tab === "about" ? (
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      {/* About, achievements, organisations and links: kept, no longer a tab. */}
+      <section aria-labelledby="profile-about" className="mt-5">
+        <h2 id="profile-about" className="mb-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-navy-500">
+          About, achievements and links
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
           <Card>
-            <div className="border-b border-navy-100 px-5 py-3.5">
+            <div className="border-b border-navy-200 px-5 py-3.5">
               <h2 className="text-[13px] font-semibold text-navy-900">Verified contribution record</h2>
               <p className="text-[11px] text-navy-500">Each record names how it was confirmed.</p>
             </div>
-            <ul className="divide-y divide-navy-100">
+            <ul className="divide-y divide-navy-200">
               {view.contributions ? (
                 verified.slice(0, 6).map((row) => (
                   <li key={row.attribution.id} className="px-5 py-3">
@@ -692,7 +696,7 @@ export default async function ProfilePage({
                 {person.portfolioUrls && person.portfolioUrls.length > 0 ? (
                   person.portfolioUrls.slice(0, 3).map((url) => (
                     <li key={url}>
-                      <a href={url} rel="nofollow noopener noreferrer" target="_blank" className="text-brand-700 underline">
+                      <a href={url} rel="nofollow noopener noreferrer" target="_blank" className="text-brand-600 underline">
                         {new URL(url).hostname.replace(/^www\./, "")}
                       </a>
                     </li>
@@ -714,7 +718,7 @@ export default async function ProfilePage({
             </Card>
           </div>
         </div>
-      ) : null}
+      </section>
 
       {!viewer ? (
         <p className="mt-4 text-[11px] text-navy-400">

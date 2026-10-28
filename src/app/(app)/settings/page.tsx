@@ -245,13 +245,13 @@ export default async function SettingsPage({
               </Card>
 
               <Card>
-                <div className="border-b border-navy-100 px-5 py-3.5">
+                <div className="border-b border-navy-200 px-5 py-3.5">
                   <h2 className="text-[14px] font-semibold text-navy-950">Blocked accounts</h2>
                   <p className="text-[11px] text-navy-500">
                     Blocking hides their content from your feed and stops messages in both directions. They are not told.
                   </p>
                 </div>
-                <ul className="divide-y divide-navy-100">
+                <ul className="divide-y divide-navy-200">
                   {blocked.map((entry) => (
                     <li key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3">
                       <div className="flex items-center gap-2">
@@ -323,9 +323,9 @@ export default async function SettingsPage({
                 <Field label="Other interests" htmlFor="interests" hint="Comma separated, e.g. accessibility, hardware, research.">
                   <Input id="interests" name="interests" defaultValue={(prefs.interests ?? []).join(", ")} />
                 </Field>
-                <p className="rounded-lg border border-navy-100 bg-navy-50/60 px-3 py-2 text-[11.5px] leading-5 text-navy-600">
+                <p className="rounded-lg border border-navy-200 bg-navy-50/60 px-3 py-2 text-[11.5px] leading-5 text-navy-600">
                   Theme is set in{" "}
-                  <Link href="/settings?tab=appearance" className="text-brand-700 underline">
+                  <Link href="/settings?tab=appearance" className="text-brand-600 underline">
                     Appearance
                   </Link>
                   . Animations follow your device&rsquo;s reduce-motion setting automatically.
@@ -337,13 +337,13 @@ export default async function SettingsPage({
 
           {tab === "contributions" ? (
             <Card>
-              <div className="border-b border-navy-100 px-5 py-3.5">
+              <div className="border-b border-navy-200 px-5 py-3.5">
                 <h2 className="text-[14px] font-semibold text-navy-950">My contribution records</h2>
                 <p className="text-[11px] text-navy-500">
                   You can dispute a record you believe is inaccurate, and correct your own role description.
                 </p>
               </div>
-              <ul className="divide-y divide-navy-100">
+              <ul className="divide-y divide-navy-200">
                 {attributions.map((row) => (
                   <li key={row.attribution.id} className="px-5 py-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -390,7 +390,7 @@ export default async function SettingsPage({
           {tab === "creator" ? (
             <div className="space-y-4">
               <Card>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-100 px-5 py-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-200 px-5 py-3.5">
                   <div>
                     <h2 className="text-[14px] font-semibold text-navy-950">Creator products</h2>
                     <p className="text-[11px] text-navy-500">
@@ -401,7 +401,7 @@ export default async function SettingsPage({
                     New product
                   </ButtonLink>
                 </div>
-                <ul className="divide-y divide-navy-100">
+                <ul className="divide-y divide-navy-200">
                   {products.map((row) => (
                     <li key={row.product.id} className="flex items-center justify-between gap-3 px-5 py-3">
                       <div>
@@ -539,16 +539,16 @@ export default async function SettingsPage({
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Related</h2>
             <ul className="mt-1.5 space-y-1 text-[11.5px]">
               <li>
-                <Link href="/privacy" className="text-brand-700 underline">Privacy notice</Link>
+                <Link href="/privacy" className="text-brand-600 underline">Privacy notice</Link>
               </li>
               <li>
-                <Link href="/terms" className="text-brand-700 underline">Terms of use</Link>
+                <Link href="/terms" className="text-brand-600 underline">Terms of use</Link>
               </li>
               <li>
-                <Link href="/help" className="text-brand-700 underline">Help centre</Link>
+                <Link href="/help" className="text-brand-600 underline">Help centre</Link>
               </li>
               <li>
-                <Link href="/notifications" className="text-brand-700 underline">Notifications</Link>
+                <Link href="/notifications" className="text-brand-600 underline">Notifications</Link>
               </li>
             </ul>
           </Card>

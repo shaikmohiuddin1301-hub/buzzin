@@ -52,7 +52,7 @@ export default async function AdminStoriesPage() {
               Provider: {row.board.provider} · generated {formatDate(row.board.createdAt)} · visibility {row.board.visibility}
             </p>
             {row.board.projectId ? (
-              <Link href={`/projects/${row.board.projectId}/story`} className="mt-2 inline-block text-[11.5px] text-brand-700 underline">
+              <Link href={`/projects/${row.board.projectId}/story`} className="mt-2 inline-block text-[11.5px] text-brand-600 underline">
                 Open the storyboard editor
               </Link>
             ) : null}

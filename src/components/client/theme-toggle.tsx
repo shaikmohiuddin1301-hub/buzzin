@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
+// Only the Settings control remains: the header no longer carries a theme toggle.
+
 import { cn } from "@/components/ui";
 import { THEME_CHOICES, THEME_COOKIE, THEME_STORAGE_KEY, isThemeChoice, type ThemeChoice } from "@/lib/theme";
 
@@ -72,7 +74,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             <span
               className={cn(
                 "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
-                active ? "bg-brand-600 text-white" : "bg-navy-100 text-navy-600",
+                active ? "bg-brand-600 text-on-brand" : "bg-navy-100 text-navy-600",
               )}
               aria-hidden="true"
             >
@@ -89,45 +91,4 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-/**
- * Small header control: flips between light and dark using the current resolved theme.
- * Keyboard reachable, labelled, and only rendered as a button (so it never lies about state
- * before hydration).
- */
-export function QuickThemeToggle({ className }: { className?: string }) {
-  const [dark, setDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
-    setMounted(true);
-  }, []);
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        const next = dark ? "light" : "dark";
-        setDark(!dark);
-        apply(next);
-      }}
-      aria-label={mounted && dark ? "Switch to light theme" : "Switch to dark theme"}
-      title={mounted && dark ? "Light theme" : "Dark theme"}
-      className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-lg text-navy-600 transition hover:bg-navy-100 hover:text-navy-900",
-        className,
-      )}
-    >
-      <span aria-hidden="true" className="relative block h-4 w-4">
-        <Sun
-          size={16}
-          className={cn("absolute inset-0 transition-all duration-200", dark ? "rotate-90 opacity-0" : "rotate-0 opacity-100")}
-        />
-        <Moon
-          size={16}
-          className={cn("absolute inset-0 transition-all duration-200", dark ? "rotate-0 opacity-100" : "-rotate-90 opacity-0")}
-        />
-      </span>
-    </button>
-  );
-}

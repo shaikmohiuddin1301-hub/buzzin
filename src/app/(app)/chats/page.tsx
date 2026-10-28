@@ -81,7 +81,7 @@ export default async function ChatsPage({
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
-          <div className="border-b border-navy-100 p-3">
+          <div className="border-b border-navy-200 p-3">
             <form action="/chats" role="search" className="flex gap-2">
               <label htmlFor="chat-search" className="sr-only">
                 Search conversations
@@ -102,7 +102,7 @@ export default async function ChatsPage({
               </button>
             </form>
           </div>
-          <ul className="divide-y divide-navy-100">
+          <ul className="divide-y divide-navy-200">
             {conversations.map((conversation) => (
               <li key={conversation.id}>
                 <Link href={`/chats/${conversation.id}`} className="flex items-start gap-3 px-5 py-3.5 hover:bg-navy-50/60">
@@ -123,7 +123,7 @@ export default async function ChatsPage({
                       {conversation.taskId ? <Badge tone="brand">task</Badge> : null}
                       {conversation.kind === "group" && !conversation.taskId ? <Badge tone="neutral">project</Badge> : null}
                       {conversation.muted ? <Badge tone="neutral">muted</Badge> : null}
-                      {conversation.unread > 0 ? <Badge tone="brand">{conversation.unread} new</Badge> : null}
+                      {conversation.unread > 0 ? <Badge tone="coral">{conversation.unread} new</Badge> : null}
                     </div>
                     <p className="truncate text-[11.5px] text-navy-600">{truncate(conversation.lastMessage ?? "No messages yet", 80)}</p>
                   </div>
@@ -168,7 +168,7 @@ export default async function ChatsPage({
             </form>
           </Card>
 
-          <details className="rounded-2xl border border-navy-200/70 bg-surface p-4 shadow-card">
+          <details className="card-surface p-4">
             <summary className="cursor-pointer list-none text-[12px] font-semibold uppercase tracking-wide text-navy-500 [&::-webkit-details-marker]:hidden">
               Who can see a chat
             </summary>

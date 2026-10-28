@@ -77,7 +77,7 @@ export default async function CheckoutPage({
                 {
                   term: "Linked resource",
                   value: resource ? (
-                    <Link href={`/learn/${resource.id}`} className="text-brand-700 underline">
+                    <Link href={`/learn/${resource.id}`} className="text-brand-600 underline">
                       {resource.title}
                     </Link>
                   ) : (
@@ -113,7 +113,7 @@ export default async function CheckoutPage({
                   {resource ? (
                     <>
                       You can open{" "}
-                      <Link href={`/learn/${resource.id}`} className="text-brand-700 underline">
+                      <Link href={`/learn/${resource.id}`} className="text-brand-600 underline">
                         {resource.title}
                       </Link>{" "}
                       in full. Entitlement is checked on the server for every request.
@@ -163,7 +163,7 @@ export default async function CheckoutPage({
               </form>
 
               <h3 className="mt-5 text-[12px] font-semibold uppercase tracking-wide text-navy-500">Current grants</h3>
-              <ul className="mt-1.5 divide-y divide-navy-100">
+              <ul className="mt-1.5 divide-y divide-navy-200">
                 {grants.map((row) => (
                   <li key={row.entitlement.id} className="flex items-center justify-between gap-2 py-2">
                     <div>

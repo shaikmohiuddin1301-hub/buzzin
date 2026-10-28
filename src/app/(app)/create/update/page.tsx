@@ -63,7 +63,7 @@ export default async function NewUpdatePage({
             </Select>
           </Field>
 
-          <div className="border-t border-navy-100 pt-4">
+          <div className="border-t border-navy-200 pt-4">
             <SubmitButton name="publish" value="on" pendingLabel="Sharing…">
               Share update
             </SubmitButton>

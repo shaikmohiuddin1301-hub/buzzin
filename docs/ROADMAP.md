@@ -11,7 +11,7 @@
 | 5 | Storyboard generation, review workflow, animated explainer prototype | **Done with the local deterministic provider; hosted AI/video is a seam** |
 | 6 | Chat, notifications, business accounts, admin moderation | **Done** (chat polls rather than pushing) |
 | 7 | Premium products, test-mode access grants, entitlements | **Done — payments deliberately disabled, grants recorded honestly** |
-| 8 | Analytics, accessibility, security review, testing, deployment docs | **Done to the level documented in `docs/SECURITY.md`; independent review, load testing and browser E2E are outstanding** |
+| 8 | Analytics, accessibility, security review, testing, deployment docs | **Done to the level documented in `docs/SECURITY.md`; independent review, load testing and the submission/review browser journeys are outstanding** |
 
 ## 2. Acceptance criteria
 
@@ -35,9 +35,9 @@ Every item below is implemented and, where a service exists, covered by an integ
 | Use chat and notifications | ✅ | `tests/social-and-moderation.test.ts`; `/chats`, `/notifications` |
 | Report content and block another user | ✅ | `tests/social-and-moderation.test.ts` |
 | Manage privacy settings | ✅ | `tests/social-and-moderation.test.ts` (DM policy), `/settings?tab=privacy` |
-| Automated tests cover the important permissions and data flows | ✅ | 66 tests across 6 suites; `npm test` |
+| Automated tests cover the important permissions and data flows | ✅ | 251 tests across 23 suites (`npm test`); 41 Playwright checks for registration, the shell, swipe navigation, profile menu, notifications, project creation, submission → review → accepted work, journey publication, moderation with its audit entry, and premium gating (`npm run test:e2e`) |
 
-**Not claimed as met:** a real payment journey (no rail, by design), OAuth/MFA sign-in, hosted AI video, email delivery over SMTP, and automated browser E2E tests.
+**Not claimed as met:** a real payment journey (no rail, by design), OAuth/MFA sign-in, hosted AI video, and email delivery over SMTP.
 
 ## 3. What is deliberately not built
 
@@ -49,7 +49,7 @@ These are product boundaries, not bugs:
 
 ## 4. Next up (in order)
 
-1. **Browser end-to-end tests** (Playwright) for sign-up → project → task → submission → review → journey, plus admin moderation and entitlement gating.
+1. **Extend the browser end-to-end suite to the remaining surfaces**: storyboard generation and rendering, chat delivery, course enrolment and the business workspace.
 2. **PostgreSQL migration** using the path in `docs/DEPLOYMENT.md`, then horizontal scaling, Redis rate limits and a job queue for generation and notifications.
 3. **Email delivery** (SMTP or an API provider) with SPF/DKIM/DMARC, plus real verification/reset flows for production.
 4. **Object storage** behind the existing `StorageAdapter` with signed URLs and lifecycle rules; malware scanning and image re-encoding on upload.

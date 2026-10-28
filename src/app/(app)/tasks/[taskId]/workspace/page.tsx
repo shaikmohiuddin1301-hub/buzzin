@@ -237,7 +237,7 @@ export default async function WorkspacePage({
                     {entry.body ? <p className="mt-1 whitespace-pre-line text-[12.5px] leading-6 text-navy-700">{entry.body}</p> : null}
 
                     {entry.linkUrl ? (
-                      <a href={entry.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 inline-block text-[11.5px] font-medium text-brand-700 underline">
+                      <a href={entry.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 inline-block text-[11.5px] font-medium text-brand-600 underline">
                         {entry.linkUrl}
                       </a>
                     ) : null}
@@ -267,7 +267,7 @@ export default async function WorkspacePage({
                       </details>
                     ) : null}
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-navy-100 pt-2">
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-navy-200 pt-2">
                       {access.canReview && entry.visibility === "public_pending" ? (
                         <form action={approveWorkLogAction}>
                           <input type="hidden" name="taskId" value={taskId} />
@@ -326,7 +326,7 @@ export default async function WorkspacePage({
               individual entry public.
             </p>
             <p className="mt-2 text-[11.5px] font-medium text-navy-800">
-              Status: {consentGranted ? <span className="text-emerald-700">granted</span> : <span className="text-amber-700">not granted</span>}
+              Status: {consentGranted ? <span className="text-emerald-600">granted</span> : <span className="text-amber-700">not granted</span>}
             </p>
             <form action={withdrawConsentAction} className="mt-2">
               <input type="hidden" name="taskId" value={taskId} />
@@ -349,7 +349,7 @@ export default async function WorkspacePage({
                 Draft from approved entries
               </SubmitButton>
             </form>
-            <form action={createJourneyAction} className="mt-3 space-y-2 border-t border-navy-100 pt-3">
+            <form action={createJourneyAction} className="mt-3 space-y-2 border-t border-navy-200 pt-3">
               <input type="hidden" name="taskId" value={taskId} />
               <input type="hidden" name="projectId" value={project.id} />
               <Field label="Or start manually" htmlFor="journey-title">
@@ -360,10 +360,10 @@ export default async function WorkspacePage({
               </SubmitButton>
             </form>
             {journeys.length > 0 ? (
-              <ul className="mt-3 space-y-1 border-t border-navy-100 pt-2">
+              <ul className="mt-3 space-y-1 border-t border-navy-200 pt-2">
                 {journeys.map((journey) => (
                   <li key={journey.id} className="flex items-center justify-between gap-2">
-                    <Link href={`/learn/journeys/${journey.id}`} className="truncate text-[11.5px] font-medium text-brand-700 hover:underline">
+                    <Link href={`/learn/journeys/${journey.id}`} className="truncate text-[11.5px] font-medium text-brand-600 hover:underline">
                       {journey.title}
                     </Link>
                     <StatusBadge status={journey.status} />

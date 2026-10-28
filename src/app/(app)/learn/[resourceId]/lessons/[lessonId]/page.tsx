@@ -64,7 +64,7 @@ export default async function LessonPage({
       <Flash error={error} notice={notice} />
 
       <header className="mb-5">
-        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand-700">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand-600">
           <GraduationCap size={13} aria-hidden="true" />
           Module · {module.title}
           {courseProgress ? (
@@ -110,7 +110,7 @@ export default async function LessonPage({
         </div>
         {courseProgress && totalLessons > 0 ? (
           <div className="mt-4 max-w-xl">
-            <Progress value={courseProgress.pct} label={`${courseProgress.pct}% of the course complete`} />
+            <Progress tone="teal" value={courseProgress.pct} label={`${courseProgress.pct}% of the course complete`} />
           </div>
         ) : null}
       </header>
@@ -143,7 +143,7 @@ export default async function LessonPage({
                 href={lesson.videoUrl}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-700 underline"
+                className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-600 underline"
               >
                 <ExternalLink size={13} aria-hidden="true" />
                 Open {providerLabel(externalProvider(lesson.videoUrl))} video{externalHost(lesson.videoUrl) ? ` on ${externalHost(lesson.videoUrl)}` : ""}
@@ -157,7 +157,7 @@ export default async function LessonPage({
 
           {media && mediaUrl ? (
             <Card className="overflow-hidden">
-              <div className="border-b border-navy-100 px-5 py-3">
+              <div className="border-b border-navy-200 px-5 py-3">
                 <h2 className="text-[13px] font-semibold text-navy-950">Lesson file</h2>
               </div>
               <div className="p-4">
@@ -200,7 +200,7 @@ export default async function LessonPage({
                 rel="noopener noreferrer nofollow"
                 className="mt-2 block rounded-lg border border-navy-200 bg-navy-50/40 p-3 transition hover:border-brand-200 hover:bg-brand-50/40"
               >
-                <span className="flex items-center gap-2 text-[12.5px] font-medium text-brand-700">
+                <span className="flex items-center gap-2 text-[12.5px] font-medium text-brand-600">
                   <ExternalLink size={13} aria-hidden="true" />
                   {lesson.externalLabel || externalHost(lesson.externalUrl) || "Open resource"}
                 </span>
@@ -222,7 +222,7 @@ export default async function LessonPage({
               <p className="mt-1 text-[12.5px] font-semibold text-navy-900">{exercise.title}</p>
               <p className="mt-1 whitespace-pre-line text-[12.5px] leading-6 text-navy-700">{exercise.instructions}</p>
               {exercise.hint ? <p className="mt-2 rounded-lg bg-navy-50 px-3 py-2 text-[11px] text-navy-600">Hint: {exercise.hint}</p> : null}
-              <p className="mt-3 border-t border-navy-100 pt-2 text-[10.5px] leading-4 text-navy-500">
+              <p className="mt-3 border-t border-navy-200 pt-2 text-[10.5px] leading-4 text-navy-500">
                 Completing the exercise here does not create an accepted contribution. Submit work through the relevant
                 project task if you want it reviewed and recorded.
               </p>
@@ -328,7 +328,7 @@ export default async function LessonPage({
             <Card className="p-4">
               <h2 className="text-[12px] font-semibold uppercase tracking-wide text-navy-500">Course progress</h2>
               <div className="mt-2">
-                <Progress value={courseProgress.pct} label={`${courseProgress.completedLessons} of ${courseProgress.totalLessons} lessons complete`} />
+                <Progress tone="teal" value={courseProgress.pct} label={`${courseProgress.completedLessons} of ${courseProgress.totalLessons} lessons complete`} />
               </div>
               <div className="mt-3 space-y-1 text-[10.5px] text-navy-500">
                 <p className="flex items-center gap-1.5">

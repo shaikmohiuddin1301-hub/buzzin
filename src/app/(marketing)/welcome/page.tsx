@@ -106,9 +106,9 @@ export default async function WelcomePage() {
         secondary={{ href: "/projects/new", label: "Start building" }}
         aside={
           <Card className="overflow-hidden">
-            <div className="border-b border-navy-100 bg-brand-600 px-5 py-4 text-white">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">Live from the feed</p>
-              <p className="mt-1 text-[13px] text-white/75">
+            <div className="border-b border-navy-200 bg-brand-600 px-5 py-4 text-on-brand">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-on-brand/60">Live from the feed</p>
+              <p className="mt-1 text-[13px] text-on-brand/75">
                 Documentation → story → learning, connected to the same source records.
               </p>
             </div>
@@ -147,7 +147,7 @@ export default async function WelcomePage() {
         }
       />
 
-      <section className="border-b border-navy-100 bg-navy-50/60">
+      <section className="border-b border-navy-200 bg-navy-50/60">
         <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
           {[
             { icon: <Layers size={16} aria-hidden="true" />, title: "Projects, not job ads", body: "Real work with scope, milestones and public progress." },
@@ -244,7 +244,7 @@ export default async function WelcomePage() {
                   <Card className="p-4">
                     <div className="flex items-center justify-between">
                       <p className="text-[13px] font-semibold text-navy-900">Why these numbers exist</p>
-                      <Link href={`/u/${jonas?.username ?? ""}`} className="text-[11px] font-medium text-brand-700 hover:underline">
+                      <Link href={`/u/${jonas?.username ?? ""}`} className="text-[11px] font-medium text-brand-600 hover:underline">
                         Example profile →
                       </Link>
                     </div>
@@ -256,7 +256,7 @@ export default async function WelcomePage() {
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-3 border-t border-navy-100 pt-2 text-[11px] text-navy-500">
+                    <p className="mt-3 border-t border-navy-200 pt-2 text-[11px] text-navy-500">
                       Every point is a row in the reputation ledger tied to a project, task or resource. Owner-confirmed is
                       never described as independently verified.
                     </p>
@@ -301,7 +301,7 @@ export default async function WelcomePage() {
               </div>
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                 <p className="text-[12px] font-semibold text-amber-900">Honest limits</p>
-                <p className="mt-1 text-[12px] leading-5 text-amber-800">
+                <p className="mt-1 text-[12px] leading-5 text-amber-700">
                   No earnings are guaranteed. The demonstration data contains no real sales, revenue or testimonials.
                   Commission arrangements and tax obligations must be decided before any payment rail is enabled.
                 </p>
@@ -464,7 +464,7 @@ export default async function WelcomePage() {
             ].map((item) => (
               <figure key={item.name} className="rounded-xl border border-navy-200 bg-surface p-5">
                 <blockquote className="text-[13px] leading-6 text-navy-700">“{item.quote}”</blockquote>
-                <figcaption className="mt-3 border-t border-navy-100 pt-3 text-[11px] text-navy-500">
+                <figcaption className="mt-3 border-t border-navy-200 pt-3 text-[11px] text-navy-500">
                   <span className="font-semibold text-navy-700">{item.name}</span>
                   <br />
                   {item.role}

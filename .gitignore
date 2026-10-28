@@ -18,6 +18,11 @@ storage/
 .env.local
 .env.*.local
 
+# Browser end-to-end artefacts (throwaway database, auth state, reports)
+.tmp-e2e/
+test-results/
+playwright-report/
+
 # OS / editor
 .DS_Store
 Thumbs.db

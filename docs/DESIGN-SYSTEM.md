@@ -6,36 +6,112 @@ palette hiding in a page.
 
 ## Colour tokens
 
-All colours are CSS variables defined twice in `src/app/globals.css` — once under `:root`
-(light) and once under `.dark` (dark). `tailwind.config.ts` maps the Tailwind scales onto
-those variables, so `text-navy-900`, `bg-surface`, `border-navy-200` and `bg-brand-600` mean
-the same thing in both themes.
+Every colour is a CSS variable defined twice in `src/app/globals.css` — once under `:root`
+(light) and once under `.dark` — and mapped onto Tailwind in `tailwind.config.ts`. There is no
+second palette in a page, and there is no blue, navy, indigo, violet or purple anywhere: the
+`navy` name is kept only as the graphite/silver ink ramp.
 
-| Ramp | Meaning |
+| Token | Light | Dark | Role |
+| --- | --- | --- | --- |
+| `brand-600` | `#34343A` | `#E7E7EB` | Graphite action: links, active navigation, primary buttons |
+| `brand-700` | `#222226` | `#F5F5F3` | Pressed/hover action |
+| `brand-50` | `#EEEEF0` | `#3A3A42` | Selected chip and active-row surface |
+| `navy-900` | `#34343A` | `#F5F5F3` | Headings and primary text |
+| `navy-700` | `#47474F` | `#D6D6DC` | Strong body copy |
+| `navy-600` | `#56565F` | `#C4C4CD` | Body and secondary text |
+| `navy-500` | `#777780` | `#B8B8C1` | Inactive navigation and metadata |
+| `navy-300` | `#B8B8C1` | `#787882` | Silver dividers and disabled graphics |
+| `navy-200` | `#E7E7EB` | `#484850` | Solid borders and dividers |
+| `surface` | `#FFFFFF` | `#34343A` | Inputs and opaque fallbacks |
+| `page-warm` | `#F5F5F3` | `#222226` | Home, profile, projects, chats list, notifications |
+| `page-secondary` | `#E7E7EB` | `#26262B` | Explore, learning, creator workspace, open conversation |
+| `coral-500` | `#FF785A` | `#FF785A` | Creative action, likes, unread markers |
+| `coral-600` | `#EC6647` | `#EC6647` | Coral pressed state and icon stroke |
+| `emerald-500` | `#169B75` | `#3FC79C` | Growth, completion, positive actions |
+| `emerald-600` | `#0F7A5C` | `#7DDCBE` | Emerald text on pale emerald |
+| `amber-300` | `#D9AD55` | `#D9AD55` | Opportunities, review states, "request changes" |
+| `amber-700` | `#5C4310` | `#EBCA8F` | Gold text on pale gold |
+| `red-600` | `#C83D4D` | `#F09EA8` | Destructive actions and errors |
+
+`navy` is an inverted ink ramp, so `bg-navy-50` is the faint surface in both themes and
+`text-navy-900` the strongest text. Content that must stay dark in both themes uses the fixed
+helpers `.ink-surface`, `.ink-card`, `.ink-hero` and `.avatar-surface`; never put
+`text-navy-*` on top of those. `info` replaces the old `sky` ramp so no colour name implies blue.
+
+### Glass surfaces
+
+| Layer | Light | Dark |
+| --- | --- | --- |
+| Main page | `#F5F5F3` | `#222226` |
+| Secondary page | `#E7E7EB` | `#26262B` |
+| Card / panel (`--glass-panel`) | `rgba(255,255,255,0.68)` | `rgba(52,52,58,0.72)` |
+| Secondary panel | `rgba(231,231,235,0.58)` | `rgba(65,65,73,0.62)` |
+| Glass border | `rgba(255,255,255,0.85)` | `rgba(255,255,255,0.12)` |
+| Header (`--glass-header`) | `rgba(245,245,243,0.74)` | `rgba(34,34,38,0.78)` |
+| Bottom bar (`--glass-bar`) | `rgba(255,255,255,0.74)` | `rgba(52,52,58,0.82)` |
+| Card shadow | `0 8px 32px rgba(34,34,38,0.08)` | `0 8px 32px rgba(0,0,0,0.45)` |
+
+Panels use `backdrop-filter: blur(18px) saturate(1.15)`; the header and bar use a slightly
+stronger blur. A `@supports not (backdrop-filter: …)` block swaps every glass surface to
+`--glass-fallback` (white in light, `#34343A` in dark) so the interface stays readable where
+blur is unavailable. Page backgrounds add three restrained radial washes (silver, pale grey,
+warm off-white, plus a 5–6% coral highlight); dark mode uses silver light on charcoal.
+
+### Semantic status tokens
+
+`status-todo`, `status-progress`, `status-review`, `status-approved` and `status-blocked`
+(with matching `-text` tokens) carry work state. They are deliberately separate from the
+decorative coral and gold accents, and every status badge prints its label next to the dot.
+
+| State | Light background / text | Dark background / text |
+| --- | --- | --- |
+| To do | `#E7E7EB` / `#34343A` | `#3A3A42` / `#D6D6DC` |
+| In progress | `#D5D5DC` / `#222226` | `#484850` / `#F5F5F3` |
+| Needs review | `#FAF0DB` / `#5C4310` | `#403624` / `#EBCA8F` |
+| Approved | `#DFF4ED` / `#0F7A5C` | `#1B3A30` / `#89DEBF` |
+| Blocked | `#FBE9EC` / `#A32638` | `#3E242A` / `#F09EA8` |
+
+### Component mapping
+
+| Surface | Colour |
 | --- | --- |
-| `navy` | Ink/indigo neutral. `50` is the quietest surface, `950` the strongest text. |
-| `brand` | Electric violet. Navigation, links, primary actions, selected states. |
-| `coral` | Warm human accent. Reserved for emphasis (progress highlight, warm cues), never a large fill. |
-| `emerald` / `amber` / `red` / `sky` | State colours. Re-tinted per theme (not inverted) so success stays green and danger stays red. |
-| `surface` | Page (`-muted`), card (`DEFAULT`) and raised (`-subtle`) surfaces. |
+| Header | translucent warm off-white glass with a silver hairline |
+| Bottom navigation | translucent white glass; active graphite, inactive steel grey, Create coral and centred |
+| Primary / secondary / positive / creative / destructive buttons | graphite / grey glass + graphite / emerald / coral / `#C83D4D` |
+| Feed cards, profile panel, notification cards, course cards, project cards | translucent white glass |
+| Around Your Network rail | warm page, glass cards, graphite accents, coral new-activity marker |
+| Unread notification card | `navy-100` (`#EEEEF0` light, `#414149` dark) with a coral dot |
+| Grouped sections and task-board columns | `.glass-secondary` (secondary glass) |
+| Outgoing chat bubble | graphite `#34343A` with white text in both themes |
+| Incoming chat bubble | silver-white glass (light) or `#414149` (dark) with a glass border |
+| Like / comment / share icons | coral stroke / graphite / emerald |
+| Learning progress | emerald fill; project progress graphite |
 
-`navy` is **inverted** in dark mode rather than duplicated. That is why one class set works
-everywhere: `bg-navy-50` is a faint surface in light mode and a faint surface in dark mode.
+`pageSurfaceClass()` in `src/lib/navigation.ts` owns the route-level background choice, so the
+shell and the pages cannot drift apart.
 
-Fixed-colour helpers exist for content that must stay dark in both themes: `.ink-surface`
-(panels), `.ink-card` (story cards), `.ink-hero` (project/profile covers), `.avatar-surface`
-(initials), `.create-glow` (the Create action). Do not put `text-navy-*` on top of these.
+### Measured contrast
 
-Measured contrast (WCAG 2.1, from the compiled stylesheet):
+WCAG 2.2 AA, computed from the token values:
 
 | Pair | Light | Dark |
 | --- | --- | --- |
-| Body text on card | 10.53 | 12.71 |
-| Muted meta text | 4.85 | 8.09 |
-| Faint meta text | 4.20 | 5.08 |
-| Link text | 7.09 | 5.43 |
-| White on primary button | 5.51 | 5.71 |
-| Badge text on badge tint | 4.4–8.2 | 6.9–13.1 |
+| Primary text on a card | 12.37 | 11.33 |
+| Secondary text on a card | 7.26 | 6.28 |
+| Link on a card | 12.37 | 10.03 |
+| Label on a primary button | 12.37 | 12.85 |
+| Label on a coral action | 6.10 | 6.10 |
+| Label on a destructive action | 4.96 | 7.67 |
+| Status badge text | 4.62–10.85 | 6.82–8.30 |
+
+Two pairs were specified with fixed text colours: white on the emerald `#169B75` measures
+3.51:1, and the white Create icon on
+`#FF785A` measures 2.60:1. Both are kept because they were specified; the positive action
+stays identifiable by its label and the Create action by its position, shape and aria-label.
+The like icon uses the darker coral stroke (`#EC6647`, 3.20:1) so the control itself clears
+the 3:1 non-text target while the fill remains `#FF785A`. The inactive navigation grey
+`#777780` measures 4.44:1 on white — a 0.06 shortfall that is kept rather than deviating from
+the requested steel grey; it is never the only cue for a destination.
 
 ## Theming
 
@@ -44,19 +120,26 @@ Measured contrast (WCAG 2.1, from the compiled stylesheet):
 - `THEME_SCRIPT` in `src/app/layout.tsx` runs before the first paint, so there is no flash of
   the wrong theme. It also adds `motion-ready` only when the device has not asked for reduced
   motion.
-- Controls: segmented switch in **Settings → Appearance** (`ThemeToggle`), quick toggle in
-  the header (`QuickThemeToggle`).
+- The only control is the segmented switch in **Settings → Appearance** (`ThemeToggle`). The
+  header no longer carries a theme toggle.
 - `color-scheme` is set per theme so native scrollbars and form controls match.
 
 ## Navigation
 
-- Mobile/tablet: a floating pill (`.glass`, `shadow-float`) inset from the edges, respecting
-  `env(safe-area-inset-bottom)`. Seven destinations in a fixed order; the Create action is the
-  only raised element. The active destination becomes an icon+label pill. The bar hides while
-  a text field is focused so the on-screen keyboard has the space, and while the Create sheet
-  is open.
-- Desktop: a floating sidebar panel with the same destinations, Workspace links behind a
-  disclosure, and the Create button as the single gradient action.
+- Mobile/tablet: a floating pill (`.glass-bar`, `shadow-float`) inset from the edges, respecting
+  `env(safe-area-inset-bottom)`. Exactly five destinations (Home · Explore · Create · Chats ·
+  Profile) in a five-column grid, so the raised Create action is geometrically centred whatever
+  the label widths are. The bar hides while a text field is focused so the on-screen keyboard
+  has the space, and while the Create sheet is open. Learning and Projects stay reachable from
+  the sidebar and the Home workspace card instead.
+- A deliberate horizontal swipe moves between the four page destinations (Home · Explore ·
+  Chats · Profile). Create is an action, not a destination: it is skipped in both directions
+  and the bottom bar ignores gestures. Scroll position is remembered per destination.
+- The header carries no hamburger and no profile shortcut. The only menu is on the Profile
+  page (`ProfileMenu`), and the notification bell is a link to `/notifications`, not a pop-up.
+- Desktop: a floating sidebar panel with the same five destinations plus Learning and
+  Projects, Workspace links behind a disclosure, and the Create button as the single gradient
+  action.
 - `surface-gutter` on `<main>` reserves room for the bar; nothing scrolls underneath it.
 
 ## Motion
@@ -74,7 +157,7 @@ Motion is transform/opacity only and collapses under `prefers-reduced-motion: re
 - `ShareButton` uses the native share sheet with a copy-link fallback and announces the
   result politely; there are no decorative interaction icons.
 - Profile posts render as a square media grid; the Home feed keeps a wider reading
-  column with a followed-projects rail (real covers only) above the composer.
+  column with the "Around your network" activity rail (real records only) above the composer.
 
 ## Account kinds
 
@@ -97,5 +180,6 @@ still the only boundary.
 
 Use `Card`, `PageHeader`, `Tabs`, `Badge`, `Field`, `Alert`, `EmptyState` from
 `src/components/ui.tsx`, and `Reveal` around cards that appear below the fold. Never use
-`bg-white` or a literal hex colour for a surface: use `bg-surface`, `bg-navy-*` or one of the
-`.ink-*` helpers.
+`bg-white` or a literal hex colour for a surface: use `.card-surface`, `bg-navy-*` or one of
+the `.ink-*` helpers. Use `.glass`, `.glass-bar` and `.glass-header` for chrome, and
+`.bubble-incoming` / `.bubble-outgoing` for messages so both themes stay in sync.

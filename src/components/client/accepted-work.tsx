@@ -36,13 +36,13 @@ export function AcceptedWorkCelebration({ show, title }: { show: boolean; title:
     >
       <div className="motion-lift w-full max-w-sm rounded-xl border border-emerald-200 bg-surface p-4 shadow-raised">
         <div className="flex items-start gap-3">
-          <span className="motion-check grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+          <span className="motion-check grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-600">
             <Check size={18} aria-hidden="true" />
           </span>
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-navy-950">Approved and filed</p>
             <p className="mt-0.5 truncate text-[12px] text-navy-600">{title}</p>
-            <p className="motion-file mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+            <p className="motion-file mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
               <FolderCheck size={12} aria-hidden="true" /> Accepted Work
             </p>
           </div>

@@ -64,7 +64,7 @@ export default async function SignUpPage({
         Already have an account?{" "}
         <Link
           href={next === "/home" ? "/auth/sign-in" : `/auth/sign-in?next=${encodeURIComponent(next)}`}
-          className="font-medium text-brand-700 hover:underline"
+          className="font-medium text-brand-600 hover:underline"
         >
           Sign in
         </Link>

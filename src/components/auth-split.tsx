@@ -7,7 +7,7 @@ import { Logo } from "@/components/logo";
  */
 export function AuthSplit({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="page-surface min-h-screen">
       <div className="grid min-h-screen lg:grid-cols-[1fr_480px]">
         <div className="order-2 flex flex-col justify-center px-5 py-10 sm:px-10 lg:order-1">
           <div className="mx-auto w-full max-w-md">

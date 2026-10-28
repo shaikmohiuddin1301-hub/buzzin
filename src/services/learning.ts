@@ -144,7 +144,10 @@ export function draftJourneyFromTask(taskId: string, userId: string): { journeyI
 
   let skipped = 0;
   for (const entry of entries) {
-    if (entry.visibility !== "public" && entry.authorId !== userId && !access.canReview) {
+    // The same rule `addJourneyStep` enforces when the step is written: a step may
+    // cite public documentation, or the creator's own entries — never somebody
+    // else's team-only notes, even when the drafter is the project owner.
+    if (entry.visibility !== "public" && entry.authorId !== userId) {
       skipped += 1;
       continue;
     }

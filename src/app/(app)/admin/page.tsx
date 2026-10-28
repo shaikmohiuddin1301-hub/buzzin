@@ -30,10 +30,10 @@ export default async function AdminOverviewPage() {
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <Card>
-          <div className="border-b border-navy-100 px-5 py-3.5">
+          <div className="border-b border-navy-200 px-5 py-3.5">
             <h2 className="text-[13px] font-semibold text-navy-900">Reports by reason</h2>
           </div>
-          <ul className="divide-y divide-navy-100">
+          <ul className="divide-y divide-navy-200">
             {reasons.map((row) => (
               <li key={row.reason} className="flex items-center justify-between px-5 py-2.5 text-[12px]">
                 <span className="capitalize text-navy-700">{row.reason.replace(/_/g, " ")}</span>
@@ -45,13 +45,13 @@ export default async function AdminOverviewPage() {
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between border-b border-navy-100 px-5 py-3.5">
+          <div className="flex items-center justify-between border-b border-navy-200 px-5 py-3.5">
             <h2 className="text-[13px] font-semibold text-navy-900">Recent administrative activity</h2>
-            <Link href="/admin/audit" className="text-[11px] text-brand-700 underline">
+            <Link href="/admin/audit" className="text-[11px] text-brand-600 underline">
               Full log
             </Link>
           </div>
-          <ul className="divide-y divide-navy-100">
+          <ul className="divide-y divide-navy-200">
             {audit.map((entry) => (
               <li key={entry.log.id} className="px-5 py-2.5">
                 <p className="text-[12px] text-navy-800">{entry.log.action.replace(/\./g, " · ").replace(/_/g, " ")}</p>

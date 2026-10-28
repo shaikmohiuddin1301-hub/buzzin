@@ -36,6 +36,15 @@ const COLUMNS: { id: string; label: string; statuses: string[] }[] = [
   { id: "cancelled", label: "Cancelled", statuses: ["cancelled"] },
 ];
 
+const COLUMN_TONES: Record<string, string> = {
+  draft: "bg-status-todo text-status-todo-text",
+  open: "bg-status-todo text-status-todo-text",
+  active: "bg-status-progress text-status-progress-text",
+  review: "bg-status-review text-status-review-text",
+  done: "bg-status-approved text-status-approved-text",
+  cancelled: "bg-status-blocked text-status-blocked-text",
+};
+
 export default async function ProjectTasksPage({
   params,
   searchParams,
@@ -114,9 +123,9 @@ export default async function ProjectTasksPage({
           {COLUMNS.map((column) => {
             const columnTasks = tasks.filter((task) => column.statuses.includes(task.status));
             return (
-              <section key={column.id} className="min-w-[190px] rounded-xl border border-navy-200 bg-navy-50/60 p-2.5">
-                <h2 className="flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wide text-navy-600">
-                  {column.label}
+              <section key={column.id} className="glass-secondary min-w-[190px] rounded-xl p-2.5">
+                <h2 className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-navy-600">
+                  <span className={cn("rounded-full px-2 py-0.5", COLUMN_TONES[column.id])}>{column.label}</span>
                   <span className="rounded-full bg-surface px-1.5 py-0.5 text-[10px] text-navy-500">{columnTasks.length}</span>
                 </h2>
                 <ul className="mt-2 space-y-2">
@@ -124,7 +133,7 @@ export default async function ProjectTasksPage({
                     <li key={task.id}>
                       <Link
                         href={`/tasks/${task.id}`}
-                        className="block rounded-lg border border-navy-200 bg-surface p-2.5 shadow-sm hover:border-brand-300"
+                        className="block glass rounded-lg p-2.5 shadow-sm hover:border-brand-300"
                       >
                         <p className="text-[12px] font-medium leading-5 text-navy-900">{task.title}</p>
                         <p className="mt-1 text-[10px] text-navy-500">
@@ -244,7 +253,7 @@ export default async function ProjectTasksPage({
               </Alert>
 
               <div className="flex flex-wrap gap-2">
-                <SubmitButton name="publish" value="on" pendingLabel="Publishing…">
+                <SubmitButton name="publish" value="on" variant="creative" pendingLabel="Publishing…">
                   Publish task
                 </SubmitButton>
                 <SubmitButton variant="secondary" pendingLabel="Saving…">
