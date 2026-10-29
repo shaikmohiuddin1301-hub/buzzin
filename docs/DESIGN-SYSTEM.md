@@ -144,15 +144,21 @@ the requested steel grey; it is never the only cue for a destination.
   replays a screen the reader swiped back out of, then continues the tab order. Only an
   exhausted history falls back to the adjacent tab; the ends of the order do nothing rather
   than leave the page. Re-selecting the open tab adds no entry, and the browser's own back and
-  forward buttons move the cursor instead of creating a parallel record.
+  forward buttons move the cursor instead of creating a parallel record. The record lives in
+  `sessionStorage` (`bt.swipe-history`), so it survives a reload in the same tab; every entry is
+  re-validated as one of the four routes before it is used.
 - The swipe answers immediately: once horizontal intent is clear, only `<main>` moves, as a
   single `translate3d` per frame on the compositor, capped at 30% of the viewport and held back
-  to 14% at the ends of the sequence. Release commits after 56px of travel, or an 18px flick at
-  0.3px/ms — the rule lives in `swipedFarEnough()`, not in the component. Anything shorter
-  springs back in 240ms instead of jumping. The release hands its offset to the view transition
-  through `--swipe-shift`, so the outgoing snapshot starts under the finger and the 300ms
-  in/out pair reads as one movement. Prefetching both neighbours keeps the incoming page ready,
-  so the transition is not left waiting on data.
+  to 14% at the ends of the sequence. The gap it opens reveals the destination's edge — its own
+  surface, a hairline border and, once the gap can hold the word, its name; the preview layer
+  is bounded by the visible content area so it never covers the header or the bar. Release
+  commits after 22% of the viewport width (never less than 56px), or an 18px flick at 0.3px/ms
+  — the rule lives in `swipedFarEnough()`/`swipeCommitDistance()`, not in the component.
+  Anything shorter springs back in 260ms instead of jumping. The release hands its offset to the
+  view transition through `--swipe-shift`, so the outgoing snapshot starts under the finger and
+  the paired 300ms in/out animations share `cubic-bezier(0.22, 1, 0.36, 1)`; the old page is
+  held until the incoming one is ready, so there is no blank frame. Prefetching both neighbours
+  keeps the incoming page ready, so the transition is not left waiting on data.
 - One shared bar, page-specific contents (`src/components/top-bar.tsx`). Nothing appears on
   every page just because it exists elsewhere:
 

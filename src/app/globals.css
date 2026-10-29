@@ -146,6 +146,9 @@
   --shadow-glow: 0 12px 32px -14px rgb(255 120 90 / 0.45);
 
   --ease-out: cubic-bezier(0.22, 0.7, 0.24, 1);
+  /* The swipe pair: a decisive start that settles without overshoot, so the two
+     pages read as one movement at 300ms. */
+  --ease-swipe: cubic-bezier(0.22, 1, 0.36, 1);
 
   color-scheme: light;
 }
@@ -348,7 +351,7 @@
   /* The drag itself: transform only, written once per frame, so the page tracks
      the finger on the compositor instead of waiting for layout or paint. */
   main#main.swipe-settling {
-    transition: transform 240ms var(--ease-out);
+    transition: transform 260ms var(--ease-swipe);
   }
 
   ::view-transition-old(root),
@@ -366,16 +369,16 @@
        as one movement. The outgoing snapshot starts at `--swipe-shift`, the
        position the finger released at, and carries on from there. */
     html[data-swipe-direction="left"]::view-transition-old(app-content) {
-      animation: bt-swipe-out-left 300ms var(--ease-out) both;
+      animation: bt-swipe-out-left 300ms var(--ease-swipe) both;
     }
     html[data-swipe-direction="left"]::view-transition-new(app-content) {
-      animation: bt-swipe-in-right 300ms var(--ease-out) both;
+      animation: bt-swipe-in-right 300ms var(--ease-swipe) both;
     }
     html[data-swipe-direction="right"]::view-transition-old(app-content) {
-      animation: bt-swipe-out-right 300ms var(--ease-out) both;
+      animation: bt-swipe-out-right 300ms var(--ease-swipe) both;
     }
     html[data-swipe-direction="right"]::view-transition-new(app-content) {
-      animation: bt-swipe-in-left 300ms var(--ease-out) both;
+      animation: bt-swipe-in-left 300ms var(--ease-swipe) both;
     }
   }
 
@@ -757,7 +760,7 @@
     transform: translate3d(var(--swipe-shift, 0px), 0, 0);
   }
   to {
-    opacity: 0.62;
+    opacity: 0.75;
     transform: translate3d(-100%, 0, 0);
   }
 }
@@ -777,7 +780,7 @@
     transform: translate3d(var(--swipe-shift, 0px), 0, 0);
   }
   to {
-    opacity: 0.62;
+    opacity: 0.75;
     transform: translate3d(100%, 0, 0);
   }
 }

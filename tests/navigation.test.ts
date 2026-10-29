@@ -3,6 +3,7 @@ import {
   BOTTOM_NAV,
   BOTTOM_NAV_CREATE_INDEX,
   EMPTY_SWIPE_HISTORY,
+  SWIPE_MIN_DISTANCE,
   SWIPE_ORDER,
   activeSwipeDestination,
   adjacentSwipeDestination,
@@ -10,6 +11,7 @@ import {
   profileHref,
   recordSwipeVisit,
   swipedFarEnough,
+  swipeCommitDistance,
   swipeDestination,
   type SwipeHistory,
 } from "@/lib/navigation";
@@ -82,6 +84,22 @@ describe("when a released swipe navigates", () => {
 
   it("ignores a flick that ends up moving the other way", () => {
     expect(swipedFarEnough({ dx: -30, dy: 0, velocity: 0.9 })).toBe(false);
+  });
+
+  it("scales the commit distance with the viewport", () => {
+    // Roughly a fifth of the width on a phone, a tablet and a small phone; a
+    // sliver wider than the absolute minimum would otherwise be trigger-happy.
+    expect(swipeCommitDistance(412)).toBe(91);
+    expect(swipeCommitDistance(834)).toBe(183);
+    expect(swipeCommitDistance(240)).toBe(SWIPE_MIN_DISTANCE);
+  });
+
+  it("applies the viewport threshold instead of the fixed minimum", () => {
+    const commitDistance = swipeCommitDistance(834);
+    expect(swipedFarEnough({ dx: -120, dy: 0, velocity: 0.05, commitDistance })).toBe(false);
+    expect(swipedFarEnough({ dx: -190, dy: 0, velocity: 0.05, commitDistance })).toBe(true);
+    // A flick still commits below the distance threshold.
+    expect(swipedFarEnough({ dx: -30, dy: 0, velocity: -0.8, commitDistance })).toBe(true);
   });
 });
 

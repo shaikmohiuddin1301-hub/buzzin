@@ -374,6 +374,86 @@ async function dragStart(page: Page, surface: { x: number; y: number }) {
   return client;
 }
 
+test("the destination's edge is revealed in the gap while dragging", async ({ page }) => {
+  await page.goto("/home");
+  const surface = await safeSurface(page);
+  const client = await dragStart(page, surface);
+
+  // 80px is under the 22%-of-viewport commit distance on this 412px screen, so
+  // this drag can only be a peek: it must still show the destination immediately.
+  for (let index = 1; index <= 4; index += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: surface.x - index * 20, y: surface.y }],
+    });
+    await page.waitForTimeout(50);
+  }
+
+  const peek = await page.evaluate(() => {
+    const element = document.querySelector<HTMLElement>("[data-swipe-peek]");
+    if (!element) return null;
+    const box = element.getBoundingClientRect();
+    const content = document.getElementById("main")!.getBoundingClientRect();
+    return {
+      display: getComputedStyle(element).display,
+      width: Math.round(box.width),
+      // Flush with the content area's edge (the layout viewport excludes the
+      // desktop scrollbar, so this is the page's own right edge).
+      right: Math.round(document.body.getBoundingClientRect().right - box.right),
+      opacity: getComputedStyle(element).opacity,
+      label: element.textContent?.trim(),
+      insideContent: box.top >= content.top - 2,
+    };
+  });
+
+  expect(peek).not.toBeNull();
+  expect(peek!.display).toBe("flex");
+  expect(peek!.width).toBeGreaterThan(20);
+  expect(peek!.right).toBe(0);
+  expect(Number(peek!.opacity)).toBe(1);
+  expect(peek!.label).toBe("Explore");
+  expect(peek!.insideContent).toBe(true);
+
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await client.detach();
+
+  // Under the threshold: the page snaps back, the preview leaves with it, and the
+  // route does not change.
+  expect(new URL(page.url()).pathname).toBe("/home");
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.querySelector("[data-swipe-peek]")!).display))
+    .toBe("none");
+
+  // A fuller drag names the destination, with the whole word inside the reveal.
+  const wide = await dragStart(page, surface);
+  for (let index = 1; index <= 8; index += 1) {
+    await wide.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: surface.x - index * 25, y: surface.y }],
+    });
+    await page.waitForTimeout(40);
+  }
+  const peekLabel = () =>
+    page.evaluate(() => getComputedStyle(document.querySelector("[data-swipe-peek] span")!).opacity);
+  await expect.poll(peekLabel).toBe("1");
+
+  const label = await page.evaluate(() => {
+    const element = document.querySelector<HTMLElement>("[data-swipe-peek]")!;
+    const span = element.querySelector("span")!;
+    return {
+      width: element.getBoundingClientRect().width,
+      spanWidth: span.getBoundingClientRect().width,
+      text: span.textContent,
+    };
+  });
+  expect(label.text).toBe("Explore");
+  expect(label.spanWidth).toBeLessThanOrEqual(label.width);
+
+  await wide.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await wide.detach();
+  await page.waitForURL("**/explore");
+});
+
 test("the page follows the finger while dragging", async ({ page }) => {
   await page.goto("/home");
   const surface = await safeSurface(page);
@@ -405,6 +485,67 @@ test("the page follows the finger while dragging", async ({ page }) => {
     .poll(() => page.evaluate(() => getComputedStyle(document.getElementById("main")!).transform))
     .toBe("none");
   expect(await page.evaluate(() => document.documentElement.dataset.swiping)).toBeUndefined();
+});
+
+test("the outgoing and incoming pages share one 300ms eased transition", async ({ page }) => {
+  await page.goto("/home");
+  await swipe(page, "left");
+
+  const read = () =>
+    page.evaluate(() =>
+      ["::view-transition-old(app-content)", "::view-transition-new(app-content)"].map((pseudo) => {
+        const style = getComputedStyle(document.documentElement, pseudo);
+        return {
+          pseudo,
+          duration: style.animationDuration,
+          easing: style.animationTimingFunction.replace(/\s+/g, ""),
+          name: style.animationName,
+        };
+      }),
+    );
+
+  await expect
+    .poll(async () => (await read()).map((entry) => entry.name), { timeout: 10_000 })
+    .toEqual(["bt-swipe-out-left", "bt-swipe-in-right"]);
+
+  // Both snapshots move for the same time on the same curve, which is what makes
+  // the release read as one continuous transition rather than two animations.
+  for (const animation of await read()) {
+    expect(animation.duration).toBe("0.3s");
+    expect(animation.easing).toBe("cubic-bezier(0.22,1,0.36,1)");
+  }
+});
+
+test("the swipe history survives a reload", async ({ page }) => {
+  await page.goto("/home");
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Chats" }).click();
+  await page.waitForURL("**/chats");
+  await page.reload();
+
+  // The adjacent-tab fallback from Chats would be Explore; only the stored
+  // history can send this swipe back to Home.
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+  expect(new URL(page.url()).pathname).toBe("/home");
+});
+
+test.describe("desktop widths", () => {
+  test.use({ viewport: { width: 1280, height: 900 }, hasTouch: false });
+
+  test("a pointer drag is not a page swipe and links still navigate", async ({ page }) => {
+    await page.goto("/home");
+    await page.mouse.move(700, 480);
+    await page.mouse.down();
+    await page.mouse.move(420, 480, { steps: 10 });
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    expect(new URL(page.url()).pathname).toBe("/home");
+    await expect(page.locator("[data-swipe-peek]")).toHaveCSS("display", "none");
+
+    await page.locator('aside a[href="/explore"]').first().click();
+    await page.waitForURL("**/explore");
+  });
 });
 
 test("reduced motion still navigates, without the swipe animation", async ({ page }) => {

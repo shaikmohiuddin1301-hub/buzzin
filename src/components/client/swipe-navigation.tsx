@@ -18,9 +18,10 @@
  *   - touch only, one finger, starting away from the screen edges (the OS owns
  *     those back gestures);
  *   - the page follows the finger as soon as horizontal intent is clear, so the
- *     gesture answers immediately instead of waiting for the release;
- *   - at least 56px of travel or a quick flick (18px at 0.3px/ms), with a clear
- *     horizontal bias;
+ *     gesture answers immediately instead of waiting for the release, and the
+ *     destination's edge is revealed in the gap it leaves;
+ *   - about 22% of the viewport width of travel (never less than 56px), or a
+ *     quick flick (18px at 0.3px/ms), with a clear horizontal bias;
  *   - vertical movement hands the gesture back to the page immediately, so feed
  *     scrolling never changes page;
  *   - a gesture that starts on a control, a dialog/menu, a horizontally
@@ -30,7 +31,7 @@
  * stays on the compositor. On release the drag offset is handed to the browser
  * View Transition API (`--swipe-shift`), so the outgoing page continues from
  * exactly where the finger left it while the incoming page arrives from the
- * opposite side. A cancelled drag springs back in 240ms. Without the API, or
+ * opposite side. A cancelled drag springs back in 260ms. Without the API, or
  * with reduced motion requested, navigation happens immediately and the
  * existing route transition runs.
  */
@@ -38,11 +39,16 @@ import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   EMPTY_SWIPE_HISTORY,
+  SWIPE_HISTORY_LIMIT,
+  activeSwipeDestination,
   recordSwipeVisit,
   swipedFarEnough,
+  swipeCommitDistance,
   swipeDestination,
+  type SwipeDestinationId,
   type SwipeDirection,
   type SwipeHistory,
+  type SwipeVisit,
 } from "@/lib/navigation";
 
 /** Elements that need the gesture for themselves. Links are intentionally not here:
@@ -67,8 +73,63 @@ const AXIS_LOCK = 12;
 const FOLLOW = 0.5;
 const FOLLOW_LIMIT = 0.3;
 const EDGE_FOLLOW = 0.14;
-const SETTLE_MS = 240;
+const SETTLE_MS = 260;
 const TRANSITION_FALLBACK_MS = 2_000;
+/** The shortest reveal that is worth showing; below it the peek would flicker. */
+const PEEK_MIN = 6;
+/** Wide enough for the destination's name, so it is never clipped mid-word. */
+const PEEK_LABEL_MIN = 96;
+
+/**
+ * Where the swipe history is kept across a reload.
+ *
+ * `sessionStorage`, not a cookie or the server: it belongs to this tab and this
+ * device, it is gone when the tab closes, and it never leaves the browser. The
+ * swipe sequence itself is still decided from the live URL, so a stale or
+ * malformed value can only ever shorten the history, never send the reader to a
+ * page they cannot open — every entry is re-validated as one of the four routes.
+ */
+const SWIPE_STORAGE_KEY = "bt.swipe-history";
+
+const DESTINATION_LABELS: Record<SwipeDestinationId, string> = {
+  home: "Home",
+  explore: "Explore",
+  chats: "Chats",
+  profile: "Profile",
+};
+
+function isSwipeVisit(value: unknown): value is SwipeVisit {
+  const href = (value as { href?: unknown } | null)?.href;
+  return typeof href === "string" && activeSwipeDestination(href) !== null;
+}
+
+function readStoredHistory(): SwipeHistory {
+  try {
+    const raw = window.sessionStorage.getItem(SWIPE_STORAGE_KEY);
+    if (!raw) return EMPTY_SWIPE_HISTORY;
+    const parsed = JSON.parse(raw) as { visits?: unknown; index?: unknown };
+    if (!Array.isArray(parsed.visits)) return EMPTY_SWIPE_HISTORY;
+
+    const visits = parsed.visits
+      .filter(isSwipeVisit)
+      .map((visit) => ({ href: visit.href, id: activeSwipeDestination(visit.href)! }))
+      .slice(-SWIPE_HISTORY_LIMIT);
+    if (visits.length === 0) return EMPTY_SWIPE_HISTORY;
+
+    const index = typeof parsed.index === "number" ? parsed.index : visits.length - 1;
+    return { visits, index: Math.min(Math.max(0, index), visits.length - 1) };
+  } catch {
+    return EMPTY_SWIPE_HISTORY;
+  }
+}
+
+function writeStoredHistory(history: SwipeHistory): void {
+  try {
+    window.sessionStorage.setItem(SWIPE_STORAGE_KEY, JSON.stringify(history));
+  } catch {
+    // Private modes and full quotas are not a reason to break navigation.
+  }
+}
 
 type Gesture = {
   active: boolean;
@@ -116,6 +177,9 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
   const pathnameRef = useRef(pathname);
   const profileRef = useRef(ownProfileHref);
   const historyRef = useRef<SwipeHistory>(EMPTY_SWIPE_HISTORY);
+  const historyLoaded = useRef(false);
+  const peekRef = useRef<HTMLDivElement>(null);
+  const peekLabelRef = useRef<HTMLSpanElement>(null);
   const scrollPositions = useRef(new Map<string, number>());
   const pendingRestore = useRef<string | null>(null);
   const pendingResolve = useRef<(() => void) | null>(null);
@@ -127,8 +191,13 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
   // makes a repeated tab selection, a right swipe and the browser's back button
   // share one record instead of each adding an entry.
   useEffect(() => {
+    if (!historyLoaded.current) {
+      historyLoaded.current = true;
+      historyRef.current = readStoredHistory();
+    }
     pathnameRef.current = pathname;
     historyRef.current = recordSwipeVisit(historyRef.current, pathname);
+    writeStoredHistory(historyRef.current);
   }, [pathname]);
 
   useEffect(() => {
@@ -210,11 +279,71 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
     let shownOffset = 0;
     let settleTimer = 0;
 
+    /** The destination's edge, revealed in the gap the dragged page leaves. */
+    const peek = peekRef.current;
+    const peekLabel = peekLabelRef.current;
+    let surfaceTop = 0;
+    let surfaceHeight = 0;
+    let peekTimer = 0;
+    let peekState: { direction: SwipeDirection; href: string | null; width: number } = {
+      direction: "left",
+      href: null,
+      width: 0,
+    };
+
+    const hidePeek = (fade = false) => {
+      window.clearTimeout(peekTimer);
+      peekState = { ...peekState, href: null, width: 0 };
+      if (!peek) return;
+      peek.style.opacity = "0";
+      if (fade) {
+        // Keep the panel painted while the page springs back over it.
+        peekTimer = window.setTimeout(() => {
+          if (peek) peek.style.display = "none";
+        }, SETTLE_MS);
+      } else {
+        peek.style.display = "none";
+      }
+    };
+
+    const renderPeek = () => {
+      if (!peek || !peekLabel || !peekState.href || peekState.width < PEEK_MIN) return;
+      const id = activeSwipeDestination(peekState.href);
+      if (!id) return;
+
+      peekLabel.textContent = DESTINATION_LABELS[id];
+      // Only name the screen once the reveal can hold the word; a sliver stays a
+      // clean surface instead of showing half a label.
+      peekLabel.style.opacity = peekState.width >= PEEK_LABEL_MIN ? "1" : "0";
+      peek.style.display = "flex";
+      peek.style.opacity = "1";
+      peek.style.top = `${surfaceTop}px`;
+      peek.style.height = `${surfaceHeight}px`;
+      peek.style.width = `${peekState.width.toFixed(2)}px`;
+      // A left swipe takes the page left, so the next screen shows at the right
+      // edge; a right swipe reveals the previous one on the left.
+      if (peekState.direction === "left") {
+        peek.style.left = "";
+        peek.style.right = "0px";
+        peek.style.justifyContent = "flex-end";
+        peek.style.borderLeftWidth = "1px";
+        peek.style.borderRightWidth = "0px";
+      } else {
+        peek.style.left = "0px";
+        peek.style.right = "";
+        peek.style.justifyContent = "flex-start";
+        peek.style.borderLeftWidth = "0px";
+        peek.style.borderRightWidth = "1px";
+      }
+    };
+
     const writeOffset = () => {
       const element = main();
-      if (!element) return;
-      element.style.transform =
-        shownOffset === 0 ? "" : `translate3d(${shownOffset.toFixed(2)}px,0,0)`;
+      if (element) {
+        element.style.transform =
+          shownOffset === 0 ? "" : `translate3d(${shownOffset.toFixed(2)}px,0,0)`;
+      }
+      renderPeek();
     };
 
     const applyOffset = (value: number, immediate = false) => {
@@ -245,6 +374,9 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
     const settle = () => {
       const element = main();
       root.removeAttribute("data-swiping");
+      // The page springs back over the preview; fading it out reads as the same
+      // movement and avoids animating the width of a fixed panel for 260ms.
+      if (peekState.href) hidePeek(true);
       if (!element) return;
       if (shownOffset === 0) {
         element.style.willChange = "";
@@ -294,6 +426,7 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
       pendingRestore.current = href;
       transitioning.current = true;
       root.removeAttribute("data-swiping");
+      hidePeek();
 
       const element = main();
       if (element) {
@@ -390,6 +523,22 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
       gesture.offset = 0;
       gesture.prefetchedLeft = false;
       gesture.prefetchedRight = false;
+
+      // The reveal is bounded by the visible content area: it starts under the
+      // sticky header and stops at the viewport, so it never covers chrome that
+      // is meant to stay put, and its label is centred where the reader can see
+      // it even on a tall page.
+      const surface = main();
+      if (surface) {
+        const rect = surface.getBoundingClientRect();
+        const header = document.querySelector("header");
+        const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0;
+        const top = Math.max(rect.top, headerBottom, 0);
+        const bottom = Math.min(rect.bottom, window.innerHeight);
+        surfaceTop = top;
+        surfaceHeight = Math.max(0, bottom - top);
+      }
+      hidePeek();
     };
 
     const onTouchMove = (event: TouchEvent) => {
@@ -409,6 +558,7 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
           // A vertical scroll owns this gesture from now on.
           gesture.axis = "vertical";
           gesture.active = false;
+          hidePeek();
           return;
         }
         gesture.axis = "horizontal";
@@ -450,6 +600,7 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
       if (reduceMotion.matches) return;
       const travel = follow(dx, Boolean(href));
       gesture.offset = travel;
+      peekState = { direction, href, width: Math.abs(travel) };
       applyOffset(travel);
     };
 
@@ -470,7 +621,14 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
         settle();
         return;
       }
-      if (!swipedFarEnough({ dx, dy, velocity })) {
+      if (
+        !swipedFarEnough({
+          dx,
+          dy,
+          velocity,
+          commitDistance: swipeCommitDistance(window.innerWidth),
+        })
+      ) {
         settle();
         return;
       }
@@ -490,6 +648,7 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
     root.dataset.swipeReady = "true";
     return () => {
       window.clearTimeout(settleTimer);
+      window.clearTimeout(peekTimer);
       if (paintFrame) window.cancelAnimationFrame(paintFrame);
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchmove", onTouchMove);
@@ -497,8 +656,26 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
       document.removeEventListener("touchcancel", onTouchCancel);
       delete root.dataset.swipeReady;
       delete root.dataset.swiping;
+      hidePeek();
     };
   }, [router]);
 
-  return null;
+  // The preview layer: a sliver of the destination's own surface with its name,
+  // revealed only in the gap the dragged page opens. It is not the destination's
+  // content (that arrives with its server render), so it carries no text a
+  // reader could mistake for the page, and it never takes a touch.
+  return (
+    <div
+      ref={peekRef}
+      aria-hidden="true"
+      data-swipe-peek=""
+      className="pointer-events-none fixed z-30 hidden items-center overflow-hidden border-navy-200/70 bg-navy-200/55 text-navy-600 backdrop-blur-[2px] transition-opacity duration-200"
+    >
+      <span
+        ref={peekLabelRef}
+        aria-hidden="true"
+        className="whitespace-nowrap px-4 text-[11px] font-semibold uppercase tracking-[0.16em] transition-opacity duration-150"
+      />
+    </div>
+  );
 }

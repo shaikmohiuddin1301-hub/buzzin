@@ -78,22 +78,39 @@ export const SWIPE_FLICK_VELOCITY = 0.3;
 export const SWIPE_HORIZONTAL_BIAS = 1.2;
 
 /**
+ * How far a slow drag must travel before it counts, as a share of the viewport.
+ *
+ * A fixed pixel threshold is a different gesture on a phone and on a tablet: 56px
+ * is a fifth of a small screen and a sixteenth of a large one. A quarter of the
+ * width is the distance a reader who means it covers naturally, and it keeps a
+ * small accidental nudge from changing page at any size. The pixel minimum still
+ * applies, so a very narrow viewport does not become trigger-happy.
+ */
+export const SWIPE_COMMIT_RATIO = 0.22;
+
+export function swipeCommitDistance(viewportWidth: number): number {
+  return Math.max(SWIPE_MIN_DISTANCE, Math.round(viewportWidth * SWIPE_COMMIT_RATIO));
+}
+
+/**
  * Whether a released gesture should navigate.
  *
- * A slow drag has to travel `SWIPE_MIN_DISTANCE`. A quick flick commits earlier:
- * the finger's own speed is used, so waiting for more travel would make a natural
- * flick feel ignored. Both cases still require a clear horizontal bias, and the
- * flick has to be travelling the way the gesture was, so a drag that starts fast
- * and snaps back does not change page.
+ * A slow drag has to travel `commitDistance` — by default `SWIPE_MIN_DISTANCE`,
+ * and the component passes the viewport-relative distance instead. A quick flick
+ * commits earlier: the finger's own speed is used, so waiting for more travel
+ * would make a natural flick feel ignored. Both cases still require a clear
+ * horizontal bias, and the flick has to be travelling the way the gesture was, so
+ * a drag that starts fast and snaps back does not change page.
  */
 export function swipedFarEnough(input: {
   dx: number;
   dy: number;
   velocity: number;
+  commitDistance?: number;
 }): boolean {
   const distance = Math.abs(input.dx);
   if (distance < Math.abs(input.dy) * SWIPE_HORIZONTAL_BIAS) return false;
-  if (distance >= SWIPE_MIN_DISTANCE) return true;
+  if (distance >= (input.commitDistance ?? SWIPE_MIN_DISTANCE)) return true;
   return (
     distance >= SWIPE_FLICK_DISTANCE &&
     Math.abs(input.velocity) >= SWIPE_FLICK_VELOCITY &&
