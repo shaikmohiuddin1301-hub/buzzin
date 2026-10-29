@@ -201,7 +201,7 @@ export default async function ProfilePage({
               href={person.portfolioUrls[0]}
               target="_blank"
               rel="nofollow noopener noreferrer"
-              className="text-brand-600 underline"
+              className="text-blue-600 underline"
             >
               Portfolio
             </a>
@@ -278,13 +278,13 @@ export default async function ProfilePage({
                   className={cn(
                     "inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-1.5 text-[12.5px] font-medium transition-colors",
                     active
-                      ? "border-brand-500 text-brand-600"
+                      ? "border-blue-400 text-blue-600"
                       : "border-transparent text-navy-500 hover:text-navy-900",
                   )}
                 >
                   {item.label}
                   {typeof item.count === "number" && item.count > 0 ? (
-                    <span className={cn("rounded-full px-1.5 text-[10px] font-semibold", active ? "bg-brand-50 text-brand-600" : "bg-navy-100 text-navy-600")}>{item.count}</span>
+                    <span className={cn("rounded-full px-1.5 text-[10px] font-semibold", active ? "bg-glass-blue text-blue-600" : "bg-navy-100 text-navy-600")}>{item.count}</span>
                   ) : null}
                 </Link>
               </li>
@@ -323,7 +323,7 @@ export default async function ProfilePage({
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                       />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-navy-50 to-brand-50 p-3 text-center text-[12px] leading-5 text-navy-700">
+                      <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-navy-50 to-blue-50 p-3 text-center text-[12px] leading-5 text-navy-700">
                         <span className="line-clamp-6">{post.title ?? post.body}</span>
                       </span>
                     )}
@@ -360,7 +360,7 @@ export default async function ProfilePage({
                 className={cn(
                   "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
                   projectFilter === filter.id
-                    ? "border-brand-500 bg-brand-50 text-brand-600"
+                    ? "border-blue-400 bg-glass-blue text-blue-600"
                     : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
                 )}
                 aria-current={projectFilter === filter.id ? "page" : undefined}
@@ -552,7 +552,7 @@ export default async function ProfilePage({
                   <li key={`${item.attributionId}-${item.deliverable?.id ?? "none"}`}>
                     <Card className="motion-card h-full p-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link href={`/projects/${item.projectId}`} className="text-[12px] font-medium text-brand-600 hover:underline">
+                        <Link href={`/projects/${item.projectId}`} className="text-[12px] font-medium text-blue-600 hover:underline">
                           {item.projectName}
                         </Link>
                         <Badge tone={item.verificationMethod === "owner_confirmed" ? "info" : "success"}>
@@ -570,7 +570,7 @@ export default async function ProfilePage({
                       {item.summary ? <p className="mt-1.5 line-clamp-3 text-[12px] leading-5 text-navy-600">{item.summary}</p> : null}
                       <div className="mt-2 flex flex-wrap gap-3 text-[11.5px]">
                         {item.taskId ? (
-                          <Link href={`/tasks/${item.taskId}`} className="text-brand-600 underline">
+                          <Link href={`/tasks/${item.taskId}`} className="text-blue-600 underline">
                             View the task
                           </Link>
                         ) : null}
@@ -579,13 +579,13 @@ export default async function ProfilePage({
                             href={item.deliverable.url}
                             target="_blank"
                             rel="noopener noreferrer nofollow"
-                            className="text-brand-600 underline"
+                            className="text-blue-600 underline"
                           >
                             Open deliverable
                           </a>
                         ) : null}
                         {item.deliverable?.fileId ? (
-                          <Link href={`/api/files/${item.deliverable.fileId}`} className="text-brand-600 underline">
+                          <Link href={`/api/files/${item.deliverable.fileId}`} className="text-blue-600 underline">
                             Download file
                           </Link>
                         ) : null}
@@ -665,7 +665,7 @@ export default async function ProfilePage({
               <ul className="mt-2 space-y-2">
                 {achievements.map((achievement) => (
                   <li key={achievement.id} className="flex items-start gap-2">
-                    <Star size={13} className="mt-0.5 text-brand-600" aria-hidden="true" />
+                    <Star size={13} className="mt-0.5 text-gold-700" aria-hidden="true" />
                     <div>
                       <p className="text-[11.5px] font-medium text-navy-800">{achievement.title}</p>
                       <p className="text-[10px] text-navy-500">{achievement.description ?? relativeTime(achievement.earnedAt)}</p>
@@ -707,7 +707,7 @@ export default async function ProfilePage({
                 {person.portfolioUrls && person.portfolioUrls.length > 0 ? (
                   person.portfolioUrls.slice(0, 3).map((url) => (
                     <li key={url}>
-                      <a href={url} rel="nofollow noopener noreferrer" target="_blank" className="text-brand-600 underline">
+                      <a href={url} rel="nofollow noopener noreferrer" target="_blank" className="text-blue-600 underline">
                         {new URL(url).hostname.replace(/^www\./, "")}
                       </a>
                     </li>

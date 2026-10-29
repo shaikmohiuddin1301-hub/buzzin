@@ -258,7 +258,7 @@ export function AppTour({ autoStart, userId }: { autoStart: boolean; userId: str
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-coral-500 text-white shadow-sm">
             <BookOpen size={21} aria-hidden="true" />
           </span>
-          <p className="mt-4 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-brand-600">Welcome</p>
+          <p className="mt-4 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-navy-600">Welcome</p>
           <h2 id="app-tour-welcome-title" className="mt-1 text-[24px] font-semibold leading-tight tracking-tight text-navy-950">
             Welcome to BuildTogether
           </h2>
@@ -328,12 +328,12 @@ export function AppTour({ autoStart, userId }: { autoStart: boolean; userId: str
         style={cardStyle}
         className={cn(
           "glass-popover fixed z-10 overflow-y-auto rounded-2xl p-4 outline-none shadow-float",
-          "focus-visible:ring-2 focus-visible:ring-brand-500/40",
+          "focus-visible:ring-2 focus-visible:ring-blue-500/40",
         )}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-600">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-navy-600">
               {step.eyebrow} · {index + 1} of {STEPS.length}
             </p>
             <h2 id="app-tour-title" className="mt-1 text-[17px] font-semibold leading-6 tracking-tight text-navy-950">
@@ -351,7 +351,7 @@ export function AppTour({ autoStart, userId }: { autoStart: boolean; userId: str
         </div>
 
         <div className="mt-3 flex items-start gap-2.5">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-glass-blue text-blue-600">
             <step.icon size={17} aria-hidden="true" />
           </span>
           <p className="text-[12.5px] leading-5 text-navy-600">{step.body}</p>
@@ -363,7 +363,7 @@ export function AppTour({ autoStart, userId }: { autoStart: boolean; userId: str
               key={entry.id}
               className={cn(
                 "h-1.5 rounded-full transition-all",
-                entryIndex === index ? "w-5 bg-coral-500" : "w-1.5 bg-navy-200",
+                entryIndex === index ? "w-5 bg-blue-500" : "w-1.5 bg-navy-200",
               )}
             />
           ))}

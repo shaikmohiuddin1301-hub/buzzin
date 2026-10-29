@@ -34,7 +34,7 @@ export default async function OnboardingPage({
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-600">Step 1 of 1</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-navy-600">Step 1 of 1</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Tell us what you want to do</h1>
         <p className="mt-2 text-sm leading-6 text-navy-600">
           This shapes your feed and the projects we recommend. You can change everything later in settings — we only ask
@@ -162,9 +162,9 @@ export default async function OnboardingPage({
                 {PROJECT_CATEGORIES.map((category) => (
                   <label
                     key={category}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-navy-200 px-3 py-1.5 text-[12px] font-medium text-navy-700 has-[:checked]:border-brand-400 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-navy-200 px-3 py-1.5 text-[12px] font-medium text-navy-700 has-[:checked]:border-blue-400 has-[:checked]:bg-glass-blue has-[:checked]:text-blue-800"
                   >
-                    <input type="checkbox" name="categories" value={category} className="h-3.5 w-3.5 rounded border-navy-300 text-brand-600" />
+                    <input type="checkbox" name="categories" value={category} className="h-3.5 w-3.5 rounded border-navy-300 text-blue-600" />
                     {label(category)}
                   </label>
                 ))}

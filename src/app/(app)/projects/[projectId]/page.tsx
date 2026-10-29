@@ -242,7 +242,7 @@ export default async function ProjectPage({
               <input type="hidden" name="kind" value="like" />
               <input type="hidden" name="returnTo" value={returnTo} />
               <SubmitButton variant="secondary" size="sm" pendingLabel="…">
-                <Heart size={13} aria-hidden="true" /> {likeState.mine ? "Liked" : "Like"}
+                <Heart size={13} aria-hidden="true" className={likeState.mine ? "fill-coral-500 text-coral-600" : "text-coral-600"} /> {likeState.mine ? "Liked" : "Like"}
               </SubmitButton>
             </form>
             {!access.isMember ? (
@@ -375,7 +375,7 @@ export default async function ProjectPage({
                   type="submit"
                   className="motion-card flex h-full w-full items-start gap-3 card-surface p-4 text-left shadow-card"
                 >
-                  <MessageSquare size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+                  <MessageSquare size={17} className="mt-0.5 shrink-0 text-blue-600" aria-hidden="true" />
                   <span>
                     <span className="block text-[13px] font-semibold text-navy-950">Chats</span>
                     <span className="block text-[11.5px] leading-5 text-navy-500">Talk and decide, together.</span>
@@ -384,7 +384,7 @@ export default async function ProjectPage({
               </form>
             ) : (
               <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
-                <MessageSquare size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+                <MessageSquare size={17} className="mt-0.5 shrink-0 text-blue-600" aria-hidden="true" />
                 <span>
                   <span className="block text-[13px] font-semibold text-navy-950">Chats</span>
                   <span className="block text-[11.5px] leading-5 text-navy-500">Team only.</span>
@@ -393,7 +393,7 @@ export default async function ProjectPage({
             )}
 
             <Link href={`/projects/${projectId}?tab=tasks`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
-              <ClipboardList size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+              <ClipboardList size={17} className="mt-0.5 shrink-0 text-blue-600" aria-hidden="true" />
               <span>
                 <span className="block text-[13px] font-semibold text-navy-950">Tasks</span>
                 <span className="block text-[11.5px] leading-5 text-navy-500">
@@ -403,7 +403,7 @@ export default async function ProjectPage({
             </Link>
 
             <Link href={`/projects/${projectId}?tab=team`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
-              <Users size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+              <Users size={17} className="mt-0.5 shrink-0 text-blue-600" aria-hidden="true" />
               <span>
                 <span className="block text-[13px] font-semibold text-navy-950">Team</span>
                 <span className="block text-[11.5px] leading-5 text-navy-500">
@@ -414,7 +414,7 @@ export default async function ProjectPage({
             </Link>
 
             <Link href={`/projects/${projectId}/accepted`} className="motion-card flex h-full items-start gap-3 card-surface p-4 shadow-card">
-              <FolderCheck size={17} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+              <FolderCheck size={17} className="mt-0.5 shrink-0 text-blue-600" aria-hidden="true" />
               <span>
                 <span className="block text-[13px] font-semibold text-navy-950">Accepted work</span>
                 <span className="block text-[11.5px] leading-5 text-navy-500">
@@ -584,7 +584,7 @@ export default async function ProjectPage({
                         href={update.linkUrl}
                         target="_blank"
                         rel="nofollow noopener noreferrer"
-                        className="mt-1 inline-block max-w-full truncate text-[11.5px] font-medium text-brand-600 underline"
+                        className="mt-1 inline-block max-w-full truncate text-[11.5px] font-medium text-blue-600 underline"
                       >
                         {update.linkUrl.replace(/^https?:\/\//, "")}
                       </a>
@@ -856,7 +856,7 @@ export default async function ProjectPage({
                         ) : null}
                         {update.milestone ? <span>Milestone: {update.milestone}</span> : null}
                         {update.linkUrl ? (
-                          <a href={update.linkUrl} target="_blank" rel="nofollow noopener noreferrer" className="font-medium text-brand-600 underline">
+                          <a href={update.linkUrl} target="_blank" rel="nofollow noopener noreferrer" className="font-medium text-blue-600 underline">
                             Supporting link
                           </a>
                         ) : null}
@@ -1162,7 +1162,7 @@ export default async function ProjectPage({
                                     href={sample.url}
                                     target="_blank"
                                     rel="noopener noreferrer nofollow"
-                                    className="text-[11px] font-medium text-brand-600 underline"
+                                    className="text-[11px] font-medium text-blue-600 underline"
                                   >
                                     {sample.label}
                                   </a>
@@ -1422,7 +1422,7 @@ export default async function ProjectPage({
           <Card className="p-5">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-[14px] font-semibold text-navy-950">Approved deliverables</h2>
-              <Link href={`/projects/${projectId}/accepted`} className="text-[11.5px] font-medium text-brand-600 hover:underline">
+              <Link href={`/projects/${projectId}/accepted`} className="text-[11.5px] font-medium text-blue-600 hover:underline">
                 Accepted work
               </Link>
             </div>
@@ -1432,7 +1432,7 @@ export default async function ProjectPage({
                   <p className="text-[13px] font-medium text-navy-900">{row.deliverable.title}</p>
                   <p className="text-[11px] text-navy-500">{row.taskTitle}</p>
                   {row.deliverable.url ? (
-                    <a href={row.deliverable.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11px] text-brand-600 underline">
+                    <a href={row.deliverable.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11px] text-blue-600 underline">
                       Open deliverable
                     </a>
                   ) : null}

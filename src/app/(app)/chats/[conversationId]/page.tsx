@@ -172,11 +172,11 @@ export default async function ConversationPage({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <Card className="conversation-surface flex h-[calc(100dvh-15.5rem)] min-h-[340px] flex-col overflow-hidden lg:h-[calc(100dvh-13rem)]">
           {task ? (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-200 bg-brand-50/60 px-4 py-2 text-[11.5px] text-navy-700">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-navy-200 bg-glass-blue px-4 py-2 text-[11.5px] text-navy-700">
               <Badge tone="brand">Task</Badge>
               <span>
                 Chat for{" "}
-                <Link href={`/tasks/${task.id}`} className="font-medium text-brand-600 underline">
+                <Link href={`/tasks/${task.id}`} className="font-medium text-blue-600 underline">
                   {task.title}
                 </Link>
                 . Files shared here are attached to the task.
@@ -189,7 +189,7 @@ export default async function ConversationPage({
               {area ? <Badge tone="brand">{area.name}</Badge> : null}
               <span>
                 {area ? "Work area chat for" : "Team chat for"}{" "}
-                <Link href={`/projects/${project.id}`} className="font-medium text-brand-600 underline">
+                <Link href={`/projects/${project.id}`} className="font-medium text-blue-600 underline">
                   {project.name}
                 </Link>
                 . Access is revoked automatically when someone leaves the team.
@@ -271,7 +271,7 @@ export default async function ConversationPage({
                         ) : null}
                         {canFileDrop ? (
                           row.message.taskId ? (
-                            <Link href={`/tasks/${row.message.taskId}`} className="text-brand-600 underline">
+                            <Link href={`/tasks/${row.message.taskId}`} className="text-blue-600 underline">
                               Filed as a task
                             </Link>
                           ) : (

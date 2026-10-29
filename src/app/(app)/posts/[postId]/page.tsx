@@ -87,7 +87,7 @@ export default async function PostPage({
               href={post.linkUrl}
               target="_blank"
               rel="nofollow noopener noreferrer"
-              className="mt-3 inline-flex max-w-full items-center gap-1 truncate text-[12px] font-medium text-brand-600 underline"
+              className="mt-3 inline-flex max-w-full items-center gap-1 truncate text-[12px] font-medium text-blue-600 underline"
             >
               {post.linkUrl.replace(/^https?:\/\//, "")}
             </a>
@@ -98,12 +98,12 @@ export default async function PostPage({
               href={`/projects/${post.projectId}`}
               className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-navy-50 px-2.5 py-1 text-[11.5px] font-medium text-navy-700 hover:bg-navy-100"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" aria-hidden="true" />
               {projectName ?? "Open project"}
             </Link>
           ) : null}
           {post.resourceId ? (
-            <Link href={`/learn/${post.resourceId}`} className="mt-3 inline-flex text-[11.5px] font-medium text-brand-600 underline">
+            <Link href={`/learn/${post.resourceId}`} className="mt-3 inline-flex text-[11.5px] font-medium text-blue-600 underline">
               Open the related learning
             </Link>
           ) : null}
@@ -117,7 +117,7 @@ export default async function PostPage({
                   <input type="hidden" name="kind" value="like" />
                   <input type="hidden" name="returnTo" value={returnTo} />
                   <SubmitButton size="sm" variant="ghost" pendingLabel="…">
-                    <Heart size={13} aria-hidden="true" className={liked ? "fill-brand-600 text-brand-600" : ""} /> {likeCount}
+                    <Heart size={13} aria-hidden="true" className={liked ? "fill-coral-500 text-coral-600" : ""} /> {likeCount}
                   </SubmitButton>
                 </form>
                 <form action={saveAction}>

@@ -41,8 +41,22 @@ function contrast(a: [number, number, number], b: [number, number, number]): num
   return (first + 0.05) / (second + 0.05);
 }
 
-describe("graphite glass palette", () => {
-  it("uses the exact light tokens", () => {
+describe("graphite glass palette with colour accents", () => {
+  it("uses the exact specified accent and surface values", () => {
+    // The one palette the brief fixes; every other shade is derived from these.
+    expect(hex(light["navy-900"]!)).toBe("#34343A");
+    expect(hex(light["blue-500"]!)).toBe("#4388F5");
+    expect(hex(light["blue-600"]!)).toBe("#2864C7");
+    expect(hex(light["coral-500"]!)).toBe("#FF785A");
+    expect(hex(light["emerald-500"]!)).toBe("#169B75");
+    expect(hex(light["gold-500"]!)).toBe("#E5B957");
+    expect(hex(light["rose-500"]!)).toBe("#D9577A");
+    expect(hex(light["page-warm"]!)).toBe("#F5F5F3");
+    expect(hex(dark["surface-muted"]!)).toBe("#222226");
+    expect(hex(dark["surface"]!)).toBe("#34343A");
+  });
+
+  it("keeps the graphite glass foundation in place", () => {
     expect(hex(light["brand-600"]!)).toBe("#34343A");
     expect(hex(light["brand-700"]!)).toBe("#222226");
     expect(hex(light["coral-500"]!)).toBe("#FF785A");
@@ -89,13 +103,25 @@ describe("graphite glass palette", () => {
     expect(hex(light["status-blocked-text"]!)).toBe("#A32638");
   });
 
-  it("contains no blue, indigo or violet hue in either theme", () => {
-    // A neutral silver carries a few points of blue in its channel mix (the specified
-    // #B8B8C1 has nine); anything beyond that is the old palette leaking back in.
-    for (const [name, value] of [...Object.entries(light), ...Object.entries(dark)]) {
-      const excess = value[2] - Math.max(value[0], value[1]);
-      expect(excess, `${name} is blue-dominant`).toBeLessThanOrEqual(10);
+  it("keeps the neutral ramps neutral", () => {
+    // Blue is an accent, not a tint over the structure. The graphite/silver ramp may
+    // carry a few points of blue (the specified #B8B8C1 has nine); anything beyond
+    // that would mean the grey foundation had turned blue.
+    for (const source of [light, dark]) {
+      for (const [name, value] of Object.entries(source)) {
+        if (!/^(navy|brand)-/.test(name)) continue;
+        const excess = value[2] - Math.max(value[0], value[1]);
+        expect(excess, `${name} is blue-dominant`).toBeLessThanOrEqual(10);
+      }
     }
+  });
+
+  it("keeps the accent ramps recognisably blue, rose and gold", () => {
+    // Guards the assignment as much as the values: blue really is blue, rose is red
+    // rather than coral, and the gold anchor stays warm rather than yellow-green.
+    expect(light["blue-500"]![2]).toBeGreaterThan(light["blue-500"]![0] + 60);
+    expect(light["rose-500"]![0]).toBeGreaterThan(light["rose-500"]![2]);
+    expect(light["gold-500"]![0]).toBeGreaterThan(light["gold-500"]![2] + 100);
   });
 });
 
@@ -105,6 +131,15 @@ describe("floating surfaces and page motion", () => {
     if (!match) throw new Error(`Missing ${name}`);
     return Number(match[1]);
   }
+
+  it("uses the specified soft glass values", () => {
+    expect(alpha(block(":root"), "glass-panel")).toBeCloseTo(0.68, 2);
+    expect(alpha(block(":root"), "glass-blue")).toBeCloseTo(0.12, 2);
+    // The blue wash is rgba(67,136,245,0.12), not an opaque tint.
+    expect(block(":root")).toContain("--glass-blue: rgba(67, 136, 245, 0.12)");
+    // Dark blue glass carries a little more weight so it reads on charcoal.
+    expect(alpha(block(".dark"), "glass-blue")).toBeGreaterThan(0.12);
+  });
 
   it("keeps menus and sheets nearly opaque in both themes", () => {
     // A popover sits over text. Controlled transparency is the point: the surface
@@ -135,10 +170,17 @@ describe("colour contrast", () => {
     ["light body on card", light["navy-900"]!, light["surface"]!, 4.5],
     ["light secondary on card", light["navy-600"]!, light["surface"]!, 4.5],
     ["light secondary on warm page", light["navy-600"]!, light["page-warm"]!, 4.5],
-    ["light link on card", light["brand-600"]!, light["surface"]!, 4.5],
-    ["light link on selected surface", light["brand-600"]!, light["brand-50"]!, 4.5],
+    ["light link on card", light["blue-600"]!, light["surface"]!, 4.5],
+    ["light link on warm page", light["blue-600"]!, light["page-warm"]!, 4.5],
+    ["light selected nav label", light["blue-700"]!, light["blue-50"]!, 4.5],
+    ["light label on selected tab", light["on-blue"]!, light["blue-600"]!, 4.5],
+    ["light rose badge", light["rose-700"]!, light["rose-50"]!, 4.5],
+    ["light gold badge", light["gold-800"]!, light["gold-50"]!, 4.5],
+    ["light label on rose counter", light["on-rose"]!, light["rose-600"]!, 4.5],
     ["light primary button", light["on-brand"]!, light["brand-600"]!, 4.5],
     ["light coral label", light["on-coral"]!, light["coral-500"]!, 4.5],
+    ["light positive action", light["on-teal"]!, light["emerald-600"]!, 4.5],
+    ["dark positive action", dark["on-teal"]!, dark["emerald-600"]!, 4.5],
     ["light destructive button", [255, 255, 255], light["red-600"]!, 4.5],
     ["light approved badge", light["status-approved-text"]!, light["status-approved"]!, 4.5],
     ["light review badge", light["status-review-text"]!, light["status-review"]!, 4.5],
@@ -146,6 +188,12 @@ describe("colour contrast", () => {
     ["light todo badge", light["status-todo-text"]!, light["status-todo"]!, 4.5],
     ["dark body on card", dark["navy-900"]!, dark["surface"]!, 4.5],
     ["dark secondary on card", dark["navy-500"]!, dark["surface"]!, 4.5],
+    ["dark link on card", dark["blue-600"]!, dark["surface"]!, 4.5],
+    ["dark selected nav label", dark["blue-700"]!, dark["blue-50"]!, 4.5],
+    ["dark label on selected tab", dark["on-blue"]!, dark["blue-600"]!, 4.5],
+    ["dark rose badge", dark["rose-700"]!, dark["rose-50"]!, 4.5],
+    ["dark gold badge", dark["gold-800"]!, dark["gold-50"]!, 4.5],
+    ["dark label on rose counter", dark["on-rose"]!, dark["rose-600"]!, 4.5],
     ["dark primary action", dark["on-brand"]!, dark["brand-600"]!, 4.5],
     ["dark approved badge", dark["status-approved-text"]!, dark["status-approved"]!, 4.5],
     ["dark review badge", dark["status-review-text"]!, dark["status-review"]!, 4.5],
@@ -154,6 +202,10 @@ describe("colour contrast", () => {
     ["coral icon on white", light["coral-600"]!, light["surface"]!, 3],
     ["teal icon on warm page", light["emerald-500"]!, light["page-warm"]!, 3],
     ["graphite action on white", light["brand-600"]!, light["surface"]!, 3],
+    ["blue focus ring on white", light["blue-500"]!, light["surface"]!, 3],
+    ["gold achievement icon on white", light["gold-700"]!, light["surface"]!, 3],
+    ["rose social icon on white", light["rose-600"]!, light["surface"]!, 3],
+    ["blue focus ring on charcoal", dark["blue-400"]!, dark["surface-muted"]!, 3],
   ];
 
   for (const [name, foreground, background, minimum] of pairs) {

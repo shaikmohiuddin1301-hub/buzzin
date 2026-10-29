@@ -27,20 +27,20 @@ function SidebarLink({ item, active }: { item: SidebarItem; active: boolean }) {
       data-tour={item.tour}
       className={cn(
         "group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200",
-        active ? "bg-brand-50 text-brand-600" : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",
+        active ? "bg-glass-blue text-blue-700" : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",
       )}
     >
       <span className="flex items-center gap-2.5">
-        <span className={cn(active ? "text-brand-600" : "text-navy-500 group-hover:text-navy-700")}>{item.icon}</span>
+        <span className={cn(active ? "text-blue-600" : "text-navy-500 group-hover:text-navy-700")}>{item.icon}</span>
         {item.label}
       </span>
       {item.badge ? (
-        <span className="rounded-full bg-coral-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-on-coral">
+        <span className="rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-on-rose">
           {item.badge > 99 ? "99+" : item.badge}
         </span>
       ) : null}
       {active ? (
-        <span aria-hidden="true" className="absolute -left-1 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-brand-600" />
+        <span aria-hidden="true" className="absolute -left-1 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-blue-500" />
       ) : null}
     </Link>
   );

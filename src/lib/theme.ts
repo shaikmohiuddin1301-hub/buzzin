@@ -11,8 +11,8 @@ export const THEME_COOKIE = "bt_theme";
 export type ThemeChoice = "light" | "dark" | "system";
 
 export const THEME_CHOICES: { value: ThemeChoice; label: string; description: string }[] = [
-  { value: "light", label: "Light", description: "Warm glass, graphite accents." },
-  { value: "dark", label: "Dark", description: "Charcoal glass, silver contrast." },
+  { value: "light", label: "Light", description: "Warm glass, graphite structure, blue accents." },
+  { value: "dark", label: "Dark", description: "Charcoal glass, silver text, lifted blue accents." },
   { value: "system", label: "System", description: "Follow your device setting." },
 ];
 

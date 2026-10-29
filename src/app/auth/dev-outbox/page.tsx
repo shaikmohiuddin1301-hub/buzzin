@@ -78,7 +78,7 @@ export default async function DevOutboxPage() {
               <p className="text-[12px] text-navy-500">To: {entry.to}</p>
               {entry.link ? (
                 <p className="mt-2 break-all">
-                  <Link href={entry.link.replace(env.appUrl, "")} className="text-[12px] font-medium text-brand-600 underline">
+                  <Link href={entry.link.replace(env.appUrl, "")} className="text-[12px] font-medium text-blue-600 underline">
                     {entry.link}
                   </Link>
                 </p>

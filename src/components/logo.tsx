@@ -25,7 +25,7 @@ export function Logo({ href = "/", light = false, compact = false }: { href?: st
       </span>
       {!compact ? (
         <span className="text-[17px] font-semibold tracking-tight">
-          Build<span className={light ? "text-brand-300" : "text-brand-600"}>Together</span>
+          Build<span className={light ? "text-blue-300" : "text-blue-600"}>Together</span>
         </span>
       ) : null}
     </Link>

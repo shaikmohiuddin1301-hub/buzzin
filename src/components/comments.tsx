@@ -55,7 +55,7 @@ export function CommentThread({
         </form>
       ) : (
         <p className="rounded-lg bg-navy-50 px-3 py-2 text-[12px] text-navy-600">
-          <Link href="/auth/sign-in" className="font-medium text-brand-600 underline">
+          <Link href="/auth/sign-in" className="font-medium text-blue-600 underline">
             Sign in
           </Link>{" "}
           to join the discussion.
@@ -114,7 +114,7 @@ export function CommentThread({
                         name="body"
                         required
                         placeholder="Reply…"
-                        className="h-8 flex-1 rounded-md border border-navy-200 px-2.5 text-[12px] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/15"
+                        className="h-8 flex-1 rounded-md border border-navy-200 px-2.5 text-[12px] focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
                       <SubmitButton size="sm" variant="ghost" pendingLabel="…">
                         Reply

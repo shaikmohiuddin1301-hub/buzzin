@@ -30,7 +30,7 @@ export function MarketingHero({
       <div className="relative mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
         <div>
           {eyebrow ? (
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-600">
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-glass-blue px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-blue-700">
               {eyebrow}
             </p>
           ) : null}
@@ -73,7 +73,7 @@ export function SectionHeading({
 }) {
   return (
     <div className={cn("max-w-2xl", align === "center" && "mx-auto text-center")}>
-      {eyebrow ? <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">{eyebrow}</p> : null}
+      {eyebrow ? <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-navy-600">{eyebrow}</p> : null}
       <h2 className="text-[26px] font-semibold tracking-tight text-navy-950 sm:text-[32px]">{title}</h2>
       {description ? <p className="mt-3 text-[14.5px] leading-7 text-navy-600">{description}</p> : null}
     </div>
@@ -91,7 +91,7 @@ export function FeatureGrid({
     <div className={cn("grid gap-4", columns === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2")}>
       {features.map((feature) => (
         <div key={feature.title} className="card-surface p-5">
-          {feature.icon ? <div className="mb-3 text-brand-600">{feature.icon}</div> : null}
+          {feature.icon ? <div className="mb-3 text-blue-600">{feature.icon}</div> : null}
           <h3 className="text-[14px] font-semibold text-navy-950">{feature.title}</h3>
           <p className="mt-1.5 text-[13px] leading-6 text-navy-600">{feature.body}</p>
         </div>

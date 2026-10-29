@@ -73,7 +73,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
       <div className="px-4 pb-1 pt-3">
           <div className="whitespace-pre-line text-[13.5px] leading-6 text-navy-800">{post.body}</div>
 
-          <Link href={`/posts/${post.id}`} className="mt-1 inline-block text-[11.5px] font-medium text-navy-500 hover:text-brand-700 hover:underline">
+          <Link href={`/posts/${post.id}`} className="mt-1 inline-block text-[11.5px] font-medium text-navy-500 hover:text-blue-700 hover:underline">
             View post
           </Link>
 
@@ -82,7 +82,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
               href={post.linkUrl}
               target="_blank"
               rel="nofollow noopener noreferrer"
-              className="mt-2 inline-flex max-w-full items-center gap-1 truncate text-[11.5px] font-medium text-brand-600 underline"
+              className="mt-2 inline-flex max-w-full items-center gap-1 truncate text-[11.5px] font-medium text-blue-600 underline"
             >
               {post.linkUrl.replace(/^https?:\/\//, "")}
             </a>
@@ -93,7 +93,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
               href={`/projects/${post.projectId}`}
               className="mt-2.5 inline-flex items-center gap-1.5 rounded-md bg-navy-50 px-2.5 py-1 text-[11px] font-medium text-navy-700 hover:bg-navy-100"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" aria-hidden="true" />
               {post.projectName ?? "Open project"}
             </Link>
           ) : null}
@@ -115,7 +115,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
               href={`/posts/${post.id}#comments`}
               className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-navy-500 hover:bg-navy-100 hover:text-navy-800"
             >
-              <MessageCircle size={14} aria-hidden="true" className="text-brand-600" />
+              <MessageCircle size={14} aria-hidden="true" className="text-rose-600" />
               {post.commentCount}
             </Link>
 
@@ -149,7 +149,7 @@ export function PostCard({ post, returnTo, showCommentBox = true }: { post: Feed
                 required
                 maxLength={3000}
                 placeholder="Add a comment…"
-                className="h-9 flex-1 rounded-lg border border-navy-200 bg-navy-50/50 px-3 text-[12.5px] focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/15"
+                className="h-9 flex-1 rounded-lg border border-navy-200 bg-navy-50/50 px-3 text-[12.5px] focus:border-blue-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
               <SubmitIconButton label="Post comment" className={cn("border border-navy-200 bg-surface")}>
                 Reply

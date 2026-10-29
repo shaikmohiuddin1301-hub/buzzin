@@ -77,7 +77,7 @@ function CourseTile({
       </div>
       <div className="flex flex-1 flex-col p-4">
         <h3 className="text-[14px] font-semibold leading-snug text-navy-950">
-          <Link href={`/studio/courses/${row.resource.id}`} className="hover:text-brand-700">
+          <Link href={`/studio/courses/${row.resource.id}`} className="hover:text-blue-700">
             {row.resource.title}
           </Link>
         </h3>

@@ -41,7 +41,7 @@ export default async function ChallengesPage() {
               <li key={row.challenge.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-[13px] font-semibold text-navy-900">{row.challenge.title}</h3>
-                  {row.challenge.category ? <Badge tone="brand">{label(row.challenge.category)}</Badge> : null}
+                  {row.challenge.category ? <Badge tone="rose">{label(row.challenge.category)}</Badge> : null}
                   <Badge tone={row.challenge.status === "active" ? "success" : "neutral"}>{row.challenge.status}</Badge>
                 </div>
                 <p className="mt-1 text-[12px] leading-6 text-navy-600">{row.challenge.description}</p>

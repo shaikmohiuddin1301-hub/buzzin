@@ -118,7 +118,7 @@ export default async function LearnPage({
                     key={item.topic}
                     href={`/learn?topic=${encodeURIComponent(item.topic)}`}
                     className={`rounded-md px-2 py-1 text-[11px] font-medium ${
-                      topic === item.topic ? "bg-brand-600 text-on-brand" : "bg-navy-50 text-navy-700 hover:bg-navy-100"
+                      topic === item.topic ? "bg-blue-600 text-on-blue" : "bg-navy-50 text-navy-700 hover:bg-navy-100"
                     }`}
                   >
                     {item.topic} ({item.count})
@@ -163,7 +163,7 @@ export default async function LearnPage({
                 ))}
               </ul>
             )}
-            <Link href="/courses" className="mt-2 inline-block text-[10.5px] font-medium text-brand-600 hover:underline">
+            <Link href="/courses" className="mt-2 inline-block text-[10.5px] font-medium text-blue-600 hover:underline">
               Public course catalogue →
             </Link>
           </Card>
@@ -206,7 +206,7 @@ export default async function LearnPage({
               <ul className="mt-2 space-y-1.5">
                 {entitlements.slice(0, 5).map((row) => (
                   <li key={row.entitlement.id}>
-                    <Link href={`/learn/${row.resource.id}`} className="text-[11.5px] font-medium text-brand-600 hover:underline">
+                    <Link href={`/learn/${row.resource.id}`} className="text-[11.5px] font-medium text-blue-600 hover:underline">
                       {row.resource.title}
                     </Link>
                     <p className="text-[10px] text-navy-400">granted {relativeTime(row.entitlement.grantedAt)}</p>

@@ -73,11 +73,11 @@ export default function PricingPage() {
         ].map((tier) => (
           <Card
             key={tier.name}
-            className={tier.highlight ? "relative border-brand-300 ring-1 ring-brand-200" : ""}
+            className={tier.highlight ? "relative border-gold-300 ring-1 ring-gold-200" : ""}
           >
             {tier.highlight ? (
               <div className="absolute right-4 top-4">
-                <Badge tone="brand">Planned</Badge>
+                <Badge tone="gold">Planned</Badge>
               </div>
             ) : null}
             <div className="p-5">
@@ -88,7 +88,7 @@ export default function PricingPage() {
               <ul className="mt-4 space-y-1.5 text-[12.5px] text-navy-600">
                 {tier.features.map((feature) => (
                   <li key={feature} className="flex gap-2">
-                    <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                    <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
                     {feature}
                   </li>
                 ))}

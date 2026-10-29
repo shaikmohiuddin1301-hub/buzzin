@@ -63,7 +63,7 @@ export default async function AcceptedWorkPage({
             className={cn(
               "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
               activeArea === null
-                ? "border-brand-500 bg-brand-50 text-brand-600"
+                ? "border-blue-400 bg-glass-blue text-blue-600"
                 : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
             )}
             aria-current={activeArea === null ? "page" : undefined}
@@ -77,7 +77,7 @@ export default async function AcceptedWorkPage({
               className={cn(
                 "rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
                 activeArea === area.key
-                  ? "border-brand-500 bg-brand-50 text-brand-600"
+                  ? "border-blue-400 bg-glass-blue text-blue-600"
                   : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
               )}
               aria-current={activeArea === area.key ? "page" : undefined}
@@ -112,9 +112,9 @@ export default async function AcceptedWorkPage({
               <Card className="motion-card h-full p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-600">{item.areaLabel}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-600">{item.areaLabel}</p>
                     <h2 className="mt-1 text-[14px] font-semibold text-navy-950">{item.title}</h2>
-                    <Link href={`/tasks/${item.taskId}`} className="mt-0.5 block text-[12px] text-navy-500 hover:text-brand-700 hover:underline">
+                    <Link href={`/tasks/${item.taskId}`} className="mt-0.5 block text-[12px] text-navy-500 hover:text-blue-700 hover:underline">
                       {item.taskTitle}
                     </Link>
                   </div>
@@ -141,16 +141,16 @@ export default async function AcceptedWorkPage({
 
                 <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-navy-200 pt-3 text-[12px]">
                   {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer nofollow" className="text-brand-600 underline">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer nofollow" className="text-blue-600 underline">
                       Open deliverable
                     </a>
                   ) : null}
                   {item.fileId && canViewFiles ? (
-                    <Link href={`/api/files/${item.fileId}`} className="text-brand-600 underline">
+                    <Link href={`/api/files/${item.fileId}`} className="text-blue-600 underline">
                       Download file
                     </Link>
                   ) : null}
-                  <Link href={`/tasks/${item.taskId}`} className="text-navy-500 hover:text-brand-700 hover:underline">
+                  <Link href={`/tasks/${item.taskId}`} className="text-navy-500 hover:text-blue-700 hover:underline">
                     View the task
                   </Link>
                   {item.attributionStatus === "confirmed" ? (

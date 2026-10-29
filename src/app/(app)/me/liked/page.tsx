@@ -80,7 +80,7 @@ export default async function LikedPage({
                         className="h-14 w-14 shrink-0 rounded-lg object-cover"
                       />
                     ) : (
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-navy-50 to-brand-50 text-navy-500">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-navy-50 to-blue-50 text-navy-500">
                         <Heart size={16} aria-hidden="true" />
                       </span>
                     )}
@@ -124,7 +124,7 @@ export default async function LikedPage({
                 <li key={project.id}>
                   <Link href={`/projects/${project.id}`} className="block h-full">
                     <Card className="motion-card h-full overflow-hidden">
-                      <div className="h-28 w-full bg-gradient-to-br from-navy-100 to-brand-50">
+                      <div className="h-28 w-full bg-gradient-to-br from-navy-100 to-blue-50">
                         {project.coverImageId ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img

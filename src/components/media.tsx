@@ -78,7 +78,7 @@ export function AttachmentLink({
           <span className="truncate">{filename}</span>
           <span className="shrink-0 text-[10px] text-navy-400">{(sizeBytes / 1024).toFixed(0)} KB</span>
         </span>
-        <Link href={href} className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-600 hover:underline">
+        <Link href={href} className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:underline">
           <Download size={12} aria-hidden="true" />
           Open
         </Link>

@@ -259,7 +259,7 @@ export default async function HomePage({
           {account.kind === "business" ? (
             <Card>
               <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
-                <Building2 size={14} aria-hidden="true" className="text-brand-600" />
+                <Building2 size={14} aria-hidden="true" className="text-blue-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Your organisations</h2>
               </div>
               <ul className="divide-y divide-navy-200">
@@ -295,7 +295,7 @@ export default async function HomePage({
           ) : account.kind === "creator" ? (
             <Card>
               <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
-                <LayoutDashboard size={14} aria-hidden="true" className="text-brand-600" />
+                <LayoutDashboard size={14} aria-hidden="true" className="text-blue-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Creator workspace</h2>
               </div>
               <p className="px-4 py-3 text-[12px] leading-5 text-navy-600">
@@ -323,7 +323,7 @@ export default async function HomePage({
                 { href: "/chats", label: "Your chats" },
               ].map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="flex items-center justify-between text-navy-700 hover:text-brand-700">
+                  <Link href={link.href} className="flex items-center justify-between text-navy-700 hover:text-blue-700">
                     {link.label}
                     <span aria-hidden="true" className="text-navy-300">
                       →
@@ -373,7 +373,7 @@ export default async function HomePage({
           {deadlines.length > 0 ? (
             <Card>
               <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
-                <CalendarClock size={14} aria-hidden="true" className="text-brand-600" />
+                <CalendarClock size={14} aria-hidden="true" className="text-blue-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Your active tasks</h2>
               </div>
               <ul className="divide-y divide-navy-200">
@@ -439,7 +439,7 @@ export default async function HomePage({
             {suggestedPeople.length > 0 ? (
               <div className="border-t border-navy-200">
                 <div className="flex items-center gap-2 px-4 pt-3">
-                  <Users size={13} aria-hidden="true" className="text-brand-600" />
+                  <Users size={13} aria-hidden="true" className="text-blue-600" />
                   <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-navy-500">People to follow</h3>
                 </div>
                 <ul>
@@ -481,7 +481,7 @@ export default async function HomePage({
           {learningPicks.length > 0 ? (
             <Card>
               <div className="flex items-center gap-2 border-b border-navy-200 px-4 py-3">
-                <BookOpen size={14} aria-hidden="true" className="text-brand-600" />
+                <BookOpen size={14} aria-hidden="true" className="text-blue-600" />
                 <h2 className="text-[13px] font-semibold text-navy-950">Learning picks</h2>
               </div>
               <ul className="divide-y divide-navy-200">

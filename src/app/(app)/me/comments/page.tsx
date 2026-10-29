@@ -62,7 +62,7 @@ export default async function YourCommentsPage({
                   ) : null}
                   <Link
                     href={comment.targetHref}
-                    className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-navy-900 hover:text-brand-700 hover:underline"
+                    className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-navy-900 hover:text-blue-700 hover:underline"
                   >
                     {comment.targetTitle}
                   </Link>
@@ -72,7 +72,7 @@ export default async function YourCommentsPage({
                   <time className="text-navy-400" dateTime={comment.createdAt}>
                     {relativeTime(comment.createdAt)}
                   </time>
-                  <Link href={comment.targetHref} className="font-medium text-brand-600 hover:underline">
+                  <Link href={comment.targetHref} className="font-medium text-blue-600 hover:underline">
                     Open the original
                   </Link>
                 </div>

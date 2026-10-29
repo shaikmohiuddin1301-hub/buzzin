@@ -66,7 +66,7 @@ export function ChatsTopBar({ unread }: { unread: number }) {
       <div className="flex min-w-0 items-baseline gap-2">
         <h1 className="text-[19px] font-semibold tracking-tight text-navy-950">Chats</h1>
         {unread > 0 ? (
-          <span className="rounded-full bg-coral-100 px-2 py-0.5 text-[10.5px] font-semibold text-coral-700">
+          <span className="rounded-full bg-glass-rose px-2 py-0.5 text-[10.5px] font-semibold text-rose-700">
             {unread} unread
           </span>
         ) : null}
@@ -83,7 +83,7 @@ export function ChatsTopBar({ unread }: { unread: number }) {
       <Link
         href="/chats?compose=1"
         aria-label="New message"
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-navy-200/70 bg-surface text-navy-700 transition hover:bg-navy-50"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-navy-200/70 bg-surface text-navy-700 transition hover:border-blue-300 hover:bg-glass-blue"
       >
         <PenSquare size={16} aria-hidden="true" />
       </Link>

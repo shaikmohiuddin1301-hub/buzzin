@@ -93,7 +93,7 @@ export default async function WelcomePage() {
             <br />
             Teach what you learn.
             <br />
-            <span className="text-brand-600">Earn trust you can point to.</span>
+            <span className="text-blue-600">Earn trust you can point to.</span>
           </>
         }
         description={
@@ -156,7 +156,7 @@ export default async function WelcomePage() {
             { icon: <ShieldCheck size={16} aria-hidden="true" />, title: "Reputation with receipts", body: "Owner-confirmed records, clearly labelled as such." },
           ].map((item) => (
             <div key={item.title} className="flex gap-3">
-              <span className="mt-0.5 text-brand-600">{item.icon}</span>
+              <span className="mt-0.5 text-blue-600">{item.icon}</span>
               <div>
                 <p className="text-[12.5px] font-semibold text-navy-900">{item.title}</p>
                 <p className="text-[11.5px] leading-5 text-navy-600">{item.body}</p>
@@ -234,7 +234,7 @@ export default async function WelcomePage() {
                       <div key={key} className="rounded-xl border border-navy-200 bg-surface p-4">
                         <div className="flex items-center justify-between">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-navy-500">{label(key)}</p>
-                          <BadgeCheck size={14} aria-hidden="true" className="text-brand-600" />
+                          <BadgeCheck size={14} aria-hidden="true" className="text-blue-600" />
                         </div>
                         <p className="mt-1 text-xl font-semibold text-navy-950">{reputation.totals[key]}</p>
                         <p className="mt-0.5 text-[11px] leading-4 text-navy-500">{hint}</p>
@@ -244,7 +244,7 @@ export default async function WelcomePage() {
                   <Card className="p-4">
                     <div className="flex items-center justify-between">
                       <p className="text-[13px] font-semibold text-navy-900">Why these numbers exist</p>
-                      <Link href={`/u/${jonas?.username ?? ""}`} className="text-[11px] font-medium text-brand-600 hover:underline">
+                      <Link href={`/u/${jonas?.username ?? ""}`} className="text-[11px] font-medium text-blue-600 hover:underline">
                         Example profile →
                       </Link>
                     </div>
@@ -279,7 +279,7 @@ export default async function WelcomePage() {
             <div className="mt-6 grid gap-3">
               <div className="rounded-xl border border-navy-200 bg-surface p-5">
                 <div className="flex items-center gap-2">
-                  <Users size={16} aria-hidden="true" className="text-brand-600" />
+                  <Users size={16} aria-hidden="true" className="text-blue-600" />
                   <h3 className="text-[14px] font-semibold text-navy-950">Project contributions</h3>
                 </div>
                 <p className="mt-1.5 text-[13px] leading-6 text-navy-600">
@@ -290,7 +290,7 @@ export default async function WelcomePage() {
               </div>
               <div className="rounded-xl border border-navy-200 bg-surface p-5">
                 <div className="flex items-center gap-2">
-                  <CircleDollarSign size={16} aria-hidden="true" className="text-brand-600" />
+                  <CircleDollarSign size={16} aria-hidden="true" className="text-blue-600" />
                   <h3 className="text-[14px] font-semibold text-navy-950">Educational content</h3>
                 </div>
                 <p className="mt-1.5 text-[13px] leading-6 text-navy-600">

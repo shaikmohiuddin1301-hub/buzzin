@@ -126,7 +126,7 @@ export default async function WorkAreaPage({
                     {item.reviewedAt ? ` · ${relativeTime(item.reviewedAt)}` : ""}
                   </p>
                   {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11.5px] text-brand-600 underline">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer nofollow" className="text-[11.5px] text-blue-600 underline">
                       Open deliverable
                     </a>
                   ) : null}

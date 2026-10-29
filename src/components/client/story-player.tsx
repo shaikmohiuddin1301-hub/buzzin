@@ -81,7 +81,7 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
         />
 
         <div className="relative flex items-start justify-between gap-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-200">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-200">
             Scene {index + 1} / {scenes.length}
           </p>
           <div className="flex items-center gap-2 text-[10px]">
@@ -179,7 +179,7 @@ export function StoryPlayer({ scenes, title }: { scenes: PlayerScene[]; title: s
             }}
             className={cn(
               "h-1.5 flex-1 rounded-full transition-colors",
-              itemIndex === index ? "bg-brand-400" : "bg-white/20 hover:bg-white/40",
+              itemIndex === index ? "bg-blue-400" : "bg-white/20 hover:bg-white/40",
             )}
             title={item.title}
           />

@@ -75,7 +75,7 @@ function ConversationRow({
               {conversation.lastMessage ?? "No messages yet"}
             </p>
             {unread ? (
-              <span className="ml-auto inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-coral-500 px-1 text-[10px] font-semibold leading-none text-on-coral">
+              <span className="ml-auto inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold leading-none text-on-rose">
                 {conversation.unread > 9 ? "9+" : conversation.unread}
                 <span className="sr-only"> unread</span>
               </span>
@@ -210,7 +210,7 @@ export default async function ChatsPage({
           href="/chats?requests=1"
           className="card-surface mb-3 flex items-center gap-3 px-4 py-3 transition hover:bg-navy-50/60"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-coral-100 text-coral-700" aria-hidden="true">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-glass-rose text-rose-700" aria-hidden="true">
             <Inbox size={17} />
           </span>
           <span className="min-w-0 flex-1">
@@ -219,7 +219,7 @@ export default async function ChatsPage({
               {requests.length} {requests.length === 1 ? "person is" : "people are"} waiting to be accepted
             </span>
           </span>
-          <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral-500 px-1 text-[10px] font-semibold text-on-coral">
+          <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-on-rose">
             {requests.length}
           </span>
         </Link>

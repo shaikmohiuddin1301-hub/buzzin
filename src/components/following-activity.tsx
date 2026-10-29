@@ -13,12 +13,12 @@ import type { ActivityItem, ActivityKind } from "@/services/activity";
  * fetched for this viewer; there is no placeholder activity.
  */
 const STYLES: Record<ActivityKind, { icon: typeof PenLine; marker: string; ring: string; accent: string }> = {
-  post: { icon: PenLine, marker: "New post", ring: "bg-coral-100 text-coral-800", accent: "from-coral-500/15 to-transparent" },
+  post: { icon: PenLine, marker: "New post", ring: "bg-glass-rose text-rose-700", accent: "from-rose-500/15 to-transparent" },
   teaching: {
     icon: GraduationCap,
     marker: "New teaching",
-    ring: "bg-coral-100 text-coral-800",
-    accent: "from-coral-500/15 to-transparent",
+    ring: "bg-glass-rose text-rose-700",
+    accent: "from-rose-500/15 to-transparent",
   },
   update: { icon: Megaphone, marker: "Project update", ring: "bg-info-100 text-info-700", accent: "from-info-500/15 to-transparent" },
   milestone: { icon: Flag, marker: "Milestone hit", ring: "bg-emerald-100 text-emerald-600", accent: "from-emerald-500/15 to-transparent" },
@@ -35,12 +35,12 @@ export function FollowingActivityRail({ items }: { items: ActivityItem[] }) {
     <section aria-labelledby="following-activity" className="mb-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Sparkles size={14} aria-hidden="true" className="text-brand-600" />
+          <Sparkles size={14} aria-hidden="true" className="text-blue-600" />
           <h2 id="following-activity" className="text-[12px] font-semibold uppercase tracking-[0.12em] text-navy-600">
             Around your network
           </h2>
         </div>
-        <Link href="/explore?tab=projects&sort=active" className="text-[11.5px] font-medium text-brand-600 hover:underline">
+        <Link href="/explore?tab=projects&sort=active" className="text-[11.5px] font-medium text-blue-600 hover:underline">
           Find more to follow
         </Link>
       </div>
@@ -49,7 +49,7 @@ export function FollowingActivityRail({ items }: { items: ActivityItem[] }) {
         <div className="relative overflow-hidden rounded-2xl border border-dashed border-navy-300 bg-surface p-4">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-gradient-to-br from-brand-500/10 to-coral-400/10 blur-2xl"
+            className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-gradient-to-br from-blue-500/10 to-coral-400/10 blur-2xl"
           />
           <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
@@ -76,9 +76,9 @@ export function FollowingActivityRail({ items }: { items: ActivityItem[] }) {
               <li key={item.id} className="w-[196px] shrink-0">
                 <Link
                   href={item.href}
-                  className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-navy-200/70 bg-surface shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-float"
+                  className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-navy-200/70 bg-surface shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-float"
                 >
-                  <span className="relative block h-[74px] w-full overflow-hidden bg-gradient-to-br from-navy-100 to-brand-50">
+                  <span className="relative block h-[74px] w-full overflow-hidden bg-gradient-to-br from-navy-100 to-blue-50">
                     {item.coverImageId ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

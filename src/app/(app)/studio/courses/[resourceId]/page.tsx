@@ -99,7 +99,7 @@ export default async function CourseBuilderPage({
             <span>{curriculum.length} modules</span>
             <span>{lessonCount} lessons</span>
             <span>Updated {formatDate(resource.updatedAt)}</span>
-            <Link href={`/learn/${resource.id}`} className="font-medium text-brand-600 hover:underline">
+            <Link href={`/learn/${resource.id}`} className="font-medium text-blue-600 hover:underline">
               Learner view →
             </Link>
           </>
@@ -186,7 +186,7 @@ export default async function CourseBuilderPage({
                   <section key={module.id} className="p-4 sm:p-5">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-600">Module {moduleIndex + 1}</p>
+                        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy-600">Module {moduleIndex + 1}</p>
                         <h3 className="mt-0.5 text-[14px] font-semibold text-navy-950">{module.title}</h3>
                         {module.description ? <p className="mt-1 text-[12px] leading-5 text-navy-500">{module.description}</p> : null}
                       </div>
@@ -218,7 +218,7 @@ export default async function CourseBuilderPage({
                     </div>
 
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-[11.5px] font-medium text-brand-600 hover:underline">
+                      <summary className="cursor-pointer text-[11.5px] font-medium text-blue-600 hover:underline">
                         Edit module details
                       </summary>
                       <form action={updateModuleAction} className="mt-3 space-y-3 rounded-lg border border-navy-200 p-3">
@@ -299,7 +299,7 @@ export default async function CourseBuilderPage({
                             </div>
 
                             <details className="mt-2">
-                              <summary className="cursor-pointer text-[11.5px] font-medium text-brand-600 hover:underline">
+                              <summary className="cursor-pointer text-[11.5px] font-medium text-blue-600 hover:underline">
                                 Edit lesson
                               </summary>
                               <form action={updateLessonAction} encType="multipart/form-data" className="mt-3 space-y-3 rounded-lg border border-navy-200 bg-surface p-3">
@@ -316,7 +316,7 @@ export default async function CourseBuilderPage({
                                     <Input id={`lesson-minutes-${lesson.id}`} name="durationMinutes" type="number" min={1} max={1000} defaultValue={lesson.durationMinutes ?? ""} />
                                   </Field>
                                   <label className="flex items-center gap-2 pt-7 text-[12px] text-navy-700">
-                                    <input type="checkbox" name="isFreePreview" defaultChecked={lesson.isFreePreview} className="h-4 w-4 rounded border-navy-300 text-brand-600" />
+                                    <input type="checkbox" name="isFreePreview" defaultChecked={lesson.isFreePreview} className="h-4 w-4 rounded border-navy-300 text-blue-600" />
                                     Free preview lesson
                                   </label>
                                 </div>
@@ -339,7 +339,7 @@ export default async function CourseBuilderPage({
                                 </Field>
                                 {media ? (
                                   <label className="flex items-center gap-2 text-[11.5px] text-navy-600">
-                                    <input type="checkbox" name="removeAttachment" className="h-4 w-4 rounded border-navy-300 text-brand-600" />
+                                    <input type="checkbox" name="removeAttachment" className="h-4 w-4 rounded border-navy-300 text-blue-600" />
                                     Remove the current uploaded file
                                   </label>
                                 ) : null}
@@ -379,7 +379,7 @@ export default async function CourseBuilderPage({
                     </ul>
 
                     <details className="mt-3">
-                      <summary className="inline-flex cursor-pointer items-center gap-1 text-[12px] font-medium text-brand-600 hover:underline">
+                      <summary className="inline-flex cursor-pointer items-center gap-1 text-[12px] font-medium text-blue-600 hover:underline">
                         <Plus size={13} aria-hidden="true" /> Add a lesson
                       </summary>
                       <form action={addLessonAction} encType="multipart/form-data" className="mt-3 space-y-3 rounded-lg border border-dashed border-navy-200 p-3">
@@ -396,7 +396,7 @@ export default async function CourseBuilderPage({
                             <Input id={`new-lesson-minutes-${module.id}`} name="durationMinutes" type="number" min={1} max={1000} />
                           </Field>
                           <label className="flex items-center gap-2 pt-7 text-[12px] text-navy-700">
-                            <input type="checkbox" name="isFreePreview" className="h-4 w-4 rounded border-navy-300 text-brand-600" />
+                            <input type="checkbox" name="isFreePreview" className="h-4 w-4 rounded border-navy-300 text-blue-600" />
                             Free preview
                           </label>
                           <Field label="External video" htmlFor={`new-lesson-video-${module.id}`}>
@@ -534,7 +534,7 @@ export default async function CourseBuilderPage({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={`/api/files/${resource.coverImageId}`} alt="" className="h-16 w-24 rounded-lg object-cover" />
                   <label className="flex items-center gap-2 text-[11.5px] text-navy-600">
-                    <input type="checkbox" name="removeCover" className="h-4 w-4 rounded border-navy-300 text-brand-600" />
+                    <input type="checkbox" name="removeCover" className="h-4 w-4 rounded border-navy-300 text-blue-600" />
                     Remove cover image
                   </label>
                 </div>
@@ -613,7 +613,7 @@ export default async function CourseBuilderPage({
             <p className="mt-1.5 text-[11.5px] leading-5 text-navy-600">
               Public URL:
               <br />
-              <Link href={`/courses/${resource.id}`} className="break-all font-medium text-brand-600 hover:underline">
+              <Link href={`/courses/${resource.id}`} className="break-all font-medium text-blue-600 hover:underline">
                 /courses/{resource.id}
               </Link>
             </p>

@@ -20,9 +20,11 @@ const variants: Record<Variant, string> = {
   ghost: "text-navy-700 hover:bg-navy-100",
   danger: "bg-red-600 text-on-danger shadow-sm hover:bg-red-700 disabled:bg-red-200 disabled:text-navy-600",
   creative: "bg-coral-500 text-on-coral shadow-sm hover:bg-coral-600 active:bg-coral-700 disabled:bg-coral-200 disabled:text-navy-600",
-  positive: "bg-emerald-500 text-on-teal shadow-sm hover:bg-emerald-600 active:bg-emerald-700 disabled:bg-emerald-200 disabled:text-navy-600",
-  caution: "bg-amber-300 text-on-caution shadow-sm hover:bg-amber-400 active:bg-amber-500 disabled:bg-amber-100 disabled:text-navy-600",
-  subtle: "bg-brand-50 text-brand-600 hover:bg-brand-100",
+  // The label sits on emerald-600, not the 500 accent: white on #169B75 measures 3.51:1,
+  // white on #0F7A5C measures 5.31:1, and dark mode lifts to a pale emerald with dark text.
+  positive: "bg-emerald-600 text-on-teal shadow-sm hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-emerald-100 disabled:text-navy-600",
+  caution: "bg-gold-500 text-on-caution shadow-sm hover:bg-gold-400 active:bg-gold-600 disabled:bg-gold-100 disabled:text-navy-600",
+  subtle: "bg-glass-blue text-blue-700 hover:bg-glass-blue-strong",
 };
 
 const sizes: Record<Size, string> = {
@@ -89,7 +91,7 @@ export function Field({
       <label htmlFor={htmlFor} className="block text-sm font-medium text-navy-800">
         {label}
         {required ? (
-          <span className="ml-1 text-brand-600" aria-hidden="true">
+          <span className="ml-1 text-blue-600" aria-hidden="true">
             *
           </span>
         ) : null}
@@ -137,7 +139,7 @@ export function Checkbox({
       <input
         type="checkbox"
         {...props}
-        className="mt-0.5 h-4 w-4 rounded border-navy-300 text-brand-600 focus:ring-brand-500"
+        className="mt-0.5 h-4 w-4 rounded border-navy-300 text-blue-600 focus:ring-blue-500"
       />
       <span>
         <span className="block text-sm font-medium text-navy-900">{label}</span>
@@ -194,7 +196,7 @@ export function PageHeader({
 }) {
   return (
     <header className="mb-6">
-      {eyebrow ? <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-600">{eyebrow}</div> : null}
+      {eyebrow ? <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-navy-600">{eyebrow}</div> : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 max-w-3xl">
           <h1 className="text-2xl font-semibold tracking-tight text-navy-950 sm:text-[28px]">{title}</h1>
@@ -244,7 +246,11 @@ const tones = {
   success: "bg-emerald-50 text-emerald-600",
   warning: "bg-amber-50 text-amber-700",
   danger: "bg-red-50 text-red-600",
-  info: "bg-brand-50 text-brand-600",
+  // Blue is the interactive/discovery accent; rose and gold carry social and featured work.
+  info: "bg-glass-blue text-blue-700",
+  blue: "bg-glass-blue text-blue-700",
+  rose: "bg-glass-rose text-rose-700",
+  gold: "bg-glass-gold text-gold-800",
   coral: "bg-coral-500 text-on-coral",
 } as const;
 
@@ -345,7 +351,7 @@ export function TaskStatusBadge({ status, className }: { status: string; classNa
 }
 
 export function SkillTag({ name, href }: { name: string; href?: string }) {
-  const content = <span className="rounded-md bg-brand-50 px-2 py-1 text-[12px] font-medium text-brand-600">{name}</span>;
+  const content = <span className="rounded-md bg-glass-blue px-2 py-1 text-[12px] font-medium text-blue-700">{name}</span>;
   return href ? <Link href={href}>{content}</Link> : content;
 }
 
@@ -460,7 +466,7 @@ export function Alert({
   children?: ReactNode;
 }) {
   const styles = {
-    info: "border-brand-200 bg-brand-50 text-brand-600",
+    info: "border-blue-200/80 bg-glass-blue text-blue-700",
     success: "border-emerald-200 bg-emerald-50 text-emerald-600",
     warning: "border-amber-200 bg-amber-50 text-amber-700",
     danger: "border-red-200 bg-red-50 text-red-600",
@@ -572,7 +578,7 @@ export function Tabs({
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200",
                 active
-                  ? "bg-brand-600 text-on-brand shadow-sm"
+                  ? "bg-blue-600 text-on-blue shadow-sm"
                   : "text-navy-600 hover:bg-navy-100/80 hover:text-navy-900",
               )}
             >
@@ -581,7 +587,7 @@ export function Tabs({
                 <span
                   className={cn(
                     "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                    active ? "bg-white/20 text-white" : "bg-navy-100 text-navy-600",
+                    active ? "bg-on-blue/15 text-on-blue" : "bg-navy-100 text-navy-600",
                   )}
                 >
                   {item.count}
@@ -602,7 +608,7 @@ export function Breadcrumbs({ items }: { items: { label: string; href?: string }
         {items.map((item, index) => (
           <li key={`${item.label}-${index}`} className="flex items-center gap-1.5">
             {item.href ? (
-              <Link href={item.href} className="hover:text-navy-800 hover:underline">
+              <Link href={item.href} className="hover:text-blue-700 hover:underline">
                 {item.label}
               </Link>
             ) : (

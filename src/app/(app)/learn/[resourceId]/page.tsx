@@ -240,7 +240,7 @@ export default async function ResourcePage({
           {isCourse && course ? (
             <Card className="p-5">
               <div className="flex flex-wrap items-center gap-2">
-                <GraduationCap size={16} aria-hidden="true" className="text-brand-600" />
+                <GraduationCap size={16} aria-hidden="true" className="text-blue-600" />
                 <h2 className="text-[14px] font-semibold text-navy-950">About this course</h2>
                 <Badge tone="neutral">{course.visibility === "invite_only" ? "Link only" : label(course.visibility)}</Badge>
               </div>
@@ -308,7 +308,7 @@ export default async function ResourcePage({
                     href={course.previewVideoUrl}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
-                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-600 underline"
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-blue-600 underline"
                   >
                     <ExternalLink size={13} aria-hidden="true" />
                     {providerLabel(externalProvider(course.previewVideoUrl))} preview (opens {externalHost(course.previewVideoUrl)})
@@ -357,7 +357,7 @@ export default async function ResourcePage({
                     {courseProgress ? ` · ${courseProgress.completedLessons} completed` : ""}
                   </p>
                 </div>
-                {overall > 0 ? <span className="text-[11px] font-medium text-brand-600">{overall}% complete</span> : null}
+                {overall > 0 ? <span className="text-[11px] font-medium text-emerald-700">{overall}% complete</span> : null}
               </div>
               <div className="divide-y divide-navy-200">
                 {curriculum.map((module, moduleIndex) => (
@@ -370,7 +370,7 @@ export default async function ResourcePage({
                       {module.lessons.map((lesson) => {
                         const completed = completedLessonIds.includes(lesson.id);
                         return (
-                          <li key={lesson.id} className="rounded-lg border border-navy-200 transition hover:border-brand-200 hover:bg-brand-50/30">
+                          <li key={lesson.id} className="rounded-lg border border-navy-200 transition hover:border-blue-200 hover:bg-glass-blue">
                             <div className="flex flex-wrap items-center gap-2 p-3">
                               {isCourse ? (
                                 <Link

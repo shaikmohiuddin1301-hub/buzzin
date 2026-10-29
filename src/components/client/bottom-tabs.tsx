@@ -169,7 +169,7 @@ export function BottomTabs({
                       <span
                         className={cn(
                           "inline-flex h-9 w-9 items-center justify-center rounded-xl",
-                          "bg-brand-50 text-brand-600",
+                          "bg-glass-blue text-blue-600",
                         )}
                         aria-hidden="true"
                       >
@@ -187,14 +187,14 @@ export function BottomTabs({
                         <button
                           type="button"
                           onClick={() => setPending("task")}
-                          className="block h-full w-full rounded-2xl border border-navy-200/60 bg-surface p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"
+                          className="block h-full w-full rounded-2xl border border-navy-200/60 bg-surface p-3 text-left transition hover:border-blue-300 hover:bg-glass-blue"
                         >
                           {content}
                         </button>
                       ) : (
                         <Link
                           href={option.href}
-                          className="block h-full rounded-2xl border border-navy-200/60 bg-surface p-3 transition hover:border-brand-300 hover:bg-brand-50/40"
+                          className="block h-full rounded-2xl border border-navy-200/60 bg-surface p-3 transition hover:border-blue-300 hover:bg-glass-blue"
                         >
                           {content}
                         </Link>
@@ -212,7 +212,7 @@ export function BottomTabs({
                       className="flex min-h-[48px] items-center justify-between gap-2 rounded-xl px-3 text-[14px] text-navy-800 transition hover:bg-navy-50"
                     >
                       <span className="truncate">{project.name}</span>
-                      <Plus size={15} aria-hidden="true" className="shrink-0 text-brand-600" />
+                      <Plus size={15} aria-hidden="true" className="shrink-0 text-blue-600" />
                     </Link>
                   </li>
                 ))}
@@ -297,13 +297,13 @@ function TabCell({
       aria-label={badge > 0 ? `${label}, ${badge} unread` : label}
       className={cn(
         "flex h-12 w-full flex-col items-center justify-center gap-0.5 rounded-2xl transition-colors duration-200",
-        active ? "bg-brand-50 text-brand-600" : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",
+        active ? "bg-glass-blue text-blue-700" : "text-navy-500 hover:bg-navy-100/70 hover:text-navy-900",
       )}
     >
       <span className="relative">
         <Icon size={20} aria-hidden="true" strokeWidth={active ? 2.2 : 1.8} />
         {badge > 0 ? (
-          <span className="absolute -right-2 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-coral-500 px-1 text-[9px] font-bold leading-none text-on-coral ring-2 ring-surface">
+          <span className="absolute -right-2 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-on-rose ring-2 ring-surface">
             {badge > 9 ? "9+" : badge}
           </span>
         ) : null}

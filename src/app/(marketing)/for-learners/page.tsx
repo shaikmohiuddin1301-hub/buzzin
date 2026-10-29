@@ -14,7 +14,7 @@ export default function ForLearnersPage() {
         secondary={{ href: "/explore", label: "Follow a project" }}
         aside={
           <Card className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-600">What a resource contains</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-navy-600">What a resource contains</p>
             <ul className="mt-3 space-y-2 text-[13px] text-navy-700">
               {[
                 "A free preview before any paid access",
@@ -25,7 +25,7 @@ export default function ForLearnersPage() {
                 "Stated limitations and what did not work",
               ].map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                  <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
                   {item}
                 </li>
               ))}

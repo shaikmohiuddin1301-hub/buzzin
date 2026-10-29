@@ -152,7 +152,7 @@ export default async function TaskJourneyPage({
             <ul className="mt-2 space-y-2">
               {journeys.map((journey) => (
                 <li key={journey.id}>
-                  <Link href={`/learn/journeys/${journey.id}`} className="text-[11.5px] font-medium text-brand-600 hover:underline">
+                  <Link href={`/learn/journeys/${journey.id}`} className="text-[11.5px] font-medium text-blue-600 hover:underline">
                     {journey.title}
                   </Link>
                   <div className="mt-0.5 flex items-center gap-1.5">

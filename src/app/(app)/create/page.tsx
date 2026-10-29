@@ -72,7 +72,7 @@ export default async function CreatePage() {
             <li key={option.href}>
               <Link href={option.href} className="block h-full">
                 <Card className="motion-card h-full p-5">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-glass-blue text-blue-600">
                     <Icon size={18} aria-hidden="true" />
                   </span>
                   <h2 className="mt-3 text-[14px] font-semibold text-navy-950">{option.label}</h2>

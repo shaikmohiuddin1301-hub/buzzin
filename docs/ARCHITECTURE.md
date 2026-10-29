@@ -172,7 +172,7 @@ Because the seams are typed, replacing one does not require touching pages, acti
   delivery through the event stream. Requests, unread counts and notifications all use
   the same rule: only accepted memberships count.
 - **Design system** in `src/components/ui.tsx` plus `cards.tsx`, `media.tsx`, `comments.tsx`, `post-card.tsx`, `report-form.tsx`, `marketing.tsx`: buttons, fields, panels, tabs, badges, avatars, tables, empty/loading/error states, confirmation dialogs, progress meters, reputation indicators, media player, uploads.
-- **Tokens** in `globals.css` (graphite/silver structure, coral and emerald accents, translucent glass surfaces) with CSS variables so the light and dark themes stay in sync without rewriting components.
+- **Tokens** in `globals.css` (graphite/silver structure, blue interactive, coral creative, emerald success, gold featured and rose social accents, translucent glass surfaces) with CSS variables so the light and dark themes stay in sync without rewriting components.
 - **Accessibility**: semantic landmarks, labelled form fields, visible focus rings, keyboard-operable menus and tabs, captions/transcripts for media, `prefers-reduced-motion` support, WCAG AA contrast targets, no autoplaying audio.
 
 ## 8. Known architectural limitations

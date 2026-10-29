@@ -87,7 +87,7 @@ export function ProfileMenu() {
         aria-expanded={open}
         aria-controls="profile-account-menu"
         onClick={() => setOpen((value) => !value)}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-navy-200/70 bg-surface/80 text-navy-700 transition hover:bg-navy-100 hover:text-navy-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="flex h-9 w-9 items-center justify-center rounded-xl border border-navy-200/70 bg-surface/80 text-navy-700 transition hover:bg-navy-100 hover:text-navy-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
       >
         <Menu size={18} aria-hidden="true" />
       </button>

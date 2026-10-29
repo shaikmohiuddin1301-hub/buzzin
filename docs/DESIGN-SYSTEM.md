@@ -8,14 +8,25 @@ palette hiding in a page.
 
 Every colour is a CSS variable defined twice in `src/app/globals.css` — once under `:root`
 (light) and once under `.dark` — and mapped onto Tailwind in `tailwind.config.ts`. There is no
-second palette in a page, and there is no blue, navy, indigo, violet or purple anywhere: the
-`navy` name is kept only as the graphite/silver ink ramp.
+second palette in a page. The foundation is graphite/silver glass; blue is an accent laid over
+it, never a replacement for it. `navy` remains the graphite/silver ink ramp (the name is
+historic), and blue, rose and gold are separate accent ramps with real roles.
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `brand-600` | `#34343A` | `#E7E7EB` | Graphite action: links, active navigation, primary buttons |
+| `brand-600` | `#34343A` | `#E7E7EB` | Graphite action: primary buttons and structural emphasis |
 | `brand-700` | `#222226` | `#F5F5F3` | Pressed/hover action |
-| `brand-50` | `#EEEEF0` | `#3A3A42` | Selected chip and active-row surface |
+| `brand-50` | `#EEEEF0` | `#3A3A42` | Neutral selected chip and secondary button hover |
+| `blue-500` | `#4388F5` | `#5B9EFA` | Electric blue: focus rings, icons, active indicators |
+| `blue-600` | `#2864C7` | `#9CC0FA` | Deep blue: links and filled selected indicators |
+| `blue-700` | `#2054A8` | `#BAD5FC` | Link/selected label on a soft blue wash |
+| `blue-50` | `#EBF3FE` | `#1E2A3E` | Pale blue wash for selected counts and image placeholders |
+| `rose-500` | `#D9577A` | `#F08CA7` | Social engagement: unread markers, comment icons |
+| `rose-600` | `#BE4063` | `#F6AABF` | Rose counter fill and icon stroke |
+| `rose-700` | `#9E2E4E` | `#FAC4D3` | Rose label on a soft rose wash |
+| `gold-500` | `#E5B957` | `#E5B957` | Warm gold: featured opportunities, achievements |
+| `gold-700` | `#8A641D` | `#F6DCA0` | Gold icon and text on pale gold |
+| `gold-800` | `#5C4310` | `#FAEAC4` | Gold label on a soft gold wash |
 | `navy-900` | `#34343A` | `#F5F5F3` | Headings and primary text |
 | `navy-700` | `#47474F` | `#D6D6DC` | Strong body copy |
 | `navy-600` | `#56565F` | `#C4C4CD` | Body and secondary text |
@@ -25,18 +36,30 @@ second palette in a page, and there is no blue, navy, indigo, violet or purple a
 | `surface` | `#FFFFFF` | `#34343A` | Inputs and opaque fallbacks |
 | `page-warm` | `#F5F5F3` | `#222226` | Home, profile, projects, chats list, notifications |
 | `page-secondary` | `#E7E7EB` | `#26262B` | Explore, learning, creator workspace, open conversation |
-| `coral-500` | `#FF785A` | `#FF785A` | Creative action, likes, unread markers |
-| `coral-600` | `#EC6647` | `#EC6647` | Coral pressed state and icon stroke |
+| `coral-500` | `#FF785A` | `#FF785A` | Central Create action, likes, creative actions |
+| `coral-600` | `#EC6647` | `#EC6647` | Coral pressed state and like-icon stroke |
 | `emerald-500` | `#169B75` | `#3FC79C` | Growth, completion, positive actions |
 | `emerald-600` | `#0F7A5C` | `#7DDCBE` | Emerald text on pale emerald |
-| `amber-300` | `#D9AD55` | `#D9AD55` | Opportunities, review states, "request changes" |
-| `amber-700` | `#5C4310` | `#EBCA8F` | Gold text on pale gold |
+| `amber-300` | `#D9AD55` | `#D9AD55` | Caution and review states, "request changes" |
+| `amber-700` | `#5C4310` | `#EBCA8F` | Caution text on pale gold |
 | `red-600` | `#C83D4D` | `#F09EA8` | Destructive actions and errors |
 
 `navy` is an inverted ink ramp, so `bg-navy-50` is the faint surface in both themes and
 `text-navy-900` the strongest text. Content that must stay dark in both themes uses the fixed
 helpers `.ink-surface`, `.ink-card`, `.ink-hero` and `.avatar-surface`; never put
-`text-navy-*` on top of those. `info` replaces the old `sky` ramp so no colour name implies blue.
+`text-navy-*` on top of those. `info` is now the blue discovery accent rather than a second
+neutral ramp.
+
+### Colour roles
+
+| Colour | Used for | Deliberately not used for |
+| --- | --- | --- |
+| Blue | Text links, breadcrumb hover, selected navigation (soft blue wash + blue label), selected filters, the section-tab fill, search/field focus, skill and discovery chips, category badges | Page backgrounds, primary buttons, body copy |
+| Coral | The centred Create button and its sheet, likes, creative/primary creation actions, the starter tour CTA | Unread counters, comments, generic emphasis |
+| Emerald | Successful and accepted states, completed steps, learning progress (bars and percentages) | Ordinary selection or navigation |
+| Gold | Featured/highlight plan ring, discovery "why this" chips, achievement icons, review-state and caution buttons | Links or navigation |
+| Rose | Unread counters and notification dots, comment icons, community activity markers, challenge categories | Likes (coral) or errors (red) |
+| Graphite / silver | Primary and secondary buttons, headings and body text, panels, borders, dividers, inactive navigation | Decorative accent for interactive state |
 
 ### Glass surfaces
 
@@ -45,6 +68,9 @@ helpers `.ink-surface`, `.ink-card`, `.ink-hero` and `.avatar-surface`; never pu
 | Main page | `#F5F5F3` | `#222226` |
 | Secondary page | `#E7E7EB` | `#26262B` |
 | Card / panel (`--glass-panel`) | `rgba(255,255,255,0.68)` | `rgba(52,52,58,0.72)` |
+| Soft blue glass (`--glass-blue`) | `rgba(67,136,245,0.12)` | `rgba(67,136,245,0.18)` |
+| Soft rose glass (`--glass-rose`) | `rgba(217,87,122,0.12)` | `rgba(217,87,122,0.18)` |
+| Soft gold glass (`--glass-gold`) | `rgba(229,185,87,0.16)` | `rgba(229,185,87,0.16)` |
 | Secondary panel | `rgba(231,231,235,0.58)` | `rgba(65,65,73,0.62)` |
 | Glass border | `rgba(255,255,255,0.85)` | `rgba(255,255,255,0.12)` |
 | Header (`--glass-header`) | `rgba(245,245,243,0.74)` | `rgba(34,34,38,0.78)` |
@@ -54,8 +80,10 @@ helpers `.ink-surface`, `.ink-card`, `.ink-hero` and `.avatar-surface`; never pu
 Panels use `backdrop-filter: blur(18px) saturate(1.15)`; the header and bar use a slightly
 stronger blur. A `@supports not (backdrop-filter: …)` block swaps every glass surface to
 `--glass-fallback` (white in light, `#34343A` in dark) so the interface stays readable where
-blur is unavailable. Page backgrounds add three restrained radial washes (silver, pale grey,
-warm off-white, plus a 5–6% coral highlight); dark mode uses silver light on charcoal.
+blur is unavailable. Page backgrounds add restrained radial washes (silver, pale grey, warm
+off-white) plus a single 7–10% electric-blue light from the top corner and a 4–5% coral trace;
+dark mode keeps silver light on charcoal with a 10% blue wash. The base surface never changes
+colour, so the result still reads as grey glass with colour in the lighting.
 
 ### Semantic status tokens
 
@@ -76,18 +104,22 @@ decorative coral and gold accents, and every status badge prints its label next 
 | Surface | Colour |
 | --- | --- |
 | Header | translucent warm off-white glass with a silver hairline |
-| Bottom navigation | translucent white glass; active graphite, inactive steel grey, Create coral and centred |
+| Bottom navigation | translucent white glass; active soft blue glass with a blue label, inactive steel grey, Create coral and centred |
 | Primary / secondary / positive / creative / destructive buttons | graphite / grey glass + graphite / emerald / coral / `#C83D4D` |
+| Section tabs (`Tabs`) and the theme segmented control | deep blue fill in light, lifted blue fill with dark label in dark |
+| Field and search focus | blue border, blue ring and a soft blue wash |
 | Feed cards, profile panel, notification cards, course cards, project cards | translucent white glass |
-| Around Your Network rail | warm page, glass cards, graphite accents, coral new-activity marker |
-| Unread notification card | `navy-100` (`#EEEEF0` light, `#414149` dark) with a coral dot |
+| Around Your Network rail | warm page, glass cards, rose markers for posts and teaching, blue for project updates |
+| Unread notification card | `navy-100` (`#EEEEF0` light, `#414149` dark) with a rose dot |
 | Grouped sections and task-board columns | `.glass-secondary` (secondary glass) |
 | Outgoing chat bubble | graphite `#34343A` with white text in both themes |
 | Incoming chat bubble | silver-white glass (light) or `#414149` (dark) with a glass border |
 | Message request | glass card with a coral border; Accept is the graphite primary, Dismiss secondary |
-| Inbox row | white glass row, coral unread count, muted timestamp and preview |
-| Like / comment / share icons | coral stroke / graphite / emerald |
-| Learning progress | emerald fill; project progress graphite |
+| Inbox row | white glass row, rose unread count, muted timestamp and preview |
+| Like / comment icons | coral stroke / rose stroke |
+| Achievements | gold star icon (gold-700) |
+| Discovery reasons ("why this") | soft gold glass chip |
+| Learning progress | emerald fill and emerald percentage; project progress graphite |
 
 `pageSurfaceClass()` in `src/lib/navigation.ts` owns the route-level background choice, so the
 shell and the pages cannot drift apart.
@@ -100,20 +132,30 @@ WCAG 2.2 AA, computed from the token values:
 | --- | --- | --- |
 | Primary text on a card | 12.37 | 11.33 |
 | Secondary text on a card | 7.26 | 6.28 |
-| Link on a card | 12.37 | 10.03 |
+| Link on a card (`blue-600`) | 5.62 | 6.67 |
+| Selected label on soft blue glass (`blue-700`) | 6.49 | 9.62 |
+| Label on a selected tab (`on-blue` / `blue-600`) | 5.62 | 8.56 |
 | Label on a primary button | 12.37 | 12.85 |
 | Label on a coral action | 6.10 | 6.10 |
+| Label on a positive action (`emerald-600`) | 5.31 | 9.74 |
 | Label on a destructive action | 4.96 | 7.67 |
+| Rose badge (`rose-700` on `rose-50`) | 6.33 | 9.63 |
+| Gold badge (`gold-800` on `gold-50`) | 8.38 | 10.63 |
 | Status badge text | 4.62–10.85 | 6.82–8.30 |
+| Non-text: blue focus ring on its surface | 3.45 | 7.55 |
+| Non-text: gold achievement icon, rose social icon | 5.36 / 5.12 | — |
 
-Two pairs were specified with fixed text colours: white on the emerald `#169B75` measures
-3.51:1, and the white Create icon on
-`#FF785A` measures 2.60:1. Both are kept because they were specified; the positive action
-stays identifiable by its label and the Create action by its position, shape and aria-label.
+The emerald accent itself (`#169B75`) measures 3.51:1 against white, so positive action
+labels sit on `emerald-600` (`#0F7A5C`, 5.31:1) rather than on the 500 shade while the accent
+keeps its specified value for icons, progress fills and badges. The white Create icon on
+`#FF785A` measures 2.60:1 and is kept because the fill was specified; the Create action stays
+identifiable by its position, shape and aria-label.
 The like icon uses the darker coral stroke (`#EC6647`, 3.20:1) so the control itself clears
 the 3:1 non-text target while the fill remains `#FF785A`. The inactive navigation grey
 `#777780` measures 4.44:1 on white — a 0.06 shortfall that is kept rather than deviating from
-the requested steel grey; it is never the only cue for a destination.
+the requested steel grey; it is never the only cue for a destination. Every selected state
+carries `aria-current`, and every status badge prints a label, so colour is never the only
+signal for meaning.
 
 ## Theming
 
@@ -144,12 +186,20 @@ the requested steel grey; it is never the only cue for a destination.
   replays a screen the reader swiped back out of, then continues the tab order. Only an
   exhausted history falls back to the adjacent tab; the ends of the order do nothing rather
   than leave the page. Re-selecting the open tab adds no entry, and the browser's own back and
-  forward buttons move the cursor instead of creating a parallel record. The record lives in
+  forward buttons move the cursor instead of creating a parallel record.
+- A swipe commits once per release, and the destination is adopted as it is issued rather than
+  when React paints it, so the next gesture decides from the screen being navigated to. A
+  gesture released while the previous screen is still arriving waits in a queue of up to three
+  and runs in order when that transition ends — never dropped, and never fused into a jump that
+  skips a screen. A gesture that starts while a transition is running does not drag the page
+  that is already leaving; it is recorded and played next. The record lives in
   `sessionStorage` (`bt.swipe-history`), so it survives a reload in the same tab; every entry is
   re-validated as one of the four routes before it is used.
 - The swipe answers immediately: once horizontal intent is clear, only `<main>` moves, as a
   single `translate3d` per frame on the compositor, capped at 30% of the viewport and held back
-  to 14% at the ends of the sequence. The gap it opens reveals the destination's edge — its own
+  to 14% at the ends of the sequence. A horizontal rail keeps the gesture only while it still has
+  somewhere to scroll in that direction; at the end of the rail the page takes the swipe, so a
+  row of chips never turns its band of the page into a dead zone. The gap it opens reveals the destination's edge — its own
   surface, a hairline border and, once the gap can hold the word, its name; the preview layer
   is bounded by the visible content area so it never covers the header or the bar. Release
   commits after 22% of the viewport width (never less than 56px), or an 18px flick at 0.3px/ms

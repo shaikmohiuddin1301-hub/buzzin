@@ -133,7 +133,7 @@ export default async function ProjectTasksPage({
                     <li key={task.id}>
                       <Link
                         href={`/tasks/${task.id}`}
-                        className="block glass rounded-lg p-2.5 shadow-sm hover:border-brand-300"
+                        className="block glass rounded-lg p-2.5 shadow-sm hover:border-blue-300"
                       >
                         <p className="text-[12px] font-medium leading-5 text-navy-900">{task.title}</p>
                         <p className="mt-1 text-[10px] text-navy-500">

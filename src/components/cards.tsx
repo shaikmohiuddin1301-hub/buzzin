@@ -11,7 +11,7 @@ function ReasonChips({ reasons }: { reasons?: string[] }) {
       {reasons.map((reason) => (
         <span
           key={reason}
-          className="inline-flex items-center gap-1 rounded-full bg-coral-50 px-2 py-0.5 text-[10.5px] font-medium text-coral-800"
+          className="inline-flex items-center gap-1 rounded-full bg-glass-gold px-2 py-0.5 text-[10.5px] font-medium text-gold-800"
         >
           <Sparkles size={10} aria-hidden="true" />
           {reason}
@@ -70,17 +70,25 @@ export function ProjectCard({
           </div>
         )}
         <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-          <Badge tone="brand">{label(project.category)}</Badge>
-          <Badge tone="neutral" className="bg-white/90">
+          {/* Over cover imagery the chips carry their own fixed ink surface: a translucent
+              pale chip would lose contrast against a bright or dark photo in one theme. */}
+          <Badge tone="neutral" className="border border-white/20 bg-black/55 text-white">
+            {label(project.category)}
+          </Badge>
+          <Badge tone="neutral" className="border border-white/20 bg-black/55 text-white">
             {label(project.stage)}
           </Badge>
-          {project.visibility !== "public" ? <Badge tone="warning">{label(project.visibility)}</Badge> : null}
+          {project.visibility !== "public" ? (
+            <Badge tone="neutral" className="border border-white/20 bg-black/55 text-white">
+              {label(project.visibility)}
+            </Badge>
+          ) : null}
         </div>
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
         <h3 className="text-[15px] font-semibold leading-snug text-navy-950">
-          <Link href={`/projects/${project.id}`} className="hover:text-brand-700">
+          <Link href={`/projects/${project.id}`} className="hover:text-blue-700">
             {project.name}
           </Link>
         </h3>
@@ -166,7 +174,7 @@ export function ResourceCard({
           )}
         </div>
         <h3 className="mt-2 text-[14px] font-semibold leading-snug text-navy-950">
-          <Link href={target} className="hover:text-brand-700">
+          <Link href={target} className="hover:text-blue-700">
             {resource.title}
           </Link>
         </h3>
@@ -207,7 +215,7 @@ export function PersonCard({
       <Avatar name={person.displayName} size={44} src={person.avatarFileId ? `/api/files/${person.avatarFileId}` : null} />
       <div className="min-w-0 flex-1">
         <h3 className="text-[14px] font-semibold text-navy-950">
-          <Link href={`/u/${person.username}`} className="hover:text-brand-700">
+          <Link href={`/u/${person.username}`} className="hover:text-blue-700">
             {person.displayName}
           </Link>
         </h3>
@@ -275,7 +283,7 @@ export function MilestoneRow({
           milestone.status === "completed"
             ? "border-emerald-500 bg-emerald-500 text-on-teal"
             : milestone.status === "in_progress"
-              ? "border-brand-500 bg-surface text-brand-600"
+              ? "border-blue-400 bg-surface text-blue-600"
               : "border-navy-300 bg-surface",
         )}
         aria-hidden="true"
@@ -349,7 +357,7 @@ export function MiniBarChart({ data, label }: { data: { day: string; count: numb
         {data.map((item) => (
           <div key={item.day} className="group relative flex-1" title={`${item.day}: ${item.count}`}>
             <div
-              className="w-full rounded-t bg-brand-500/80 transition group-hover:bg-brand-600"
+              className="w-full rounded-t bg-blue-500/80 transition group-hover:bg-blue-600"
               style={{ height: `${Math.max(4, (item.count / max) * 96)}px` }}
             />
           </div>

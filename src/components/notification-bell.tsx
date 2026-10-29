@@ -16,7 +16,7 @@ export function NotificationBell({ unread, className }: { unread: number; classN
       href="/notifications"
       aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
       className={cn(
-        "relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-700",
+        "relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-blue-600 transition-colors hover:bg-glass-blue hover:text-blue-700",
         className,
       )}
     >
@@ -24,7 +24,7 @@ export function NotificationBell({ unread, className }: { unread: number; classN
       {unread > 0 ? (
         <span
           aria-hidden="true"
-          className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-coral-500 px-1 text-[9px] font-bold leading-none text-on-coral ring-2 ring-page-warm"
+          className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-on-rose ring-2 ring-page-warm"
         >
           {unread > 99 ? "99+" : unread > 9 ? "9+" : unread}
         </span>

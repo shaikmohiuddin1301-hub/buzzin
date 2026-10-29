@@ -237,7 +237,7 @@ export default async function WorkspacePage({
                     {entry.body ? <p className="mt-1 whitespace-pre-line text-[12.5px] leading-6 text-navy-700">{entry.body}</p> : null}
 
                     {entry.linkUrl ? (
-                      <a href={entry.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 inline-block text-[11.5px] font-medium text-brand-600 underline">
+                      <a href={entry.linkUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 inline-block text-[11.5px] font-medium text-blue-600 underline">
                         {entry.linkUrl}
                       </a>
                     ) : null}
@@ -363,7 +363,7 @@ export default async function WorkspacePage({
               <ul className="mt-3 space-y-1 border-t border-navy-200 pt-2">
                 {journeys.map((journey) => (
                   <li key={journey.id} className="flex items-center justify-between gap-2">
-                    <Link href={`/learn/journeys/${journey.id}`} className="truncate text-[11.5px] font-medium text-brand-600 hover:underline">
+                    <Link href={`/learn/journeys/${journey.id}`} className="truncate text-[11.5px] font-medium text-blue-600 hover:underline">
                       {journey.title}
                     </Link>
                     <StatusBadge status={journey.status} />

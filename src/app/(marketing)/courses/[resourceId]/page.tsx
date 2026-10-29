@@ -114,7 +114,7 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
                     href={course.previewVideoUrl!}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
-                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-600 underline"
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-blue-600 underline"
                   >
                     <ExternalLink size={13} aria-hidden="true" />
                     Open {providerLabel(externalProvider(course.previewVideoUrl))} preview
@@ -164,7 +164,7 @@ export default async function PublicCoursePage({ params }: { params: Promise<{ r
               <ol className="divide-y divide-navy-200">
                 {curriculum.map((module, moduleIndex) => (
                   <li key={module.id} className="px-5 py-4">
-                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-600">Module {moduleIndex + 1}</p>
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy-600">Module {moduleIndex + 1}</p>
                     <h3 className="mt-0.5 text-[13px] font-semibold text-navy-950">{module.title}</h3>
                     {module.description ? <p className="mt-1 text-[11.5px] leading-5 text-navy-500">{module.description}</p> : null}
                     <ul className="mt-2 space-y-1.5">

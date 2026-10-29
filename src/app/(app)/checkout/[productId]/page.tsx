@@ -77,7 +77,7 @@ export default async function CheckoutPage({
                 {
                   term: "Linked resource",
                   value: resource ? (
-                    <Link href={`/learn/${resource.id}`} className="text-brand-600 underline">
+                    <Link href={`/learn/${resource.id}`} className="text-blue-600 underline">
                       {resource.title}
                     </Link>
                   ) : (
@@ -113,7 +113,7 @@ export default async function CheckoutPage({
                   {resource ? (
                     <>
                       You can open{" "}
-                      <Link href={`/learn/${resource.id}`} className="text-brand-600 underline">
+                      <Link href={`/learn/${resource.id}`} className="text-blue-600 underline">
                         {resource.title}
                       </Link>{" "}
                       in full. Entitlement is checked on the server for every request.

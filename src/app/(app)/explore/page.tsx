@@ -354,7 +354,7 @@ export default async function ExplorePage({
                 <summary className="flex cursor-pointer list-none items-center justify-between text-[12px] font-medium text-navy-700 [&::-webkit-details-marker]:hidden">
                   More filters
                   {[stage, workMode, compensation, skill].filter(Boolean).length + (sort !== "recent" ? 1 : 0) > 0 ? (
-                    <span className="rounded-full bg-brand-100 px-1.5 text-[10px] font-semibold text-brand-800">
+                    <span className="rounded-full bg-blue-100 px-1.5 text-[10px] font-semibold text-blue-800">
                       {[stage, workMode, compensation, skill].filter(Boolean).length + (sort !== "recent" ? 1 : 0)}
                     </span>
                   ) : null}
@@ -417,7 +417,7 @@ export default async function ExplorePage({
               </p>
               <div className="flex gap-2">
                 <Badge tone="neutral">{q ? `“${q}”` : "All categories"}</Badge>
-                {skill ? <Badge tone="brand">skill: {skill}</Badge> : null}
+                {skill ? <Badge tone="blue">skill: {skill}</Badge> : null}
               </div>
             </div>
 
@@ -467,7 +467,7 @@ export default async function ExplorePage({
                     <h3 className="text-[13.5px] font-semibold text-navy-950">{item.name}</h3>
                     <p className="text-[11px] text-navy-500">{item.category ?? "General"} · {item.people} people · {item.projects} projects</p>
                   </div>
-                  <Link href={`/explore?tab=projects&skill=${item.slug}`} className="text-[11px] font-medium text-brand-600 hover:underline">
+                  <Link href={`/explore?tab=projects&skill=${item.slug}`} className="text-[11px] font-medium text-blue-600 hover:underline">
                     Projects →
                   </Link>
                 </div>

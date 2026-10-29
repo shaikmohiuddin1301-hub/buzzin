@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 const FIELD =
-  "h-10 w-full rounded-full border border-navy-200/80 bg-surface/80 pl-9 pr-3 text-[13px] text-navy-900 shadow-card placeholder:text-navy-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
+  "h-10 w-full rounded-full border border-navy-200/80 bg-surface/80 pl-9 pr-3 text-[13px] text-navy-900 shadow-card placeholder:text-navy-400 focus:border-blue-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-blue-500/30";
 
 /**
  * Explore search, living in the Explore header.

@@ -64,7 +64,7 @@ export default async function LessonPage({
       <Flash error={error} notice={notice} />
 
       <header className="mb-5">
-        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand-600">
+        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-navy-600">
           <GraduationCap size={13} aria-hidden="true" />
           Module · {module.title}
           {courseProgress ? (
@@ -143,7 +143,7 @@ export default async function LessonPage({
                 href={lesson.videoUrl}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-brand-600 underline"
+                className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-blue-600 underline"
               >
                 <ExternalLink size={13} aria-hidden="true" />
                 Open {providerLabel(externalProvider(lesson.videoUrl))} video{externalHost(lesson.videoUrl) ? ` on ${externalHost(lesson.videoUrl)}` : ""}
@@ -198,9 +198,9 @@ export default async function LessonPage({
                 href={lesson.externalUrl}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="mt-2 block rounded-lg border border-navy-200 bg-navy-50/40 p-3 transition hover:border-brand-200 hover:bg-brand-50/40"
+                className="mt-2 block rounded-lg border border-navy-200 bg-navy-50/40 p-3 transition hover:border-blue-200 hover:bg-glass-blue"
               >
-                <span className="flex items-center gap-2 text-[12.5px] font-medium text-brand-600">
+                <span className="flex items-center gap-2 text-[12.5px] font-medium text-blue-600">
                   <ExternalLink size={13} aria-hidden="true" />
                   {lesson.externalLabel || externalHost(lesson.externalUrl) || "Open resource"}
                 </span>

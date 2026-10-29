@@ -290,11 +290,11 @@ export default async function TaskPage({
                         .map((file) => (
                           <li key={file.id} className="text-[12px]">
                             {file.url ? (
-                              <a href={file.url} target="_blank" rel="noopener noreferrer nofollow" className="text-brand-600 underline">
+                              <a href={file.url} target="_blank" rel="noopener noreferrer nofollow" className="text-blue-600 underline">
                                 {file.title}
                               </a>
                             ) : (
-                              <Link href={file.fileId ? `/api/files/${file.fileId}` : "#"} className="text-brand-600 underline">
+                              <Link href={file.fileId ? `/api/files/${file.fileId}` : "#"} className="text-blue-600 underline">
                                 {file.title}
                               </Link>
                             )}
@@ -363,7 +363,7 @@ export default async function TaskPage({
                     key={file.id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-navy-50/60 px-2.5 py-1.5 text-[12px]"
                   >
-                    <a href={`/api/files/${file.id}`} className="font-medium text-brand-600 underline">
+                    <a href={`/api/files/${file.id}`} className="font-medium text-blue-600 underline">
                       {file.filename}
                     </a>
                     <span className="text-[10.5px] text-navy-500">

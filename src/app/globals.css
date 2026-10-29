@@ -8,9 +8,11 @@
  * `navy` is the graphite/silver neutral ramp. In dark mode it is inverted (50 becomes
  * the quietest surface, 950 the strongest text) so every `text-navy-*` / `bg-navy-*` /
  * `border-navy-*` class keeps its meaning without a parallel set of classes.
- * `brand` is graphite (there is no blue or purple in the system), `coral` the warm
- * creative accent, and the state ramps are re-tinted rather than inverted so success
- * stays emerald and danger stays red.
+ * `brand` is graphite (the action and structural anchor). `blue` is the interactive
+ * accent — links, selected navigation, focus and discovery. `coral` is creation and
+ * liking, `rose` social engagement, `gold` featured work and achievements, and the
+ * state ramps are re-tinted rather than inverted so success stays emerald and danger
+ * stays red. Blue complements the grey foundation; it does not replace it.
  */
 :root {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -39,6 +41,19 @@
   --brand-700: 34 34 38; /* #222226 hover */
   --brand-800: 34 34 38;
   --brand-900: 26 26 30;
+
+  /* Electric blue: interactive links, selected navigation, search focus, discovery
+     elements and selected filters. Deep blue is the pressed/selected fill. */
+  --blue-50: 235 243 254; /* #EBF3FE soft blue wash */
+  --blue-100: 219 233 253;
+  --blue-200: 190 215 251;
+  --blue-300: 150 190 248; /* #96BEF8 non-text accent on pale surfaces */
+  --blue-400: 96 156 247;
+  --blue-500: 67 136 245; /* #4388F5 electric blue */
+  --blue-600: 40 100 199; /* #2864C7 deep blue */
+  --blue-700: 32 84 168; /* #2054A8 link text on a soft blue wash */
+  --blue-800: 26 68 136;
+  --blue-900: 21 55 110;
 
   /* Coral: warmth and creative action. */
   --coral-50: 255 236 231;
@@ -76,6 +91,31 @@
   --amber-800: 74 54 13;
   --amber-900: 56 41 10;
 
+  /* Rose: social engagement, community highlights and celebration. */
+  --rose-50: 253 238 242; /* #FDEFF2 */
+  --rose-100: 251 224 231;
+  --rose-200: 248 199 212;
+  --rose-300: 238 160 180;
+  --rose-400: 231 118 146;
+  --rose-500: 217 87 122; /* #D9577A */
+  --rose-600: 190 64 99; /* #BE4063 icon stroke and text */
+  --rose-700: 158 46 78; /* #9E2E4E text on a pale rose wash */
+  --rose-800: 130 36 62;
+  --rose-900: 106 28 51;
+
+  /* Warm gold: featured opportunities, achievements, discovery highlights and review
+     states. #E5B957 is the anchor. */
+  --gold-50: 250 243 227; /* #FAF3E3 */
+  --gold-100: 248 235 205;
+  --gold-200: 243 220 168;
+  --gold-300: 236 206 128;
+  --gold-400: 234 195 105;
+  --gold-500: 229 185 87; /* #E5B957 */
+  --gold-600: 201 158 63; /* #C99E3F */
+  --gold-700: 138 100 29; /* #8A641D icon stroke and text */
+  --gold-800: 92 67 16; /* #5C4310 text on a pale gold wash */
+  --gold-900: 66 48 11;
+
   /* Destructive red. */
   --red-50: 251 233 236; /* #FBE9EC */
   --red-100: 249 214 218;
@@ -88,17 +128,17 @@
   --red-800: 140 37 49;
   --red-900: 112 28 38;
 
-  /* Informational content uses the neutral ramp: there is no blue in the system. */
-  --info-50: 238 238 240;
-  --info-100: 231 231 235;
-  --info-200: 184 184 193;
-  --info-300: 154 154 164;
-  --info-400: 119 119 128;
-  --info-500: 86 86 95;
-  --info-600: 52 52 58;
-  --info-700: 52 52 58;
-  --info-800: 34 34 38;
-  --info-900: 26 26 30;
+  /* Informational content is the blue discovery accent, not a separate hue family. */
+  --info-50: 235 243 254;
+  --info-100: 219 233 253;
+  --info-200: 190 215 251;
+  --info-300: 150 190 248;
+  --info-400: 96 156 247;
+  --info-500: 67 136 245;
+  --info-600: 40 100 199;
+  --info-700: 32 84 168;
+  --info-800: 26 68 136;
+  --info-900: 21 55 110;
 
   --surface: 255 255 255;
   --surface-muted: 245 245 243; /* #F5F5F3 warm page */
@@ -119,7 +159,16 @@
   --glass-fallback: #ffffff;
   --border-solid: #e7e7eb;
 
+  /* Translucent colour washes. The blue glass is the specified interactive tint; the
+     rose and gold variants carry social and featured/highlight surfaces. */
+  --glass-blue: rgba(67, 136, 245, 0.12);
+  --glass-blue-strong: rgba(67, 136, 245, 0.2);
+  --glass-rose: rgba(217, 87, 122, 0.12);
+  --glass-gold: rgba(229, 185, 87, 0.16);
+
   --on-brand: 255 255 255;
+  --on-blue: 255 255 255;
+  --on-rose: 255 255 255;
   --on-coral: 34 34 38; /* #222226 */
   --on-teal: 255 255 255;
   --on-danger: 255 255 255;
@@ -136,14 +185,15 @@
   --status-blocked: 251 233 236; /* pale red */
   --status-blocked-text: 163 38 56;
 
-  --ring: 52 52 58; /* graphite focus ring */
-  --selection: 184 184 193;
+  --ring: 67 136 245; /* electric-blue focus ring */
+  --selection: 190 215 251; /* pale blue text selection */
   --shimmer: 255 255 255;
 
   --shadow-card: 0 8px 32px rgb(34 34 38 / 0.08);
   --shadow-raised: 0 18px 48px -28px rgb(34 34 38 / 0.34), 0 2px 8px -4px rgb(34 34 38 / 0.08);
   --shadow-float: 0 18px 44px -18px rgb(34 34 38 / 0.3), 0 2px 10px -6px rgb(34 34 38 / 0.16);
   --shadow-glow: 0 12px 32px -14px rgb(255 120 90 / 0.45);
+  --shadow-glow-blue: 0 12px 32px -18px rgb(67 136 245 / 0.4);
 
   --ease-out: cubic-bezier(0.22, 0.7, 0.24, 1);
   /* The swipe pair: a decisive start that settles without overshoot, so the two
@@ -176,6 +226,19 @@
   --brand-700: 245 245 243;
   --brand-800: 255 255 255;
   --brand-900: 255 255 255;
+
+  /* Blue is lifted in dark mode so it stays legible on charcoal, and the filled
+     selected state keeps a dark label. */
+  --blue-50: 30 42 62;
+  --blue-100: 34 51 78;
+  --blue-200: 43 68 105;
+  --blue-300: 110 160 240;
+  --blue-400: 140 180 248;
+  --blue-500: 91 158 250; /* #5B9EFA */
+  --blue-600: 156 192 250; /* #9CC0FA */
+  --blue-700: 186 213 252; /* #BAD5FC */
+  --blue-800: 217 232 254;
+  --blue-900: 236 244 255;
 
   --coral-50: 58 40 35;
   --coral-100: 70 46 40;
@@ -221,16 +284,38 @@
   --red-800: 250 208 212;
   --red-900: 252 231 234;
 
-  --info-50: 58 58 66;
-  --info-100: 65 65 73;
-  --info-200: 90 90 100;
-  --info-300: 120 120 130;
-  --info-400: 184 184 193;
-  --info-500: 231 231 235;
-  --info-600: 245 245 243;
-  --info-700: 245 245 243;
-  --info-800: 255 255 255;
-  --info-900: 255 255 255;
+  --rose-50: 58 34 43;
+  --rose-100: 70 39 50;
+  --rose-200: 92 47 62;
+  --rose-300: 150 72 96;
+  --rose-400: 240 140 167;
+  --rose-500: 240 140 167; /* #F08CA7 */
+  --rose-600: 246 170 191; /* #F6AABF */
+  --rose-700: 250 196 211;
+  --rose-800: 252 220 229;
+  --rose-900: 254 240 244;
+
+  --gold-50: 58 50 33;
+  --gold-100: 68 58 37;
+  --gold-200: 90 75 45;
+  --gold-300: 160 130 74;
+  --gold-400: 229 185 87; /* #E5B957 */
+  --gold-500: 229 185 87; /* #E5B957 */
+  --gold-600: 240 205 126;
+  --gold-700: 246 220 160;
+  --gold-800: 250 234 196;
+  --gold-900: 253 245 220;
+
+  --info-50: 30 42 62;
+  --info-100: 34 51 78;
+  --info-200: 43 68 105;
+  --info-300: 110 160 240;
+  --info-400: 140 180 248;
+  --info-500: 91 158 250;
+  --info-600: 156 192 250;
+  --info-700: 186 213 252;
+  --info-800: 217 232 254;
+  --info-900: 236 244 255;
 
   --surface: 52 52 58; /* #34343A elevated card */
   --surface-muted: 34 34 38; /* #222226 page */
@@ -248,7 +333,14 @@
   --glass-fallback: #34343a;
   --border-solid: #484850;
 
+  --glass-blue: rgba(67, 136, 245, 0.18);
+  --glass-blue-strong: rgba(67, 136, 245, 0.28);
+  --glass-rose: rgba(217, 87, 122, 0.18);
+  --glass-gold: rgba(229, 185, 87, 0.16);
+
   --on-brand: 34 34 38; /* #222226 on the light graphite action */
+  --on-blue: 34 34 38; /* #222226 on the lifted blue fill */
+  --on-rose: 34 34 38; /* #222226 on the lifted rose fill */
   --on-coral: 34 34 38;
   --on-teal: 34 34 38;
   --on-danger: 34 34 38;
@@ -265,14 +357,15 @@
   --status-blocked: 62 36 42;
   --status-blocked-text: 240 158 168;
 
-  --ring: 184 184 193; /* visible silver focus */
-  --selection: 72 72 80;
+  --ring: 140 180 248; /* visible blue focus ring */
+  --selection: 43 68 105;
   --shimmer: 184 184 193;
 
   --shadow-card: 0 8px 32px rgb(0 0 0 / 0.45);
   --shadow-raised: 0 24px 56px -32px rgb(0 0 0 / 0.85), 0 2px 10px -6px rgb(0 0 0 / 0.6);
   --shadow-float: 0 22px 50px -20px rgb(0 0 0 / 0.75), 0 2px 12px -6px rgb(0 0 0 / 0.7);
   --shadow-glow: 0 14px 38px -16px rgb(255 120 90 / 0.4);
+  --shadow-glow-blue: 0 14px 38px -20px rgb(67 136 245 / 0.5);
 
   color-scheme: dark;
 }
@@ -408,7 +501,7 @@
     @apply mb-4 list-decimal space-y-1 pl-5;
   }
   .prose-bt a {
-    @apply text-brand-600 underline underline-offset-2 hover:text-brand-800;
+    @apply text-blue-600 underline underline-offset-2 hover:text-blue-800;
   }
   .prose-bt blockquote {
     @apply my-4 border-l-2 border-brand-300 pl-4 italic text-navy-600;
@@ -426,8 +519,10 @@
     background-image: linear-gradient(to right, transparent, rgb(var(--shimmer) / 0.35), transparent);
   }
 
+  /* Focus is the blue interactive accent: border, ring and a soft blue wash, so a
+     search field reads as active without turning the whole panel blue. */
   .field-input {
-    @apply w-full rounded-xl border border-navy-200 bg-surface px-3.5 py-2.5 text-sm text-navy-900 shadow-sm transition placeholder:text-navy-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:border-navy-200 disabled:bg-navy-100 disabled:text-navy-500;
+    @apply w-full rounded-xl border border-navy-200 bg-surface px-3.5 py-2.5 text-sm text-navy-900 shadow-sm transition placeholder:text-navy-400 focus:border-blue-500 focus:bg-[color:var(--glass-blue)] focus:outline-none focus:ring-2 focus:ring-blue-500/35 disabled:cursor-not-allowed disabled:border-navy-200 disabled:bg-navy-100 disabled:text-navy-500;
   }
 
   /*
@@ -452,14 +547,18 @@
     border: 1px solid var(--glass-border);
     -webkit-backdrop-filter: blur(14px) saturate(1.1);
     backdrop-filter: blur(14px) saturate(1.1);
-  }
-
-  /* The warm page is the default; discovery, learning and creator surfaces use grey. */
+  }  /*
+   * The warm grey page is the default; discovery, learning and creator surfaces use the
+   * cooler grey. Ambient light is restrained: a grey wash, one low-alpha blue light from
+   * the top corner and a trace of coral. The page stays grey glass; the colour is only
+   * in the lighting, never in the base surface.
+   */
   .page-surface {
     background-color: rgb(var(--page-warm));
     background-image:
       radial-gradient(1200px 640px at 10% -12%, rgb(216 216 222 / 0.55), transparent 62%),
-      radial-gradient(900px 560px at 96% -6%, rgb(255 120 90 / 0.06), transparent 60%),
+      radial-gradient(900px 560px at 92% -8%, rgb(67 136 245 / 0.07), transparent 62%),
+      radial-gradient(900px 560px at 96% -6%, rgb(255 120 90 / 0.05), transparent 60%),
       radial-gradient(760px 520px at 50% 112%, rgb(238 238 240 / 0.7), transparent 64%);
     background-repeat: no-repeat;
   }
@@ -467,16 +566,18 @@
     background-color: rgb(var(--page-secondary));
     background-image:
       radial-gradient(1100px 620px at 6% -10%, rgb(238 238 240 / 0.9), transparent 62%),
+      radial-gradient(900px 560px at 90% 0%, rgb(67 136 245 / 0.1), transparent 62%),
       radial-gradient(900px 520px at 92% 2%, rgb(216 216 222 / 0.55), transparent 60%),
-      radial-gradient(720px 480px at 48% 112%, rgb(255 120 90 / 0.05), transparent 65%);
+      radial-gradient(720px 480px at 48% 112%, rgb(255 120 90 / 0.04), transparent 65%);
     background-repeat: no-repeat;
   }
   .dark .page-surface,
   .dark .page-surface-secondary {
     background-image:
       radial-gradient(1100px 620px at 12% -10%, rgb(184 184 193 / 0.1), transparent 62%),
-      radial-gradient(860px 520px at 92% 0%, rgb(184 184 193 / 0.06), transparent 60%),
-      radial-gradient(640px 460px at 50% 112%, rgb(255 120 90 / 0.045), transparent 66%);
+      radial-gradient(860px 520px at 92% 0%, rgb(67 136 245 / 0.1), transparent 62%),
+      radial-gradient(640px 460px at 50% 112%, rgb(255 120 90 / 0.04), transparent 66%);
+
   }
 
   /* An open conversation keeps the quieter grey reading surface inside its card. */

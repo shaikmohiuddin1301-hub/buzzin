@@ -511,14 +511,14 @@ export function ProjectWizard({
                   className={cn(
                     "flex w-full items-start gap-2.5 rounded-xl border p-3 text-left transition",
                     active
-                      ? "border-brand-500 bg-brand-50 text-navy-900 shadow-sm"
+                      ? "border-blue-400 bg-glass-blue text-navy-900 shadow-sm"
                       : "border-navy-200 bg-surface text-navy-600 hover:border-navy-300",
                   )}
                 >
                   <span
                     className={cn(
                       "mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                      active ? "bg-brand-600 text-on-brand" : done ? "bg-brand-100 text-brand-600" : "bg-navy-100 text-navy-600",
+                      active ? "bg-blue-600 text-on-blue" : done ? "bg-emerald-50 text-emerald-700" : "bg-navy-100 text-navy-600",
                     )}
                     aria-hidden="true"
                   >
@@ -583,7 +583,7 @@ export function ProjectWizard({
           <div className="mb-1">
             <Alert tone="info" title="Unfinished project restored">
               Everything you typed before the last save attempt is still here.{" "}
-              <button type="button" onClick={startOver} className="font-medium text-brand-600 underline">
+              <button type="button" onClick={startOver} className="font-medium text-blue-600 underline">
                 Start over
               </button>
             </Alert>
@@ -1127,7 +1127,7 @@ export function ProjectWizard({
             </p>
 
             <div className="mt-4 overflow-hidden rounded-xl border border-navy-200">
-              <div className="h-32 w-full bg-gradient-to-br from-navy-100 to-brand-50">
+              <div className="h-32 w-full bg-gradient-to-br from-navy-100 to-blue-50">
                 {coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={coverUrl} alt="" className="h-full w-full object-cover" />
@@ -1278,7 +1278,7 @@ export function ProjectWizard({
                         <button
                           type="button"
                           onClick={() => goToStep(blocker.step)}
-                          className="text-[11.5px] font-medium text-brand-600 underline"
+                          className="text-[11.5px] font-medium text-blue-600 underline"
                         >
                           Go to {stepLabel(blocker.step)}
                         </button>
@@ -1349,7 +1349,7 @@ export function ProjectWizard({
             <p className="mt-2 text-[11.5px] leading-5 text-navy-500">
               {blockers.length} thing{blockers.length === 1 ? "" : "s"} still needed before publishing. "Save as draft" works at any
               point and keeps everything you have entered.{" "}
-              <button type="button" onClick={() => goToStep(LAST_STEP)} className="font-medium text-brand-600 underline">
+              <button type="button" onClick={() => goToStep(LAST_STEP)} className="font-medium text-blue-600 underline">
                 See what is missing
               </button>
             </p>
@@ -1390,7 +1390,7 @@ function TaskEditor({
   const required = draft.title.trim().length >= 4;
 
   return (
-    <div className="mt-3 rounded-xl border border-brand-300 bg-brand-50/40 p-4">
+    <div className="mt-3 rounded-xl border border-blue-300 bg-glass-blue p-4">
       <h3 className="text-[13px] font-semibold text-navy-950">{others.some((entry) => entry.key === task.key) ? "Edit task" : "New task"}</h3>
       <div className="mt-3 space-y-3">
         <Field label="Task title" htmlFor="task-title" required>

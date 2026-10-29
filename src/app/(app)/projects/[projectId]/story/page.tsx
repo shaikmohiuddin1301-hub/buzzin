@@ -291,7 +291,7 @@ export default async function ProjectStoryPage({
                       href={`/projects/${projectId}/story?board=${row.id}`}
                       className={cn(
                         "flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-[11.5px]",
-                        row.id === board?.board.id ? "bg-brand-50 font-medium text-brand-800" : "text-navy-700 hover:bg-navy-50",
+                        row.id === board?.board.id ? "bg-glass-blue font-medium text-blue-700" : "text-navy-700 hover:bg-navy-50",
                       )}
                     >
                       <span className="truncate">{row.title}</span>

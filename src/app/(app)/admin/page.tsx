@@ -47,7 +47,7 @@ export default async function AdminOverviewPage() {
         <Card>
           <div className="flex items-center justify-between border-b border-navy-200 px-5 py-3.5">
             <h2 className="text-[13px] font-semibold text-navy-900">Recent administrative activity</h2>
-            <Link href="/admin/audit" className="text-[11px] text-brand-600 underline">
+            <Link href="/admin/audit" className="text-[11px] text-blue-600 underline">
               Full log
             </Link>
           </div>

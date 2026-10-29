@@ -192,7 +192,7 @@ export default async function NotificationsPage({
                                 {item.href ? (
                                   <Link
                                     href={`/api/notifications/${item.id}/open`}
-                                    className="text-[13px] font-medium text-navy-900 hover:text-brand-700 hover:underline"
+                                    className="text-[13px] font-medium text-navy-900 hover:text-blue-700 hover:underline"
                                     aria-label={`Open: ${item.title}${unreadItem ? " (unread)" : ""}`}
                                   >
                                     {item.title}
@@ -203,7 +203,7 @@ export default async function NotificationsPage({
                                 <Badge tone={TONES[item.kind] ?? "neutral"}>{label(item.kind)}</Badge>
                                 {unreadItem ? (
                                   <>
-                                    <span className="h-1.5 w-1.5 rounded-full bg-coral-500" aria-hidden="true" />
+                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true" />
                                     <span className="sr-only">Unread</span>
                                   </>
                                 ) : null}
@@ -216,7 +216,7 @@ export default async function NotificationsPage({
                                 {item.href ? (
                                   <Link
                                     href={`/api/notifications/${item.id}/open`}
-                                    className="font-medium text-brand-600 hover:underline"
+                                    className="font-medium text-blue-600 hover:underline"
                                   >
                                     Open
                                   </Link>

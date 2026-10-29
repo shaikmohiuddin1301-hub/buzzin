@@ -7,8 +7,9 @@ import type { Config } from "tailwindcss";
  * class names work in light and dark mode. The `navy` ramp carries the graphite/silver
  * neutral scale (50 = quietest surface, 950 = strongest text); in dark mode the ramp is
  * inverted, which keeps `text-navy-900`, `border-navy-200` and `bg-navy-50` semantically
- * correct everywhere without a second set of classes. `brand` is graphite, not blue: the
- * system contains no blue, navy, indigo, violet or purple.
+ * correct everywhere without a second set of classes. `brand` is graphite and remains the
+ * action/structural anchor; `blue` is the interactive accent (links, selected navigation,
+ * focus, discovery), `rose` social engagement, `gold` featured work and achievements.
  */
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 
@@ -24,7 +25,10 @@ const config: Config = {
       colors: {
         navy: ramp("navy", [...SHADES, 950]),
         brand: ramp("brand"),
+        blue: ramp("blue"),
         coral: ramp("coral"),
+        rose: ramp("rose"),
+        gold: ramp("gold"),
         // State colours are re-tinted rather than inverted, so success stays green-ish
         // and danger stays red-ish in both themes.
         emerald: ramp("emerald"),
@@ -40,9 +44,18 @@ const config: Config = {
           warm: "rgb(var(--page-warm) / <alpha-value>)",
           secondary: "rgb(var(--page-secondary) / <alpha-value>)",
         },
+        // Translucent colour washes (exact rgba values live in globals.css).
+        glass: {
+          blue: "var(--glass-blue)",
+          "blue-strong": "var(--glass-blue-strong)",
+          rose: "var(--glass-rose)",
+          gold: "var(--glass-gold)",
+        },
         // Text/icon colour that sits on a filled semantic action.
         on: {
           brand: "rgb(var(--on-brand) / <alpha-value>)",
+          blue: "rgb(var(--on-blue) / <alpha-value>)",
+          rose: "rgb(var(--on-rose) / <alpha-value>)",
           coral: "rgb(var(--on-coral) / <alpha-value>)",
           teal: "rgb(var(--on-teal) / <alpha-value>)",
           danger: "rgb(var(--on-danger) / <alpha-value>)",
@@ -86,6 +99,7 @@ const config: Config = {
         raised: "var(--shadow-raised)",
         float: "var(--shadow-float)",
         glow: "var(--shadow-glow)",
+        "glow-blue": "var(--shadow-glow-blue)",
       },
       transitionTimingFunction: {
         out: "cubic-bezier(0.22, 0.7, 0.24, 1)",

@@ -45,7 +45,7 @@ export default async function ForgotPasswordPage({
 
       <p className="mt-6 text-sm text-navy-600">
         Remembered it?{" "}
-        <Link href="/auth/sign-in" className="font-medium text-brand-600 hover:underline">
+        <Link href="/auth/sign-in" className="font-medium text-blue-600 hover:underline">
           Back to sign in
         </Link>
       </p>

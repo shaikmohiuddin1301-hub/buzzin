@@ -41,15 +41,15 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
             </h2>
             <ul className="mt-8 space-y-4 text-[13px] leading-6 text-white/70">
               <li className="flex gap-3">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" aria-hidden="true" />
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" aria-hidden="true" />
                 Express interest in work you actually want to do — not another job board.
               </li>
               <li className="flex gap-3">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" aria-hidden="true" />
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" aria-hidden="true" />
                 Your contribution record is built from accepted, documented work.
               </li>
               <li className="flex gap-3">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" aria-hidden="true" />
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" aria-hidden="true" />
                 Turn a completed project into a learning journey with proper attribution.
               </li>
             </ul>

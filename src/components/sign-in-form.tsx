@@ -21,7 +21,7 @@ export function SignInForm({ next = "/home" }: { next?: string }) {
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </Field>
       <div className="flex items-center justify-between">
-        <Link href="/auth/forgot-password" className="text-[13px] font-medium text-brand-600 hover:underline">
+        <Link href="/auth/forgot-password" className="text-[13px] font-medium text-blue-600 hover:underline">
           Forgot your password?
         </Link>
       </div>

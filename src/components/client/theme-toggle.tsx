@@ -67,14 +67,14 @@ export function ThemeToggle({ className }: { className?: string }) {
             className={cn(
               "flex items-start gap-3 rounded-xl border p-3 text-left transition",
               active
-                ? "border-brand-500 bg-brand-50 text-navy-900 shadow-sm"
+                ? "border-blue-400 bg-glass-blue text-navy-900 shadow-sm"
                 : "border-navy-200 bg-surface text-navy-700 hover:border-navy-300 hover:bg-navy-50",
             )}
           >
             <span
               className={cn(
                 "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
-                active ? "bg-brand-600 text-on-brand" : "bg-navy-100 text-navy-600",
+                active ? "bg-blue-600 text-on-blue" : "bg-navy-100 text-navy-600",
               )}
               aria-hidden="true"
             >

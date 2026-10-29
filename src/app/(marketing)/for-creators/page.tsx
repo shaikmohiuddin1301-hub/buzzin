@@ -14,11 +14,11 @@ export default function ForCreatorsPage() {
         secondary={{ href: "/learn", label: "See the learning centre" }}
         aside={
           <Card className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-600">What you can publish</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-navy-600">What you can publish</p>
             <ul className="mt-3 space-y-2 text-[13px] text-navy-700">
               {["Free articles and practical guides", "Animated project stories", "Learning journeys from a task", "Courses with modules and exercises", "Workshops and resource packs", "Premium material with a free preview"].map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
+                  <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
                   {item}
                 </li>
               ))}
