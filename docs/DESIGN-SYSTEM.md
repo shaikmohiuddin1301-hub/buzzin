@@ -159,6 +159,15 @@ the requested steel grey; it is never the only cue for a destination.
   the paired 300ms in/out animations share `cubic-bezier(0.22, 1, 0.36, 1)`; the old page is
   held until the incoming one is ready, so there is no blank frame. Prefetching both neighbours
   keeps the incoming page ready, so the transition is not left waiting on data.
+- The transition is between the two real rendered pages, and they stay attached. The incoming
+  snapshot starts at `calc(100% + var(--swipe-shift))` (mirrored for a right swipe), exactly one
+  snapshot-width from where the outgoing page was released, so both pages travel the same
+  distance on the same timeline and remain edge to edge for the whole 300ms — the gap between
+  them never opens and then closes as it plays. `e2e/swipe-navigation.spec.ts` samples the live
+  pseudo-elements and asserts that distance, the shared clock and the real destination content;
+  one page is never on screen without the other until the transition finishes. Before the commit
+  the destination's server-rendered DOM does not exist yet, so the drag reveals the preview edge
+  described above rather than a second live page.
 - One shared bar, page-specific contents (`src/components/top-bar.tsx`). Nothing appears on
   every page just because it exists elsewhere:
 

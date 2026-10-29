@@ -49,7 +49,7 @@ async function safeSurface(page: Page): Promise<{ x: number; y: number }> {
 async function swipe(
   page: Page,
   direction: "left" | "right" | "up" | "down",
-  options: { x?: number; y?: number; distance?: number } = {},
+  options: { x?: number; y?: number; distance?: number; settle?: boolean } = {},
 ) {
   // Wait for hydration to attach the listener; without this a fast swipe after
   // `goto` can be dispatched before the client component exists.
@@ -97,6 +97,14 @@ async function swipe(
   }
   await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await client.detach();
+
+  // Opt-in: wait until the swipe transition has fully released the gesture, so a
+  // test that fires swipes back to back is racing the interaction, not the lock.
+  if (options.settle) {
+    await page.waitForFunction(() => !document.documentElement.dataset.swipeTransition, undefined, {
+      timeout: 20_000,
+    });
+  }
 }
 
 async function activeTab(page: Page) {
@@ -353,6 +361,9 @@ test("swiping back to Home restores its scroll position", async ({ page }) => {
 });
 
 test("tablet touch gestures work with the same routes", async ({ page }) => {
+  // The first visit compiles the route in dev; give the cold start room so a
+  // slow machine cannot turn a hydration wait into a false failure.
+  test.slow();
   await page.setViewportSize({ width: 834, height: 1112 });
   await page.goto("/explore");
   await swipe(page, "left", { distance: 420 });
@@ -487,32 +498,180 @@ test("the page follows the finger while dragging", async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.dataset.swiping)).toBeUndefined();
 });
 
-test("the outgoing and incoming pages share one 300ms eased transition", async ({ page }) => {
+/**
+ * Hold a swipe at a committed distance, so a sampler can be installed before the
+ * finger is lifted and the transition can be watched from outside the page.
+ */
+async function holdSwipe(page: Page, dx: number) {
+  const surface = await safeSurface(page);
+  const client = await dragStart(page, surface);
+  for (let step = 1; step <= 6; step += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: surface.x + (dx * step) / 6, y: surface.y }],
+    });
+    await page.waitForTimeout(15);
+  }
+  return { client, surface };
+}
+
+/**
+ * Sample the live transition from the page. `requestAnimationFrame` stops while
+ * the snapshots are animating, so a plain interval is the reliable clock here.
+ */
+async function startTransitionSampler(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __swipe: { rows: unknown[]; timer: number } };
+    const parseX = (value: string) => {
+      const matrix = value.match(/^matrix(?:3d)?\((.+)\)$/);
+      if (!matrix) return 0;
+      const parts = matrix[1]!.split(",").map((part) => Number(part.trim()));
+      return parts.length === 16 ? parts[12]! : parts[4]!;
+    };
+
+    w.__swipe = { rows: [], timer: 0 };
+    w.__swipe.timer = window.setInterval(() => {
+      const root = document.documentElement;
+      const main = document.getElementById("main");
+      if (!main) return;
+      const pseudo = (name: string) => getComputedStyle(root, name);
+      const animations = root
+        .getAnimations({ subtree: true })
+        .map((animation) => {
+          const effect = animation.effect as KeyframeEffect | null;
+          const pseudoElement =
+            (effect as unknown as { pseudoElement?: string | null } | null)?.pseudoElement ?? null;
+          if (!pseudoElement?.includes("app-content")) return null;
+          const timing = effect?.getTiming();
+          return {
+            pseudo: pseudoElement,
+            name: (animation as unknown as { animationName?: string }).animationName ?? null,
+            state: animation.playState,
+            time: Math.round(Number(animation.currentTime ?? -1)),
+            duration: typeof timing?.duration === "number" ? timing.duration : 0,
+            easing: String(timing?.easing ?? "").replace(/\s+/g, ""),
+          };
+        })
+        .filter((entry) => entry !== null);
+
+      w.__swipe.rows.push({
+        oldX: Math.round(parseX(pseudo("::view-transition-old(app-content)").transform)),
+        newX: Math.round(parseX(pseudo("::view-transition-new(app-content)").transform)),
+        mainWidth: Math.round(main.getBoundingClientRect().width),
+        textLength: main.textContent?.trim().length ?? 0,
+        // The destination's own rendered content, not a preview or placeholder.
+        destination: Boolean(document.querySelector('input[placeholder*="Search people"]')),
+        // The declarations the pseudo-elements carry while they exist.
+        declared: ["::view-transition-old(app-content)", "::view-transition-new(app-content)"].map(
+          (name) => {
+            const style = pseudo(name);
+            return {
+              duration: style.animationDuration,
+              easing: style.animationTimingFunction.replace(/\s+/g, ""),
+            };
+          },
+        ),
+        animations,
+      });
+    }, 25);
+  });
+}
+
+async function readTransitionSamples(page: Page) {
+  return page.evaluate(() => {
+    const w = window as unknown as {
+      __swipe: {
+        rows: {
+          oldX: number;
+          newX: number;
+          mainWidth: number;
+          textLength: number;
+          destination: boolean;
+          declared: { duration: string; easing: string }[];
+          animations: { pseudo: string; name: string | null; state: string; time: number; duration: number; easing: string }[];
+        }[];
+        timer: number;
+      };
+    };
+    window.clearInterval(w.__swipe.timer);
+    return w.__swipe.rows;
+  });
+}
+
+test("the two real pages move together as one continuous transition", async ({ page }) => {
   await page.goto("/home");
-  await swipe(page, "left");
+  await page.getByRole("heading", { name: /Welcome back, Maya/ }).waitFor();
 
-  const read = () =>
-    page.evaluate(() =>
-      ["::view-transition-old(app-content)", "::view-transition-new(app-content)"].map((pseudo) => {
-        const style = getComputedStyle(document.documentElement, pseudo);
-        return {
-          pseudo,
-          duration: style.animationDuration,
-          easing: style.animationTimingFunction.replace(/\s+/g, ""),
-          name: style.animationName,
-        };
-      }),
-    );
+  const { client } = await holdSwipe(page, -150);
+  await startTransitionSampler(page);
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await client.detach();
 
-  await expect
-    .poll(async () => (await read()).map((entry) => entry.name), { timeout: 10_000 })
-    .toEqual(["bt-swipe-out-left", "bt-swipe-in-right"]);
+  await page.waitForURL("**/explore");
+  await page.waitForTimeout(800);
+  const samples = await readTransitionSamples(page);
+  const running = samples.filter((sample) =>
+    sample.animations.some((animation) => animation.pseudo === "::view-transition-old(app-content)"),
+  );
 
-  // Both snapshots move for the same time on the same curve, which is what makes
-  // the release read as one continuous transition rather than two animations.
-  for (const animation of await read()) {
-    expect(animation.duration).toBe("0.3s");
-    expect(animation.easing).toBe("cubic-bezier(0.22,1,0.36,1)");
+  // The real destination page is rendered, not a stand-in.
+  expect(await page.getByPlaceholder(/Search people/).count()).toBe(1);
+  expect(await page.getByRole("heading", { name: /Welcome back, Maya/ }).count()).toBe(0);
+
+  // Several frames of the animation were observed, both pages included.
+  expect(running.length).toBeGreaterThanOrEqual(3);
+  const names = running.flatMap((sample) => sample.animations.map((animation) => animation.name));
+  expect(names).toContain("bt-swipe-out-left");
+  expect(names).toContain("bt-swipe-in-right");
+
+  for (const sample of running) {
+    const oldPage = sample.animations.find((animation) => animation.pseudo === "::view-transition-old(app-content)")!;
+    const newPage = sample.animations.find((animation) => animation.pseudo === "::view-transition-new(app-content)")!;
+
+    // Same duration, same frame: one movement, not two animations.
+    for (const animation of [oldPage, newPage]) expect(animation.duration).toBe(300);
+    expect(Math.abs(oldPage.time - newPage.time)).toBeLessThanOrEqual(2);
+
+    // The two snapshots stay exactly one page width apart: the incoming page is
+    // the outgoing page's neighbour on one strip, so the gap never changes.
+    expect(Math.abs(sample.newX - sample.oldX - sample.mainWidth)).toBeLessThanOrEqual(2);
+
+    // The incoming snapshot is the delivered destination, and the page is never blank.
+    expect(sample.destination).toBe(true);
+    expect(sample.textLength).toBeGreaterThan(20);
+  }
+
+  // The animation actually progresses from the release pose to the destination.
+  const first = running[0]!;
+  const last = running[running.length - 1]!;
+  expect(last.oldX).toBeLessThan(first.oldX);
+  expect(last.newX).toBeLessThan(first.newX);
+
+  // Both pseudo-elements declare the same 300ms curve. (The runtime timing object
+  // reports `linear` because the curve lives inside the browser-authored keyframes.)
+  for (const sample of running) {
+    for (const declaration of sample.declared) {
+      expect(declaration.duration).toBe("0.3s");
+      expect(declaration.easing).toBe("cubic-bezier(0.22,1,0.36,1)");
+    }
+  }
+});
+
+test("every page never goes blank while a swipe commits", async ({ page }) => {
+  await page.goto("/chats");
+  const { client } = await holdSwipe(page, -150);
+  await startTransitionSampler(page);
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await client.detach();
+
+  await page.waitForURL("**/u/maya_okafor");
+  await page.waitForTimeout(800);
+  const samples = await readTransitionSamples(page);
+
+  expect(samples.length).toBeGreaterThan(5);
+  for (const sample of samples) {
+    expect(sample.textLength).toBeGreaterThan(20);
+    expect(sample.mainWidth).toBeGreaterThan(100);
   }
 });
 
@@ -527,6 +686,106 @@ test("the swipe history survives a reload", async ({ page }) => {
   await swipe(page, "right");
   await page.waitForURL("**/home");
   expect(new URL(page.url()).pathname).toBe("/home");
+});
+
+test("every swipe lands on the destination's own rendered page", async ({ page }) => {
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { name: /Welcome back, Maya/ })).toBeVisible();
+
+  await swipe(page, "left");
+  await page.waitForURL("**/explore");
+  await expect(page.getByPlaceholder(/Search people/)).toBeVisible();
+
+  await swipe(page, "left");
+  await page.waitForURL("**/chats");
+  await expect(page.getByPlaceholder("Search messages")).toBeVisible();
+
+  await swipe(page, "left");
+  await page.waitForURL("**/u/maya_okafor");
+  await expect(page.getByRole("heading", { level: 1, name: "Maya Okafor" })).toBeVisible();
+
+  // Back through the same screens, each with its own content rather than a
+  // snapshot or a placeholder left on the page.
+  await swipe(page, "right");
+  await page.waitForURL("**/chats");
+  await expect(page.getByPlaceholder("Search messages")).toBeVisible();
+
+  await swipe(page, "right");
+  await page.waitForURL("**/explore");
+  await expect(page.getByPlaceholder(/Search people/)).toBeVisible();
+
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+  await expect(page.getByRole("heading", { name: /Welcome back, Maya/ })).toBeVisible();
+});
+
+// Each empty-history case is its own test: the point is one cold visit and one
+// gesture, so a slow document load cannot eat another case's time budget.
+for (const [from, to] of [
+  ["/explore", "/home"],
+  ["/chats", "/explore"],
+  ["/u/maya_okafor", "/chats"],
+] as const) {
+  test(`an empty history falls back from ${from} to ${to}`, async ({ page }) => {
+    // A fresh document is a fresh tab: no stored swipe history, so only the
+    // explicit tab-order fallback can decide this destination.
+    await page.addInitScript(() => window.sessionStorage.removeItem("bt.swipe-history"));
+    await page.goto(from);
+    await swipe(page, "right");
+    await page.waitForURL(`**${to}`);
+    expect(new URL(page.url()).pathname).toBe(to);
+  });
+}
+
+test("the first screen has no fallback and does not wrap", async ({ page }) => {
+  await page.addInitScript(() => window.sessionStorage.removeItem("bt.swipe-history"));
+  await page.goto("/home");
+
+  await swipe(page, "right");
+  await page.waitForTimeout(500);
+  expect(new URL(page.url()).pathname).toBe("/home");
+});
+
+test("the last screen does not wrap and never opens Create", async ({ page }) => {
+  await page.addInitScript(() => window.sessionStorage.removeItem("bt.swipe-history"));
+  await page.goto("/u/maya_okafor");
+
+  await swipe(page, "left");
+  await page.waitForTimeout(500);
+
+  expect(new URL(page.url()).pathname).toBe("/u/maya_okafor");
+  await expect(page.getByRole("dialog", { name: "Create" })).toHaveCount(0);
+});
+
+test("rapid repeated swipes advance one page at a time", async ({ page }) => {
+  await page.goto("/home");
+  for (const to of ["/explore", "/chats", "/u/maya_okafor"]) {
+    await swipe(page, "left", { distance: 220, settle: true });
+    await page.waitForURL(`**${to}`);
+  }
+  expect(await activeTab(page)).toContain("Profile");
+
+  for (const to of ["/chats", "/explore", "/home"]) {
+    await swipe(page, "right", { distance: 220, settle: true });
+    await page.waitForURL(`**${to}`);
+  }
+  expect(await activeTab(page)).toContain("Home");
+});
+
+test("an overlapping gesture never skips a page and leaves the swipe usable", async ({ page }) => {
+  await page.goto("/home");
+  // No waiting for the route: the second gesture lands while the first is still
+  // transitioning. It may be dropped, but it must never skip a screen.
+  await swipe(page, "left");
+  await swipe(page, "left");
+  await page.waitForTimeout(900);
+
+  const pathname = new URL(page.url()).pathname;
+  expect(["/explore", "/chats"]).toContain(pathname);
+
+  const next = pathname === "/explore" ? "/chats" : "/u/maya_okafor";
+  await swipe(page, "left");
+  await page.waitForURL(`**${next}`);
 });
 
 test.describe("desktop widths", () => {

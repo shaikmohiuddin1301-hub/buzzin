@@ -766,8 +766,12 @@
 }
 
 @keyframes bt-swipe-in-right {
+  /* The incoming page starts exactly one snapshot-width beyond the outgoing
+     page's release position, not at a full width from the viewport: both pages
+     travel the same distance in the same time, so they stay edge to edge for
+     the whole transition instead of the gap between them closing as it plays. */
   from {
-    transform: translate3d(100%, 0, 0);
+    transform: translate3d(calc(100% + var(--swipe-shift, 0px)), 0, 0);
   }
   to {
     transform: translate3d(0, 0, 0);
@@ -786,8 +790,10 @@
 }
 
 @keyframes bt-swipe-in-left {
+  /* Mirrored: the incoming page sits one snapshot-width to the left of the
+     outgoing page's release position, so the pair moves as one strip. */
   from {
-    transform: translate3d(-100%, 0, 0);
+    transform: translate3d(calc(-100% + var(--swipe-shift, 0px)), 0, 0);
   }
   to {
     transform: translate3d(0, 0, 0);
