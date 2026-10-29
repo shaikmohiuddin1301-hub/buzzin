@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   BOTTOM_NAV,
   BOTTOM_NAV_CREATE_INDEX,
+  EMPTY_SWIPE_HISTORY,
   SWIPE_ORDER,
   activeSwipeDestination,
+  adjacentSwipeDestination,
   pageSurfaceClass,
   profileHref,
+  recordSwipeVisit,
   swipedFarEnough,
   swipeDestination,
+  type SwipeHistory,
 } from "@/lib/navigation";
 
 describe("primary bottom navigation", () => {
@@ -84,26 +88,84 @@ describe("when a released swipe navigates", () => {
 describe("horizontal swipe navigation", () => {
   const own = profileHref("maya_okafor");
 
-  it("steps forward on a left swipe, skipping Create", () => {
-    expect(swipeDestination("/home", "left", own)).toBe("/explore");
-    expect(swipeDestination("/explore", "left", own)).toBe("/chats");
-    expect(swipeDestination("/chats", "left", own)).toBe("/u/maya_okafor");
-    expect(swipeDestination("/u/maya_okafor", "left", own)).toBeNull();
-    expect(swipeDestination("/home", "right", own)).toBeNull();
-    expect(swipeDestination("/projects/abc", "left", own)).toBeNull();
+  function visit(...pathnames: string[]): SwipeHistory {
+    return pathnames.reduce(recordSwipeVisit, EMPTY_SWIPE_HISTORY);
+  }
+
+  function destination(history: SwipeHistory, pathname: string, direction: "left" | "right") {
+    return swipeDestination({ history, pathname, direction, ownProfileHref: own });
+  }
+
+  it("falls back to the adjacent tab when nothing has been visited", () => {
+    const history = visit("/explore");
+    expect(destination(history, "/explore", "left")).toBe("/chats");
+    expect(destination(history, "/explore", "right")).toBe("/home");
   });
 
-  it("steps back on a right swipe, returning to Explore from Chats", () => {
-    expect(swipeDestination("/u/maya_okafor", "right", own)).toBe("/chats");
-    expect(swipeDestination("/chats", "right", own)).toBe("/explore");
-    expect(swipeDestination("/explore", "right", own)).toBe("/home");
-    expect(swipeDestination("/home", "right", own)).toBeNull();
+  it("returns to the screen the reader actually came from", () => {
+    // Home → Chats by tapping the bar: a right swipe is Home, not Explore, which
+    // is what the fixed tab order would have said.
+    const history = visit("/home", "/chats");
+    expect(destination(history, "/chats", "right")).toBe("/home");
+  });
+
+  it("walks the visited screens in reverse on repeated right swipes", () => {
+    const history = visit("/home", "/explore", "/chats");
+    expect(destination(history, "/chats", "right")).toBe("/explore");
+    expect(destination(visit("/home", "/chats"), "/chats", "right")).toBe("/home");
+    expect(destination(visit("/home", "/explore", "/chats", "/u/maya_okafor"), "/u/maya_okafor", "right")).toBe(
+      "/chats",
+    );
+  });
+
+  it("replays a screen the reader swiped back out of on a left swipe", () => {
+    const history = visit("/home", "/explore", "/chats");
+    const back = recordSwipeVisit(history, "/explore");
+    expect(back.index).toBe(1);
+    expect(destination(back, "/explore", "left")).toBe("/chats");
+  });
+
+  it("continues the tab sequence once the forward history is used up", () => {
+    const history = visit("/home", "/explore", "/chats", "/u/maya_okafor");
+    expect(destination(history, "/u/maya_okafor", "left")).toBeNull();
+    expect(destination(visit("/home", "/chats"), "/chats", "left")).toBe("/u/maya_okafor");
+  });
+
+  it("does not store the same screen twice", () => {
+    const history = visit("/home", "/explore", "/explore", "/explore");
+    expect(history.visits.map((entry) => entry.href)).toEqual(["/home", "/explore"]);
+    expect(history.index).toBe(1);
+    expect(destination(history, "/explore", "right")).toBe("/home");
+  });
+
+  it("truncates forward entries when a different screen is opened", () => {
+    // Home → Explore → Chats, back to Explore, then tap Profile: the old Chats
+    // entry is no longer ahead of the cursor, exactly as the browser behaves.
+    const back = recordSwipeVisit(visit("/home", "/explore", "/chats"), "/explore");
+    const history = recordSwipeVisit(back, "/u/maya_okafor");
+    expect(history.visits.map((entry) => entry.href)).toEqual(["/home", "/explore", "/u/maya_okafor"]);
+    expect(destination(history, "/u/maya_okafor", "right")).toBe("/explore");
+    expect(destination(history, "/u/maya_okafor", "left")).toBeNull();
+  });
+
+  it("keeps pages outside the sequence out of the history", () => {
+    const history = recordSwipeVisit(visit("/home"), "/settings");
+    expect(history.visits.map((entry) => entry.href)).toEqual(["/home"]);
+    expect(destination(history, "/settings", "right")).toBeNull();
+  });
+
+  it("ignores a history whose cursor is not on the current route", () => {
+    const history = visit("/home", "/explore");
+    // A tab change the effect has not folded in yet still navigates sensibly.
+    expect(destination(history, "/chats", "right")).toBe("/explore");
   });
 
   it("never treats Create as a destination", () => {
     expect(SWIPE_ORDER).not.toContain("create");
-    expect(swipeDestination("/create", "left", own)).toBeNull();
-    expect(swipeDestination("/create", "right", own)).toBeNull();
+    expect(destination(visit("/home", "/chats"), "/create", "left")).toBeNull();
+    expect(destination(visit("/home", "/chats"), "/create", "right")).toBeNull();
+    expect(adjacentSwipeDestination("/chats", "left", own)).toBe("/u/maya_okafor");
+    expect(adjacentSwipeDestination("/home", "right", own)).toBeNull();
   });
 
   it("only claims the four page routes, not every protected page", () => {
@@ -113,6 +175,16 @@ describe("horizontal swipe navigation", () => {
     expect(activeSwipeDestination("/u/someone_else")).toBe("profile");
     expect(activeSwipeDestination("/projects")).toBeNull();
     expect(activeSwipeDestination("/settings")).toBeNull();
-    expect(swipeDestination("/projects", "left", own)).toBeNull();
+    expect(destination(visit("/home"), "/projects", "left")).toBeNull();
+  });
+
+  it("drops the oldest visits once the limit is reached", () => {
+    const routes = ["/home", "/explore", "/chats", "/u/maya_okafor"];
+    let history = EMPTY_SWIPE_HISTORY;
+    for (let step = 0; step < 24; step += 1) {
+      history = recordSwipeVisit(history, routes[step % routes.length]!);
+    }
+    expect(history.visits.length).toBeLessThanOrEqual(20);
+    expect(history.visits[history.index]?.href).toBe(routes[23 % routes.length]);
   });
 });

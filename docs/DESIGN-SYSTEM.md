@@ -137,6 +137,14 @@ the requested steel grey; it is never the only cue for a destination.
 - A deliberate horizontal swipe moves between the four page destinations (Home · Explore ·
   Chats · Profile). Create is an action, not a destination: it is skipped in both directions
   and the bottom bar ignores gestures. Scroll position is remembered per destination.
+- The gesture is contextual, not fixed: `SwipeNavigation` keeps the screens the reader has
+  actually been on (`recordSwipeVisit()` in `src/lib/navigation.ts`) with a cursor. A right
+  swipe returns to the screen before this one — Home → Chats by tapping the bar makes a right
+  swipe Home, not Explore — and repeated right swipes walk the visits in reverse. A left swipe
+  replays a screen the reader swiped back out of, then continues the tab order. Only an
+  exhausted history falls back to the adjacent tab; the ends of the order do nothing rather
+  than leave the page. Re-selecting the open tab adds no entry, and the browser's own back and
+  forward buttons move the cursor instead of creating a parallel record.
 - The swipe answers immediately: once horizontal intent is clear, only `<main>` moves, as a
   single `translate3d` per frame on the compositor, capped at 30% of the viewport and held back
   to 14% at the ends of the sequence. Release commits after 56px of travel, or an 18px flick at

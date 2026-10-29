@@ -101,14 +101,36 @@ export function swipedFarEnough(input: {
   );
 }
 
+/** A screen in the swipe sequence the account has actually been on. */
+export type SwipeVisit = { href: string; id: SwipeDestinationId };
+
 /**
- * The destination for a deliberate horizontal swipe.
+ * The screens visited in this session, in order, with a cursor.
  *
- * Left means forward and right means back, matching the visual direction of the
- * pages. The ends of the sequence return null, so the caller can leave the page
- * untouched instead of bouncing or opening Create.
+ * It mirrors the browser's own history for the four destinations but is kept by
+ * the app, because the gesture has to know which screen came *before this one*
+ * rather than which tab comes next in the bar. Entries carry their real href, so
+ * returning to a profile returns to the profile that was open.
  */
-export function swipeDestination(
+export type SwipeHistory = { visits: readonly SwipeVisit[]; index: number };
+
+export const EMPTY_SWIPE_HISTORY: SwipeHistory = { visits: [], index: -1 };
+
+/** Older entries are dropped: a session's swipe memory does not need to grow. */
+export const SWIPE_HISTORY_LIMIT = 20;
+
+function destinationHref(id: SwipeDestinationId, ownProfileHref: string): string {
+  return id === "profile" ? ownProfileHref : `/${id}`;
+}
+
+/**
+ * The fallback: one tab left or right in the bar's own order.
+ *
+ * The ends of the sequence return null, so the caller leaves the page untouched
+ * instead of bouncing or opening Create. Create is deliberately absent from
+ * `SWIPE_ORDER`, which is what makes it unreachable by gesture.
+ */
+export function adjacentSwipeDestination(
   pathname: string,
   direction: SwipeDirection,
   ownProfileHref: string,
@@ -118,6 +140,66 @@ export function swipeDestination(
   const index = SWIPE_ORDER.indexOf(active);
   const target = index + (direction === "left" ? 1 : -1);
   if (target < 0 || target >= SWIPE_ORDER.length) return null;
-  const id = SWIPE_ORDER[target];
-  return id === "profile" ? ownProfileHref : `/${id}`;
+  return destinationHref(SWIPE_ORDER[target], ownProfileHref);
+}
+
+/**
+ * Record a committed route as a swipe visit.
+ *
+ * Re-selecting the screen that is already open adds nothing, and moving to the
+ * entry either side of the cursor moves the cursor instead of storing the route
+ * twice — so a tab tapped repeatedly, a right swipe, and the browser's own back
+ * and forward buttons all keep one history rather than piling up duplicates.
+ * Any other destination truncates the forward entries, exactly as the browser
+ * does when a new page is opened after going back.
+ */
+export function recordSwipeVisit(history: SwipeHistory, pathname: string): SwipeHistory {
+  const id = activeSwipeDestination(pathname);
+  if (!id) return history;
+
+  const current = history.visits[history.index];
+  if (current?.href === pathname) return history;
+
+  if (history.visits[history.index - 1]?.href === pathname) {
+    return { ...history, index: history.index - 1 };
+  }
+  if (history.visits[history.index + 1]?.href === pathname) {
+    return { ...history, index: history.index + 1 };
+  }
+
+  const visits = [...history.visits.slice(0, history.index + 1), { href: pathname, id }].slice(
+    -SWIPE_HISTORY_LIMIT,
+  );
+  return { visits, index: visits.length - 1 };
+}
+
+/**
+ * The destination for a deliberate horizontal swipe.
+ *
+ * Right is back: it returns to the screen that was open before this one, which is
+ * why it can be Home, Explore, Chats or Profile regardless of the tab order. Left
+ * is forward: it replays a screen the reader swiped back out of when one exists.
+ * Only when that history is exhausted does the gesture fall back to the adjacent
+ * tab, so it is never stuck and never lands somewhere unrelated. A pathname
+ * outside the sequence, and the ends of the tab order with no history, return
+ * null; the caller then leaves the page where it is.
+ */
+export function swipeDestination(input: {
+  history: SwipeHistory;
+  pathname: string;
+  direction: SwipeDirection;
+  ownProfileHref: string;
+}): string | null {
+  const { history, pathname, direction, ownProfileHref } = input;
+  if (!activeSwipeDestination(pathname)) return null;
+
+  // A history can only answer for the screen it ends on. Anything else (a reload
+  // mid-route, a browser jump the cursor did not follow) uses the tab fallback.
+  if (history.visits[history.index]?.href === pathname) {
+    const neighbour =
+      direction === "right" ? history.visits[history.index - 1] : history.visits[history.index + 1];
+    if (neighbour) return neighbour.href;
+  }
+
+  return adjacentSwipeDestination(pathname, direction, ownProfileHref);
 }

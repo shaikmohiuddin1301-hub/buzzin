@@ -8,6 +8,12 @@
  * server components, auth checks and browser history stay authoritative. Create
  * is not in the sequence and is ignored even when the gesture crosses it.
  *
+ * Right is contextual, not a fixed tab: the component keeps the screens the
+ * reader has actually been on (`SwipeHistory`) and a right swipe returns to the
+ * one before this, with its href and scroll position. Only when that history is
+ * exhausted does it fall back to the adjacent tab in the bar's order. Left
+ * replays a screen the reader swiped back out of, then continues the sequence.
+ *
  * Gesture rules:
  *   - touch only, one finger, starting away from the screen edges (the OS owns
  *     those back gestures);
@@ -30,7 +36,14 @@
  */
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { swipedFarEnough, swipeDestination, type SwipeDirection } from "@/lib/navigation";
+import {
+  EMPTY_SWIPE_HISTORY,
+  recordSwipeVisit,
+  swipedFarEnough,
+  swipeDestination,
+  type SwipeDirection,
+  type SwipeHistory,
+} from "@/lib/navigation";
 
 /** Elements that need the gesture for themselves. Links are intentionally not here:
  * a tap is distinguished by the movement threshold, while swiping across a card
@@ -102,14 +115,20 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
   const router = useRouter();
   const pathnameRef = useRef(pathname);
   const profileRef = useRef(ownProfileHref);
+  const historyRef = useRef<SwipeHistory>(EMPTY_SWIPE_HISTORY);
   const scrollPositions = useRef(new Map<string, number>());
   const pendingRestore = useRef<string | null>(null);
   const pendingResolve = useRef<(() => void) | null>(null);
   const pendingFallback = useRef(false);
   const transitioning = useRef(false);
 
+  // Every committed route is folded into one swipe history: a new screen is
+  // appended, a screen already either side of the cursor moves it. That is what
+  // makes a repeated tab selection, a right swipe and the browser's back button
+  // share one record instead of each adding an entry.
   useEffect(() => {
     pathnameRef.current = pathname;
+    historyRef.current = recordSwipeVisit(historyRef.current, pathname);
   }, [pathname]);
 
   useEffect(() => {
@@ -122,7 +141,12 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       for (const direction of ["left", "right"] as const) {
-        const href = swipeDestination(pathname, direction, ownProfileHref);
+        const href = swipeDestination({
+          history: historyRef.current,
+          pathname,
+          direction,
+          ownProfileHref,
+        });
         if (href) router.prefetch(href);
       }
     }, 350);
@@ -255,7 +279,12 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
         return;
       }
       const from = pathnameRef.current;
-      const href = swipeDestination(from, direction, profileRef.current);
+      const href = swipeDestination({
+        history: historyRef.current,
+        pathname: from,
+        direction,
+        ownProfileHref: profileRef.current,
+      });
       if (!href || href === from) {
         settle();
         return;
@@ -405,7 +434,12 @@ export function SwipeNavigation({ ownProfileHref }: { ownProfileHref: string }) 
       }
 
       const direction: SwipeDirection = dx < 0 ? "left" : "right";
-      const href = swipeDestination(pathnameRef.current, direction, profileRef.current);
+      const href = swipeDestination({
+        history: historyRef.current,
+        pathname: pathnameRef.current,
+        direction,
+        ownProfileHref: profileRef.current,
+      });
       if (href && (direction === "left" ? !gesture.prefetchedLeft : !gesture.prefetchedRight)) {
         router.prefetch(href);
         if (direction === "left") gesture.prefetchedLeft = true;

@@ -135,6 +135,95 @@ for (const [from, to] of BACKWARD) {
   });
 }
 
+test("a right swipe returns to the screen the reader actually came from", async ({ page }) => {
+  await page.goto("/home");
+  const nav = page.getByRole("navigation", { name: "Primary" });
+
+  // Reaching Chats by tapping the bar is still a visit, so a right swipe goes
+  // back to Home rather than to Explore, which the fixed tab order would pick.
+  await nav.getByRole("link", { name: "Chats" }).click();
+  await page.waitForURL("**/chats");
+
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+  expect(new URL(page.url()).pathname).toBe("/home");
+  expect(await activeTab(page)).toContain("Home");
+});
+
+test("repeated right swipes walk the visited screens in reverse", async ({ page }) => {
+  await page.goto("/home");
+  const nav = page.getByRole("navigation", { name: "Primary" });
+  await nav.getByRole("link", { name: "Chats" }).click();
+  await page.waitForURL("**/chats");
+
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+
+  // Home is the first screen visited: the history is exhausted, and the tab
+  // fallback has nothing to the left either, so the page stays put.
+  await swipe(page, "right");
+  await page.waitForTimeout(400);
+  expect(new URL(page.url()).pathname).toBe("/home");
+});
+
+test("an exhausted history uses the adjacent tab as the fallback", async ({ page }) => {
+  // Chats opened directly has no previous screen, so back is Explore: the tab
+  // before it in the bar, never Create and never an unrelated page.
+  await page.goto("/chats");
+  await swipe(page, "right");
+  await page.waitForURL("**/explore");
+  expect(new URL(page.url()).pathname).toBe("/explore");
+});
+
+test("a left swipe replays a screen the reader swiped back out of", async ({ page }) => {
+  await page.goto("/home");
+  const nav = page.getByRole("navigation", { name: "Primary" });
+  await nav.getByRole("link", { name: "Chats" }).click();
+  await page.waitForURL("**/chats");
+
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+
+  await swipe(page, "left");
+  await page.waitForURL("**/chats");
+  expect(new URL(page.url()).pathname).toBe("/chats");
+  expect(await activeTab(page)).toContain("Chats");
+});
+
+test("re-selecting the active tab does not add a history entry", async ({ page }) => {
+  await page.goto("/explore");
+  const nav = page.getByRole("navigation", { name: "Primary" });
+  await nav.getByRole("link", { name: "Explore" }).click();
+  await nav.getByRole("link", { name: "Explore" }).click();
+  await page.waitForTimeout(200);
+
+  // The only visit is Explore, so back falls through to Home rather than
+  // replaying Explore itself or a duplicate of it.
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+  expect(new URL(page.url()).pathname).toBe("/home");
+});
+
+test("the browser's back button agrees with the swipe history", async ({ page }) => {
+  await page.goto("/home");
+  const nav = page.getByRole("navigation", { name: "Primary" });
+  await nav.getByRole("link", { name: "Chats" }).click();
+  await page.waitForURL("**/chats");
+
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+
+  // The swipe is a real route change, so back returns to Chats and the bar agrees.
+  await page.goBack();
+  await page.waitForURL("**/chats");
+  expect(await activeTab(page)).toContain("Chats");
+
+  // The history moved with the browser, so back is still Home, not Explore.
+  await swipe(page, "right");
+  await page.waitForURL("**/home");
+  expect(new URL(page.url()).pathname).toBe("/home");
+});
+
 test("animates the outgoing and incoming pages with a named view transition", async ({ page }) => {
   await page.goto("/home");
   await swipe(page, "left");
